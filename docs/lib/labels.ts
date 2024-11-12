@@ -1,7 +1,7 @@
 import { create, select } from "d3-selection";
 import { Delaunay } from "d3-delaunay";
 import { polygonCentroid, polygonArea } from "d3-polygon";
-import { Plot } from "plot";
+import * as Plot from "@observablehq/plot";
 
 // Derived from https://observablehq.com/@d3/voronoi-labels
 // and
@@ -59,17 +59,18 @@ export class Label extends Plot.Mark {
   minCellSize: number;
 
   constructor(data: any[], options: LabelOptions) {
-    super(
-      data,
-      [
-        { name: "x", value: options.x, scale: "x", optional: true },
-        { name: "y", value: options.y, scale: "y", optional: true },
-        { name: "z", value: options.z, optional: true },
-        { name: "content", value: options.label },
-      ],
-      options,
-    );
-    this.data = data;
+    super();
+    // data,
+    // [
+    //   { name: "x", value: options.x, scale: "x", optional: true },
+    //   { name: "y", value: options.y, scale: "y", optional: true },
+    //   { name: "z", value: options.z, optional: true },
+    //   { name: "content", value: options.label },
+    // ],
+    // options,
+    // );
+    console.log("constructing", data);
+    this.data = Array.isArray(data) ? data : data.toArray();
     this.x = options.x;
     this.y = options.y;
     this.label = options.label;
@@ -148,6 +149,7 @@ export class Label extends Plot.Mark {
       (d: any) => scales.y(d[this.y]),
     );
     const voronoi = delaunay.voronoi([-1, -1, width + 1, height + 1]);
+    console.log(data);
     const cells = data.map(
       (d: any, i: number): Cell => [
         [scales.x(d[this.x]), scales.y(d[this.y])],
