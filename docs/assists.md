@@ -27,8 +27,8 @@ WHERE year=${year};
 ```
 
 ```js
-const x = "ast";
-const y = "tov";
+const x = "tov";
+const y = "ast";
 const data = assists.toArray().filter((d) => d.ast > 20);
 const title = "Assists to Turnovers";
 display(
@@ -38,8 +38,8 @@ display(
     title: title,
     marginRight: 40,
     grid: true,
-    x: { nice: true, ticks: 5, zero: true, label: "assists" },
-    y: { nice: true, ticks: 5, zero: true, label: "turnovers" },
+    x: { nice: true, ticks: 5, zero: true, label: "turnovers" },
+    y: { nice: true, ticks: 5, zero: true, label: "assists" },
     marks: [
       Plot.line(
         [
