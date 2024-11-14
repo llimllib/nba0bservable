@@ -42,7 +42,11 @@ display(
       ticks: 5,
       label: "3 point field goals attempted per 36 minutes",
     },
-    y: { nice: true, ticks: 5, label: "3-point field goal %" },
+    y: {
+      nice: true,
+      ticks: 5,
+      label: "3-point field goal %",
+    },
     marks: [
       label(data, {
         x,
