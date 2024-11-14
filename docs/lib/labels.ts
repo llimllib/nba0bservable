@@ -9,7 +9,7 @@ import * as Plot from "@observablehq/plot";
 //
 // An interesting approach that I may want to investigate is @Fil's voronoi labeller:
 //
-// https://docs.mapbox.com/mapbox-gl-js/example/variable-label-placement/
+// https://observablehq.com/@fil/plot-voronoi-labels
 //
 // TODO: allow user to click to remove/add labels manually
 
@@ -47,9 +47,10 @@ interface Scales {
 
 type Cell = [[number, number], any[], any];
 
-// I don't know how to label the return type of the returned function as a
-// `Label` class, which hasn't been defined yet at that point
-// export function label(Plot: any): (data: any[], options: LabelOptions) => any {
+// warning: if the data has been implicitly transformed, for example via
+// "percent: true" on the root axis, this will not work because it receives the
+// raw data and AFAICT does not have access to the transformed data. Avoid this
+// for now by transforming the data before plotting. FIXME
 export class Label extends Plot.Mark {
   data: any[];
   x: any;
@@ -59,17 +60,21 @@ export class Label extends Plot.Mark {
   minCellSize: number;
 
   constructor(data: any[], options: LabelOptions) {
-    super();
-    // data,
-    // [
-    //   { name: "x", value: options.x, scale: "x", optional: true },
-    //   { name: "y", value: options.y, scale: "y", optional: true },
-    //   { name: "z", value: options.z, optional: true },
-    //   { name: "content", value: options.label },
-    // ],
-    // options,
-    // );
-    console.log("constructing", data);
+    super(
+      // https://github.com/observablehq/plot/pull/2229
+      // @ts-expect-error the typing is not right for super()
+      data,
+      [
+        { name: "x", value: options.x, scale: "x", optional: true },
+        { name: "y", value: options.y, scale: "y", optional: true },
+        { name: "z", value: options.z, optional: true },
+        { name: "content", value: options.label },
+      ],
+      options,
+    );
+    // @ts-expect-error I did this so that we can accept the output of an
+    // observable framework sql block - I'm not sure how to type that object,
+    // so I just look for a non-array and guess that we can call toArray on it
     this.data = Array.isArray(data) ? data : data.toArray();
     this.x = options.x;
     this.y = options.y;
@@ -149,7 +154,6 @@ export class Label extends Plot.Mark {
       (d: any) => scales.y(d[this.y]),
     );
     const voronoi = delaunay.voronoi([-1, -1, width + 1, height + 1]);
-    console.log(data);
     const cells = data.map(
       (d: any, i: number): Cell => [
         [scales.x(d[this.x]), scales.y(d[this.y])],
