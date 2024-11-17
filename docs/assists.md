@@ -31,6 +31,8 @@ const x = "tov";
 const y = "ast";
 const data = assists.toArray().filter((d) => d.ast > 20);
 const title = "Assists to Turnovers";
+const maxX = d3.max(data, (d) => d[x]);
+const maxY = d3.max(data, (d) => d[y]);
 display(
   Plot.plot({
     width: 800,
@@ -38,13 +40,41 @@ display(
     title: title,
     marginRight: 40,
     grid: true,
-    x: { nice: true, ticks: 5, zero: true, label: "turnovers" },
-    y: { nice: true, ticks: 5, zero: true, label: "assists" },
+    x: {
+      domain: [0, maxX],
+      nice: true,
+      ticks: 5,
+      zero: true,
+      label: "turnovers",
+    },
+    y: {
+      domain: [0, maxY],
+      nice: true,
+      ticks: 5,
+      zero: true,
+      label: "assists",
+    },
     marks: [
       Plot.line(
         [
           { x: 0, y: 0 },
-          { x: d3.max(data, (d) => d[x]), y: d3.max(data, (d) => d[y]) },
+          { x: maxX, y: maxX },
+        ],
+        { x: "x", y: "y", strokeOpacity: 0.3 },
+      ),
+      Plot.line(
+        [
+          { x: 0, y: 0 },
+          { x: maxX, y: 2 * maxX },
+        ],
+        { x: "x", y: "y", strokeOpacity: 0.3 },
+      ),
+      // the 3x here would extend the line vertically, so I use
+      // explicit domains above to constrain it
+      Plot.line(
+        [
+          { x: 0, y: 0 },
+          { x: maxX, y: 3 * maxX },
         ],
         { x: "x", y: "y", strokeOpacity: 0.3 },
       ),

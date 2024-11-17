@@ -1,12 +1,12 @@
 ---
 theme: cotton
-title: Three-point shooting
+title: Shooting Efficiency
 toc: false
 sql:
   players: ./data/playerstats.parquet
 ---
 
-# Three Point Shooting
+# Shooting Efficiency
 
 ```js
 import { sql } from "npm:@observablehq/duckdb";
@@ -24,7 +24,7 @@ const year = view(
 const percentile = view(
   Inputs.range([5, 100], {
     value: "15",
-    label: "top x% in 3pa",
+    label: "top x% in fga",
     step: 5,
   }),
 );
@@ -66,46 +66,82 @@ console.log("teamFilter", teamFilter);
 
 ```js
 console.log(
-  `SELECT player_name, team_abbreviation, fg3m, fg3a, fg3a_per36, fg3_pct
+  `SELECT player_name, team_abbreviation, fga, ts_pct, usg_pct
        FROM players
       WHERE year=${year}
         ${teamFilter}`,
 );
-const threepoints = await sql([
-  `SELECT player_name, team_abbreviation, fg3m, fg3a, fg3a_per36, fg3_pct
+const efficiency = await sql([
+  `SELECT player_name, team_abbreviation, fga, ts_pct, usg_pct
        FROM players
       WHERE year=${year}
         ${teamFilter}`,
 ]);
 
-const x = "fg3a_per36";
-const y = "fg3_pct";
+const x = "usg_pct";
+const y = "ts_pct";
 const data = sliceQuantile(
-  threepoints.toArray(),
-  "fg3a",
+  efficiency.toArray(),
+  "fga",
   (100 - percentile) / 100,
 );
+const [xMin, xMax] = d3.extent(data, (d) => d[x]);
+const [yMin, yMax] = d3.extent(data, (d) => d[y]);
+// common options for the explanatory text font
+const fontOptions = {
+  fontSize: 20,
+  fontStyle: "italic",
+  //stroke: "black",
+  fill: "red",
+  opacity: 0.2,
+};
 display(
   Plot.plot({
     width: 800,
     height: 800,
-    title: "three-point shooting percentage by rate",
-    subtitle: `top ${percentile}% by 3pfga`,
+    title: "shooting efficiency by usage rate",
+    subtitle: `top ${percentile}% by fga`,
     marginRight: 40,
     grid: true,
     x: {
       nice: true,
       ticks: 5,
-      label: "3 point field goals attempted per 36 minutes",
+      label: "Usage %",
       labelAnchor: "center",
     },
     y: {
       nice: true,
       ticks: 5,
-      label: "3-point field goal %",
+      label: "True Shooting %",
       labelAnchor: "center",
     },
     marks: [
+      // Here's how to draw a rectangle; note that this expands the domain out
+      // to start at [0,0]. I might want to do a quadrant chart type thing here?
+      // Plot.rect([{ x1: 0, y1: 0, x2: 0.25, y2: 0.6 }], {
+      //   fill: "red",
+      //   stroke: "black",
+      //   x1: "x1",
+      //   y1: "y1",
+      //   x2: "x2",
+      //   y2: "y2",
+      // }),
+      Plot.text([[xMin + 0.01, yMin]], {
+        text: ["Low usage\nPoor efficiency"],
+        ...fontOptions,
+      }),
+      Plot.text([[xMax - 0.01, yMin]], {
+        text: ["High usage\nPoor efficiency"],
+        ...fontOptions,
+      }),
+      Plot.text([[xMin + 0.01, yMax]], {
+        text: ["Low usage\nGood efficiency"],
+        ...fontOptions,
+      }),
+      Plot.text([[xMax - 0.01, yMax]], {
+        text: ["High usage\nGood efficiency"],
+        ...fontOptions,
+      }),
       label(data, {
         x,
         y,
@@ -127,47 +163,6 @@ display(
           y,
           title: (d) =>
             `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
-        }),
-      ),
-    ],
-  }),
-);
-```
-
-```js
-const x = "fg3a";
-const y = "fg3m";
-const data = threepoints;
-display(
-  Plot.plot({
-    width: 800,
-    height: 800,
-    title: "three-point shooting aggregate",
-    marginRight: 40,
-    grid: true,
-    x: { nice: true, ticks: 5, zero: true },
-    y: { nice: true, ticks: 5, zero: true },
-    marks: [
-      label(data, {
-        x,
-        y,
-        label: "player_name",
-        padding: 10,
-        minCellSize: 2000,
-      }),
-      Plot.dot(data, {
-        x,
-        y,
-        fill: (d) => teams.get(d.team_abbreviation).colors[0],
-        stroke: (d) => teams.get(d.team_abbreviation).colors[1],
-        r: 8,
-      }),
-      Plot.tip(
-        data,
-        Plot.pointer({
-          x,
-          y,
-          title: (d) => `${d.player_name}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
         }),
       ),
     ],

@@ -46,8 +46,8 @@ display(
     title: title,
     marginRight: 40,
     grid: true,
-    x: { nice: true, ticks: 5, zero: true },
-    y: { nice: true, ticks: 5, zero: true },
+    x: { nice: true, ticks: 5, zero: true, label: "steals" },
+    y: { nice: true, ticks: 5, zero: true, label: "blocks" },
     marks: [
       Plot.line(
         [
