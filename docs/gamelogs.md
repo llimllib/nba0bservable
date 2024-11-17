@@ -6,7 +6,7 @@ sql:
   gamelogs: ./data/gamelogs.parquet
 ---
 
-# Assists to turnovers
+# Game logs
 
 ```js
 import { teams } from "./lib/teams.js";
@@ -23,61 +23,84 @@ const season_year = view(
 );
 ```
 
+<!-- turn this on when you want to see the game log table for dev
 ```sql echo display
 SELECT *
 FROM gamelogs
 WHERE season_year=${season_year}
 ORDER BY game_date desc;
 ```
+-->
 
-```sql echo id=gamelist
-SELECT a.game_id, a.team_name team_a, a.pts pts_a, a.off_rating off_rtg_a, b.team_name team_b, b.pts pts_b, b.off_rating off_rtg_b
+```sql id=gamelist
+SELECT a.game_id,
+    strftime(strptime(a.game_date, '%Y-%m-%dT%H:%M:%S'), '%B %d, %Y') as game_date,
+    a.team_name team_a,
+    a.pts pts_a,
+    a.off_rating off_rtg_a,
+    b.team_name team_b,
+    b.pts pts_b,
+    b.off_rating off_rtg_b
 FROM gamelogs a
 INNER JOIN gamelogs b
-  ON a.game_id = b.game_id and a.team_id < b.team_id
+  ON a.game_id = b.game_id and a.pts > b.pts
 WHERE a.season_year=${season_year}
 ORDER BY a.game_id desc;
 ```
 
 ```js
-function displayGames(gameList, targetDiv) {
-  const div = d3.create("div");
+const div = d3.create("div");
+const games = gamelist.toArray();
+const gamesByDate = d3.group(games, (g) => g.game_date);
 
-  // Helper function to determine color based on offensive rating
-  const colorScale = d3
-    .scaleLinear()
-    .domain(
-      d3.extent(gameList.toArray().flatMap((g) => [g.off_rtg_a, g.off_rtg_b])),
-    )
-    .range(["purple", "green"]);
+// Right now I have to pad the values of off_rtg because black text isn't
+// readable against the darkest green or purple. It would be better to choose a
+// contrasting text color in that case, but I haven't yet figured out how to do so
+const pad =
+  (n) =>
+  ([a, b]) => [a * n, b * (1 + (1 - n))];
+const colorScale = d3
+  //.scaleLinear()
+  // .scaleDiverging(d3.interpolatePRGn)
+  .scaleSequential(d3.interpolatePRGn)
+  .domain(
+    pad(0.8)(d3.extent(games.flatMap((g) => [g.off_rtg_a, g.off_rtg_b]))),
+  );
+// .range(["purple", "green"]);
 
-  // Create a table for each game
-  div
-    .selectAll("table")
-    .data(gameList)
-    .enter()
-    .append("table")
-    .html(
-      (game) => `
-      <tr>
-        <th colspan="3">${game.team_a} vs ${game.team_b}</th>
-      </tr>
-      <tr>
-        <td>${game.team_a}</td>
-        <td>${game.pts_a}</td>
-        <td style="color: ${colorScale(game.off_rtg_a)};">${game.off_rtg_a}</td>
-      </tr>
-      <tr>
-        <td>${game.team_b}</td>
-        <td>${game.pts_b}</td>
-        <td style="color: ${colorScale(game.off_rtg_b)};">${game.off_rtg_b}</td>
-      </tr>
-    `,
-    )
-    .style("border", "1px solid black")
-    .style("margin-bottom", "10px");
+// Create a table for each game
+div
+  .selectAll("div")
+  .data(gamesByDate)
+  .enter()
+  .append("div")
+  .each(function (gamesOnDate) {
+    const dateDiv = d3.select(this);
+    const date = gamesOnDate[0];
 
-  return div.node();
-}
-display(displayGames(gamelist));
+    // Add the date header
+    dateDiv.append("h3").text(`${date}`);
+
+    // Add a table for each game on this date
+    dateDiv
+      .selectAll("table")
+      .data(gamesOnDate[1])
+      .enter()
+      .append("table")
+      .html(
+        (game) => `
+          <tr>
+            <td width="130" style="text-align: center">${game.team_a}</td>
+            <td width="30" style="text-align: center">${game.pts_a}</td>
+            <td width="50" style="text-align: center; background-color: ${colorScale(game.off_rtg_a)}; color: black">${game.off_rtg_a}</td>
+            <td width="50" style="text-align: center; background-color: ${colorScale(game.off_rtg_b)}; color: black">${game.off_rtg_b}</td>
+            <td width="30" style="text-align: center">${game.pts_b}</td>
+            <td width="130" style="text-align: center">${game.team_b}</td>
+          </tr>
+        `,
+      )
+      .style("margin-bottom", "10px");
+  });
+
+display(div.node());
 ```
