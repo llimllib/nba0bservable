@@ -1,12 +1,17 @@
-import * as Plot from '@observablehq/plot';
+import * as Plot from "@observablehq/plot";
 import { label } from "./labels.js";
 import { teams } from "./teams.js";
 
 interface Player {
-  team_abbreviation: string
+  team_abbreviation: string;
 }
 
-export function nbascatter(x: string, y: string, data: Player[], overrides: any) {
+export function nbascatter(
+  x: string,
+  y: string,
+  data: Player[],
+  overrides: any,
+) {
   return Plot.plot({
     width: 800,
     height: 800,
@@ -47,5 +52,5 @@ export function nbascatter(x: string, y: string, data: Player[], overrides: any)
         }),
       ),
     ],
-  }),
+  });
 }
