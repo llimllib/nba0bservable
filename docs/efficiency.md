@@ -28,6 +28,7 @@ const percentile = view(
     step: 5,
   }),
 );
+const showBackground = view(Inputs.toggle({ label: "Show rest of NBA" }));
 ```
 
 ```js
@@ -77,16 +78,33 @@ const efficiency = await sql([
       WHERE year=${year}
         ${teamFilter}`,
 ]);
+const allPlayers = await sql([
+  `SELECT player_name, team_abbreviation, fga, ts_pct, usg_pct
+       FROM players
+      WHERE year=${year}`,
+]);
+const selectedAbbrev = selectedTeams.map((t) => t.abbreviation);
+const active = allPlayers
+  .toArray()
+  .filter((d) =>
+    selectedAbbrev.length > 0
+      ? selectedAbbrev.includes(d.team_abbreviation)
+      : true,
+  );
 
 const x = "usg_pct";
 const y = "ts_pct";
-const data = sliceQuantile(
-  efficiency.toArray(),
+const data = sliceQuantile(active, "fga", (100 - percentile) / 100);
+// Used if the "show rest of NBA" option is selected, to show the rest of the
+// league as background data
+const background = sliceQuantile(
+  allPlayers.toArray(),
   "fga",
   (100 - percentile) / 100,
 );
-const [xMin, xMax] = d3.extent(data, (d) => d[x]);
-const [yMin, yMax] = d3.extent(data, (d) => d[y]);
+const [xMin, xMax] = d3.extent(showBackground ? background : data, (d) => d[x]);
+const [yMin, yMax] = d3.extent(showBackground ? background : data, (d) => d[y]);
+
 // common options for the explanatory text font
 const fontOptions = {
   fontSize: 20,
@@ -149,6 +167,9 @@ display(
         padding: 10,
         minCellSize: 2000,
       }),
+      showBackground
+        ? Plot.dot(background, { x, y, fill: "grey", fillOpacity: 0.15, r: 8 })
+        : null,
       Plot.dot(data, {
         x,
         y,
