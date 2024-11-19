@@ -1,6 +1,6 @@
 ---
 theme: cotton
-title: Assists to turnovers
+title: Steals and blocks
 toc: false
 sql:
   players: ./data/playerstats.parquet
