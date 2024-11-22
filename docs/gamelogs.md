@@ -23,15 +23,6 @@ const season_year = view(
 );
 ```
 
-<!-- turn this on when you want to see the game log table for dev
-```sql echo display
-SELECT *
-FROM gamelogs
-WHERE season_year=${season_year}
-ORDER BY game_date desc;
-```
--->
-
 ```sql id=gamelist
 SELECT a.game_id,
     strftime(strptime(a.game_date, '%Y-%m-%dT%H:%M:%S'), '%B %d, %Y') as game_date,
@@ -45,7 +36,7 @@ FROM gamelogs a
 INNER JOIN gamelogs b
   ON a.game_id = b.game_id and a.pts > b.pts
 WHERE a.season_year=${season_year}
-ORDER BY a.game_id desc;
+ORDER BY a.game_date desc;
 ```
 
 ```js
@@ -58,15 +49,15 @@ const gamesByDate = d3.group(games, (g) => g.game_date);
 // contrasting text color in that case, but I haven't yet figured out how to do so
 const pad =
   (n) =>
-  ([a, b]) => [a * n, b * (1 + (1 - n))];
+  ([a, b]) => {
+    const pad = (b - a) * n;
+    return [a - pad, b + pad];
+  };
 const colorScale = d3
-  //.scaleLinear()
-  // .scaleDiverging(d3.interpolatePRGn)
   .scaleSequential(d3.interpolatePRGn)
   .domain(
-    pad(0.8)(d3.extent(games.flatMap((g) => [g.off_rtg_a, g.off_rtg_b]))),
+    pad(0.2)(d3.extent(games.flatMap((g) => [g.off_rtg_a, g.off_rtg_b]))),
   );
-// .range(["purple", "green"]);
 
 // Create a table for each game
 div
