@@ -1,4 +1,4 @@
-interface Team {
+export interface Team {
   abbreviation: string;
   name: string;
   colors: string[];
@@ -81,7 +81,7 @@ export const teams: Map<string, Team> = new Map([
     {
       abbreviation: "DEN",
       name: "Denver Nuggets",
-      colors: ["#0E2240", "#8B2131", "#FEC524", "#244289"],
+      colors: ["#0E2240", "#FEC524", "#8B2131", "#244289"],
     },
   ],
   [
