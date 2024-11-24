@@ -57,27 +57,6 @@ const selectedTeams = view(
 ```
 
 ```js
-console.log(selectedTeams);
-const teamFilter =
-  selectedTeams.length > 0
-    ? `AND team_abbreviation in (${selectedTeams.map((t) => `'${t.abbreviation}'`).join(",")});`
-    : "";
-console.log("teamFilter", teamFilter);
-```
-
-```js
-console.log(
-  `SELECT player_name, team_abbreviation, fga, ts_pct, usg_pct
-       FROM players
-      WHERE year=${year}
-        ${teamFilter}`,
-);
-const efficiency = await sql([
-  `SELECT player_name, team_abbreviation, fga, ts_pct, usg_pct
-       FROM players
-      WHERE year=${year}
-        ${teamFilter}`,
-]);
 const allPlayers = await sql([
   `SELECT player_name, team_abbreviation, fga, ts_pct, usg_pct
        FROM players
