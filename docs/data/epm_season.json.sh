@@ -1,2 +1,5 @@
 #!/usr/bin/env
-node -e "$(curl https://dunksandthrees.com/stats/player | grep 'const data') console.log(JSON.stringify(data))"
+set -x
+curl -s https://dunksandthrees.com/stats/player | grep 'const data' > /tmp/epmSeason.js
+printf "\nconsole.log(JSON.stringify(data));" >> /tmp/epmSeason.js
+node /tmp/epmSeason.js
