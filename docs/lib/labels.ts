@@ -20,6 +20,7 @@ interface LabelOptions {
   label: string;
   padding: number;
   minCellSize: number;
+  rotate?: number;
 }
 
 interface Point {
@@ -58,6 +59,7 @@ export class Label extends Plot.Mark {
   label: any;
   padding: number;
   minCellSize: number;
+  rotate: number | undefined;
 
   constructor(data: any[], options: LabelOptions) {
     super(
@@ -81,6 +83,7 @@ export class Label extends Plot.Mark {
     this.label = options.label;
     this.padding = options.padding;
     this.minCellSize = options.minCellSize;
+    this.rotate = options.rotate;
   }
 
   // This returns a "GElement", defined in the d3-selection type file but I
@@ -134,7 +137,11 @@ export class Label extends Plot.Mark {
                 : orient.left,
         );
       })
-      .attr("transform", ([d]) => `translate(${d})`)
+      .attr(
+        "transform",
+        ([d]) =>
+          `translate(${d})` + (this.rotate ? ` rotate(${this.rotate})` : ""),
+      )
       .attr("display", ([, cell]) =>
         -polygonArea(cell) > this.minCellSize ? null : "none",
       )
