@@ -7,6 +7,7 @@ toc: false
 # EPM data
 
 ```js
+import { epmDiamond } from "./lib/epmdiamond.js";
 import { teams } from "./lib/teams.js";
 import { label } from "./lib/labels.js";
 import { sliceQuantile } from "./lib/util.js";
@@ -79,145 +80,29 @@ const selectedTeams = view(
 ```
 
 ```js
-const x = "off";
-const y = "def";
-// TODO: filter by selected teams
-const data = sliceQuantile(epm, "p_mp_48", (100 - percentile) / 100);
-// .filter(whatever yo)
-// Used if the "show rest of NBA" option is selected, to show the rest of the
-// league as background data
-const background = sliceQuantile(epm, "p_mp_48", (100 - percentile) / 100);
-const [xMin, xMax] = d3.extent(showBackground ? background : data, (d) => d[x]);
-const [yMin, yMax] = d3.extent(showBackground ? background : data, (d) => d[y]);
-
-// common options for the explanatory text font
-const fontOptions = {
-  fontSize: 20,
-  fontStyle: "italic",
-  //stroke: "black",
-  fill: "red",
-  opacity: 0.2,
-};
+const ts = selectedTeams.map((d) => d.abbreviation);
 display(
-  Plot.plot({
-    width: 800,
-    height: 800,
-    title: "Predictive EPM",
-    subtitle: `Data by dunksandthrees.com. top ${percentile}% by predicted minutes played`,
-    marginRight: 40,
-    grid: true,
-    x: {
-      nice: true,
-      ticks: 5,
-      label: "Offensive EPM",
-      labelAnchor: "center",
-    },
-    y: {
-      nice: true,
-      ticks: 5,
-      label: "Defensive EPM",
-      labelAnchor: "center",
-    },
-    marks: [
-      label(data, {
-        x,
-        y,
-        label: "player_name",
-        padding: 10,
-        minCellSize: 2000,
-      }),
-      showBackground
-        ? Plot.dot(background, { x, y, fill: "grey", fillOpacity: 0.15, r: 8 })
-        : null,
-      Plot.dot(data, {
-        x,
-        y,
-        fill: (d) => teams.get(d.team_alias).colors[0],
-        stroke: (d) => teams.get(d.team_alias).colors[1],
-        r: 8,
-      }),
-      Plot.tip(
-        data,
-        Plot.pointer({
-          x,
-          y,
-          title: (d) =>
-            `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
-        }),
-      ),
-    ],
+  epmDiamond(epm, {
+    by: "p_mp_48",
+    selectedTeams: ts,
+    percentile,
+    showBackground,
+    size: 600,
+    title: "Prescriptive EPM",
   }),
 );
 ```
 
 ```js
-const x = "off";
-const y = "def";
-// TODO: filter by selected teams
-const data = sliceQuantile(seasonEPM, "mp", (100 - percentile) / 100);
-// .filter(whatever yo)
-// Used if the "show rest of NBA" option is selected, to show the rest of the
-// league as background data
-const background = sliceQuantile(seasonEPM, "mp", (100 - percentile) / 100);
-const [xMin, xMax] = d3.extent(showBackground ? background : data, (d) => d[x]);
-const [yMin, yMax] = d3.extent(showBackground ? background : data, (d) => d[y]);
-
-// common options for the explanatory text font
-const fontOptions = {
-  fontSize: 20,
-  fontStyle: "italic",
-  //stroke: "black",
-  fill: "red",
-  opacity: 0.2,
-};
+const ts = selectedTeams.map((d) => d.abbreviation);
 display(
-  Plot.plot({
-    width: 800,
-    height: 800,
+  epmDiamond(seasonEPM, {
+    by: "mp",
+    selectedTeams: ts,
+    percentile,
+    showBackground,
+    size: 600,
     title: "Season EPM",
-    subtitle: `Data by dunksandthrees.com. top ${percentile}% by minutes played`,
-    marginRight: 40,
-    grid: true,
-    x: {
-      nice: true,
-      ticks: 5,
-      label: "Offensive EPM",
-      labelAnchor: "center",
-    },
-    y: {
-      nice: true,
-      ticks: 5,
-      label: "Defensive EPM",
-      labelAnchor: "center",
-    },
-    marks: [
-      label(data, {
-        x,
-        y,
-        label: "player_name",
-        padding: 10,
-        minCellSize: 2000,
-      }),
-      showBackground
-        ? Plot.dot(background, { x, y, fill: "grey", fillOpacity: 0.15, r: 8 })
-        : null,
-      Plot.dot(data, {
-        x,
-        y,
-        fill: (d) => teams.get(d.team_alias).colors[0],
-        stroke: (d) => teams.get(d.team_alias).colors[1],
-        r: 8,
-      }),
-      Plot.tip(
-        data,
-        Plot.pointer({
-          x,
-          y,
-          title: (d) =>
-            `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
-        }),
-      ),
-    ],
   }),
 );
 ```
