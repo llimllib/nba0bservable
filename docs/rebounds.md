@@ -93,56 +93,67 @@ const fontOptions = {
   fill: "red",
   opacity: 0.2,
 };
-display(
-  Plot.plot({
-    width: 800,
-    height: 800,
-    title: "Rebounding",
-    subtitle: `top ${percentile}% by minutes`,
-    marginRight: 40,
-    grid: true,
-    x: {
-      nice: true,
-      ticks: 5,
-      label: "Defensive rebounds",
-      labelAnchor: "center",
-    },
-    y: {
-      nice: true,
-      ticks: 5,
-      label: "Offensive rebounds",
-      labelAnchor: "center",
-    },
-    marks: [
-      label(data, {
+const graph = Plot.plot({
+  width: 800,
+  height: 800,
+  title: "Rebounding",
+  subtitle: `top ${percentile}% by minutes`,
+  marginRight: 40,
+  grid: true,
+  x: {
+    nice: true,
+    ticks: 5,
+    label: "Defensive rebounds",
+    labelAnchor: "center",
+    labelOffset: 40,
+  },
+  y: {
+    nice: true,
+    ticks: 5,
+    label: "Offensive rebounds",
+    labelAnchor: "center",
+    labelOffset: 50,
+  },
+  marks: [
+    label(data, {
+      x,
+      y,
+      label: "player_name",
+      padding: 10,
+      minCellSize: 2000,
+    }),
+    showBackground
+      ? Plot.dot(background, { x, y, fill: "grey", fillOpacity: 0.15, r: 8 })
+      : null,
+    Plot.dot(data, {
+      x,
+      y,
+      fill: (d) => teams.get(d.team_abbreviation).colors[0],
+      stroke: (d) => teams.get(d.team_abbreviation).colors[1],
+      r: 8,
+    }),
+    Plot.tip(
+      data,
+      Plot.pointer({
         x,
         y,
-        label: "player_name",
-        padding: 10,
-        minCellSize: 2000,
+        title: (d) =>
+          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
-      showBackground
-        ? Plot.dot(background, { x, y, fill: "grey", fillOpacity: 0.15, r: 8 })
-        : null,
-      Plot.dot(data, {
-        x,
-        y,
-        fill: (d) => teams.get(d.team_abbreviation).colors[0],
-        stroke: (d) => teams.get(d.team_abbreviation).colors[1],
-        r: 8,
-      }),
-      Plot.tip(
-        data,
-        Plot.pointer({
-          x,
-          y,
-          title: (d) =>
-            `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
-        }),
-      ),
-    ],
-  }),
-);
+    ),
+  ],
+});
+d3.select(graph)
+  .style("padding-bottom", "20px")
+  .select("svg")
+  .style("overflow", "visible")
+  .select('g[aria-label="x-axis label"]')
+  .style("padding-top", "15px")
+  .style("font-size", "16px");
+d3.select(graph)
+  .select('g[aria-label="y-axis label"]')
+  .style("font-size", "16px");
+display(graph);
 ```
 
 ```js
@@ -167,54 +178,65 @@ const fontOptions = {
   fill: "red",
   opacity: 0.2,
 };
-display(
-  Plot.plot({
-    width: 800,
-    height: 800,
-    title: "Rebounding percentages",
-    subtitle: `top ${percentile}% by minutes`,
-    marginRight: 40,
-    grid: true,
-    x: {
-      nice: true,
-      ticks: 5,
-      label: "defensive rebound %",
-      labelAnchor: "center",
-    },
-    y: {
-      nice: true,
-      ticks: 5,
-      label: "offensive rebound %",
-      labelAnchor: "center",
-    },
-    marks: [
-      label(data, {
+const graph = Plot.plot({
+  width: 800,
+  height: 800,
+  title: "Rebounding percentages",
+  subtitle: `top ${percentile}% by minutes`,
+  marginRight: 40,
+  grid: true,
+  x: {
+    nice: true,
+    ticks: 5,
+    label: "defensive rebound %",
+    labelAnchor: "center",
+    labelOffset: 40,
+  },
+  y: {
+    nice: true,
+    ticks: 5,
+    label: "offensive rebound %",
+    labelAnchor: "center",
+    labelOffset: 50,
+  },
+  marks: [
+    label(data, {
+      x,
+      y,
+      label: "player_name",
+      padding: 10,
+      minCellSize: 2000,
+    }),
+    showBackground
+      ? Plot.dot(background, { x, y, fill: "grey", fillOpacity: 0.15, r: 8 })
+      : null,
+    Plot.dot(data, {
+      x,
+      y,
+      fill: (d) => teams.get(d.team_abbreviation).colors[0],
+      stroke: (d) => teams.get(d.team_abbreviation).colors[1],
+      r: 8,
+    }),
+    Plot.tip(
+      data,
+      Plot.pointer({
         x,
         y,
-        label: "player_name",
-        padding: 10,
-        minCellSize: 2000,
+        title: (d) =>
+          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
-      showBackground
-        ? Plot.dot(background, { x, y, fill: "grey", fillOpacity: 0.15, r: 8 })
-        : null,
-      Plot.dot(data, {
-        x,
-        y,
-        fill: (d) => teams.get(d.team_abbreviation).colors[0],
-        stroke: (d) => teams.get(d.team_abbreviation).colors[1],
-        r: 8,
-      }),
-      Plot.tip(
-        data,
-        Plot.pointer({
-          x,
-          y,
-          title: (d) =>
-            `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
-        }),
-      ),
-    ],
-  }),
-);
+    ),
+  ],
+});
+d3.select(graph)
+  .style("padding-bottom", "20px")
+  .select("svg")
+  .style("overflow", "visible")
+  .select('g[aria-label="x-axis label"]')
+  .style("padding-top", "15px")
+  .style("font-size", "16px");
+d3.select(graph)
+  .select('g[aria-label="y-axis label"]')
+  .style("font-size", "16px");
+display(graph);
 ```
