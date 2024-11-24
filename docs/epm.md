@@ -18,7 +18,6 @@ import { sliceQuantile } from "./lib/util.js";
 const epmEnvelope = (await FileAttachment("data/epm.json").json())[1].data;
 const epm = epmEnvelope.stats;
 const epmUpdated = epmEnvelope.date;
-display(epm);
 // seasonEPM uses an updated format where seasonEPM[1].data.stats is an array
 // of arrays without keys; the keys are in seasonEPM[1].data.k
 const seasonEPMEnvelope = (
@@ -36,7 +35,6 @@ const seasonEPM = seasonEPMrows.map((row) => {
   });
   return obj;
 });
-display(seasonEPM);
 ```
 
 ```js
