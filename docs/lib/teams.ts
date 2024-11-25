@@ -9,6 +9,7 @@ export interface Team {
   // year they started playing
   years?: [string, string] | [string];
 }
+
 export const teams: Map<string, Team> = new Map([
   [
     "ATL",
@@ -30,6 +31,15 @@ export const teams: Map<string, Team> = new Map([
     "BKN",
     {
       abbreviation: "BKN",
+      name: "Brooklyn Nets",
+      colors: ["#000000", "#FFFFFF", "#707271"],
+    },
+  ],
+  // the bbref spelling of BKN
+  [
+    "BRK",
+    {
+      abbreviation: "BRK",
       name: "Brooklyn Nets",
       colors: ["#000000", "#FFFFFF", "#707271"],
     },
@@ -56,6 +66,16 @@ export const teams: Map<string, Team> = new Map([
     "CHA",
     {
       abbreviation: "CHA",
+      name: "Charlotte Hornets",
+      colors: ["#00788C", "#1D1160", "#A1A1A4", "#FFFFFF"],
+    },
+  ],
+  // A duplicate of CHA, because bbref uses CHA but nba.com uses CHO. I _think_
+  // bbref uses CHA for the Bobcats, but haven't verified that.
+  [
+    "CHO",
+    {
+      abbreviation: "CHO",
       name: "Charlotte Hornets",
       colors: ["#00788C", "#1D1160", "#A1A1A4", "#FFFFFF"],
     },
@@ -228,6 +248,15 @@ export const teams: Map<string, Team> = new Map([
         "#002B5C",
         "#FFFFFF",
       ],
+    },
+  ],
+  // the BBref spelling of PHX
+  [
+    "PHO",
+    {
+      abbreviation: "PHO",
+      name: "Phoenix Suns",
+      colors: ["#1D1160", "#E56020", "#000000", "#63727A", "#F9A01B"],
     },
   ],
   [
