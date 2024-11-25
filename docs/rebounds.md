@@ -148,7 +148,6 @@ d3.select(graph)
   .select("svg")
   .style("overflow", "visible")
   .select('g[aria-label="x-axis label"]')
-  .style("padding-top", "15px")
   .style("font-size", "16px");
 d3.select(graph)
   .select('g[aria-label="y-axis label"]')
