@@ -13,7 +13,7 @@ import { sliceQuantile } from "./lib/util.js";
 ```
 
 ```js
-const bbref = await FileAttachment("data/bbref_2025_advanced.json").json();
+const bbref = (await FileAttachment("data/bbref_2025.json").json()).advanced;
 display(bbref);
 const width = 640;
 const height = 400;
