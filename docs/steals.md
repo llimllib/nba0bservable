@@ -6,7 +6,7 @@ sql:
   players: ./data/playerstats.parquet
 ---
 
-# Assists to turnovers
+# Steals and blocks
 
 ```js
 import { teams } from "./lib/teams.js";
