@@ -28,6 +28,7 @@ const percentile = view(
     step: 5,
   }),
 );
+const showBackground = view(Inputs.toggle({ label: "Show rest of NBA" }));
 ```
 
 ```js
@@ -56,82 +57,84 @@ const selectedTeams = view(
 ```
 
 ```js
-console.log(selectedTeams);
-const teamFilter =
-  selectedTeams.length > 0
-    ? `AND team_abbreviation in (${selectedTeams.map((t) => `'${t.abbreviation}'`).join(",")});`
-    : "";
-console.log("teamFilter", teamFilter);
-```
-
-```js
-console.log(
-  `SELECT player_name, team_abbreviation, fg3m, fg3a, fg3a_per36, fg3_pct
+const activeTeams = selectedTeams.map((t) => t.abbreviation);
+const allPlayers = (
+  await sql([
+    `SELECT player_name, team_abbreviation, fg3m, fg3a, fg3a_per36, fg3_pct
        FROM players
-      WHERE year=${year}
-        ${teamFilter}`,
+      WHERE year=${year}`,
+  ])
+).toArray();
+console.log(activeTeams, "act");
+const threepoints = allPlayers.filter((p) =>
+  activeTeams.length > 0 ? activeTeams.includes(p.team_abbreviation) : true,
 );
-const threepoints = await sql([
-  `SELECT player_name, team_abbreviation, fg3m, fg3a, fg3a_per36, fg3_pct
-       FROM players
-      WHERE year=${year}
-        ${teamFilter}`,
-]);
 
 const x = "fg3a_per36";
 const y = "fg3_pct";
-const data = sliceQuantile(
-  threepoints.toArray(),
-  "fg3a",
-  (100 - percentile) / 100,
-);
-display(
-  Plot.plot({
-    width: 800,
-    height: 800,
-    title: "three-point shooting percentage by rate",
-    subtitle: `top ${percentile}% by 3pfga`,
-    marginRight: 40,
-    grid: true,
-    x: {
-      nice: true,
-      ticks: 5,
-      label: "3 point field goals attempted per 36 minutes",
-      labelAnchor: "center",
-    },
-    y: {
-      nice: true,
-      ticks: 5,
-      label: "3-point field goal %",
-      labelAnchor: "center",
-    },
-    marks: [
-      label(data, {
+const data = sliceQuantile(threepoints, "fg3a", (100 - percentile) / 100);
+const background = sliceQuantile(allPlayers, "fg3a", (100 - percentile) / 100);
+const graph = Plot.plot({
+  width: 800,
+  height: 800,
+  title: "three-point shooting percentage by rate",
+  subtitle: `top ${percentile}% by 3pfga`,
+  marginRight: 40,
+  grid: true,
+  x: {
+    nice: true,
+    ticks: 5,
+    label: "3 point field goals attempted per 36 minutes",
+    labelAnchor: "center",
+    labelOffset: 50,
+  },
+  y: {
+    nice: true,
+    ticks: 5,
+    label: "3-point field goal %",
+    labelAnchor: "center",
+    labelOffset: 50,
+  },
+  marks: [
+    label(data, {
+      x,
+      y,
+      label: "player_name",
+      padding: 10,
+      minCellSize: 2000,
+    }),
+    showBackground
+      ? Plot.dot(background, { x, y, fill: "grey", fillOpacity: 0.15, r: 8 })
+      : null,
+    Plot.dot(data, {
+      x,
+      y,
+      fill: (d) => teams.get(d.team_abbreviation).colors[0],
+      stroke: (d) => teams.get(d.team_abbreviation).colors[1],
+      r: 8,
+    }),
+    Plot.tip(
+      data,
+      Plot.pointer({
         x,
         y,
-        label: "player_name",
-        padding: 10,
-        minCellSize: 2000,
+        title: (d) =>
+          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
-      Plot.dot(data, {
-        x,
-        y,
-        fill: (d) => teams.get(d.team_abbreviation).colors[0],
-        stroke: (d) => teams.get(d.team_abbreviation).colors[1],
-        r: 8,
-      }),
-      Plot.tip(
-        data,
-        Plot.pointer({
-          x,
-          y,
-          title: (d) =>
-            `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
-        }),
-      ),
-    ],
-  }),
-);
+    ),
+  ],
+});
+
+d3.select(graph)
+  .select("svg")
+  .style("padding-bottom", "40px")
+  .style("overflow", "visible")
+  .select('g[aria-label="x-axis label"]')
+  .style("font-size", "14px");
+d3.select(graph)
+  .select('g[aria-label="y-axis label"]')
+  .style("font-size", "14px");
+display(graph);
 ```
 
 ```js
