@@ -334,3 +334,81 @@ d3.select(graph)
   .style("font-size", "14px");
 display(graph);
 ```
+
+```js
+const salaries = await FileAttachment("data/bbref_salaries.json").json();
+const salPlayers = [];
+for (const player of allPlayers.filter((p) => p.year_a == Number(year))) {
+  const match = salaries.find((s) => s.player === player.player_name);
+  const p = { ...player };
+  if (match) {
+    p.salaries = match;
+    salPlayers.push(p);
+  }
+  salPlayers.push(p);
+}
+display(salPlayers);
+const lowSal = salPlayers.filter(
+  (p) => p.salaries?.remain_gtd < 30_000_000 || !p.salaries,
+);
+const x = "ts_diff";
+const y = "reb_ast_diff";
+const data = sliceQuantile(lowSal, "min_a", (100 - percentile) / 100);
+const graph = Plot.plot({
+  grid: true,
+  width: 800,
+  height: 800,
+  title: "change in true shooting vs change in rebound % + assist %",
+  subtitle: `difference between ${year} and ${year - 1}. Top ${percentile}% by minutes, among players with <$30mil guaranteed contract`,
+  x: {
+    inset: 50,
+    nice: true,
+    ticks: 5,
+    label: "Difference in true shooting",
+    labelAnchor: "center",
+    labelOffset: 40,
+  },
+  y: {
+    nice: true,
+    ticks: 5,
+    label: "Difference in reb% + ast%",
+    labelAnchor: "center",
+    labelOffset: 48,
+  },
+  marks: [
+    label(data, {
+      x,
+      y,
+      label: "player_name",
+      padding: 10,
+      minCellSize: 2000,
+    }),
+    Plot.dot(data, {
+      x,
+      y,
+      fill: (d) => teams.get(d.team_abbreviation).colors[0],
+      stroke: (d) => teams.get(d.team_abbreviation).colors[1],
+      r: 8,
+    }),
+    Plot.tip(
+      data,
+      Plot.pointer({
+        x,
+        y,
+        title: (d) =>
+          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+      }),
+    ),
+  ],
+});
+d3.select(graph)
+  .select("svg")
+  .style("padding-bottom", "40px")
+  .style("overflow", "visible")
+  .select('g[aria-label="x-axis label"]')
+  .style("font-size", "14px");
+d3.select(graph)
+  .select('g[aria-label="y-axis label"]')
+  .style("font-size", "14px");
+display(graph);
+```
