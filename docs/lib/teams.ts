@@ -3,6 +3,8 @@ export interface Team {
   name: string;
   colors: string[];
   comment?: string;
+  // if present, represents the name that cleaning the glass uses for the team
+  ctgName?: string;
   // a pair representing the years the team were active, [start, end]
   // Inclusive, and use the end year of a season, so the 2014-15 season would
   // be "2015". If a team is currently active, a single year represents the
@@ -15,24 +17,27 @@ export const teams: Map<string, Team> = new Map([
     "ATL",
     {
       abbreviation: "ATL",
-      name: "Atlanta Hawks",
       colors: ["#C8102E", "#FDB927", "#000000", "#9EA2A2"],
+      ctgName: "Atlanta",
+      name: "Atlanta Hawks",
     },
   ],
   [
     "BOS",
     {
       abbreviation: "BOS",
-      name: "Boston Celtics",
       colors: ["#008348", "#BB9753", "#000000", "#A73832", "#FFFFFF"],
+      ctgName: "Boston",
+      name: "Boston Celtics",
     },
   ],
   [
     "BKN",
     {
       abbreviation: "BKN",
-      name: "Brooklyn Nets",
       colors: ["#000000", "#FFFFFF", "#707271"],
+      ctgName: "Brooklyn",
+      name: "Brooklyn Nets",
     },
   ],
   // the bbref spelling of BKN
@@ -40,8 +45,9 @@ export const teams: Map<string, Team> = new Map([
     "BRK",
     {
       abbreviation: "BRK",
-      name: "Brooklyn Nets",
       colors: ["#000000", "#FFFFFF", "#707271"],
+      ctgName: "Brooklyn",
+      name: "Brooklyn Nets",
     },
   ],
   // In the data on nba,
@@ -49,8 +55,8 @@ export const teams: Map<string, Team> = new Map([
     "CHAB",
     {
       abbreviation: "CHA",
-      name: "Charlotte Bobcats",
       colors: ["#f26532", "#2f598c", "#959da0"],
+      name: "Charlotte Bobcats",
       years: ["2005", "2014"],
     },
   ],
@@ -60,14 +66,16 @@ export const teams: Map<string, Team> = new Map([
       abbreviation: "CHI",
       name: "Chicago Bulls",
       colors: ["#CE1141", "#000000"],
+      ctgName: "Chicago",
     },
   ],
   [
     "CHA",
     {
       abbreviation: "CHA",
-      name: "Charlotte Hornets",
       colors: ["#00788C", "#1D1160", "#A1A1A4", "#FFFFFF"],
+      ctgName: "Charlotte",
+      name: "Charlotte Hornets",
     },
   ],
   // A duplicate of CHA, because bbref uses CHA but nba.com uses CHO. I _think_
@@ -76,129 +84,143 @@ export const teams: Map<string, Team> = new Map([
     "CHO",
     {
       abbreviation: "CHO",
-      name: "Charlotte Hornets",
       colors: ["#00788C", "#1D1160", "#A1A1A4", "#FFFFFF"],
+      ctgName: "Charlotte",
+      name: "Charlotte Hornets",
     },
   ],
   [
     "CLE",
     {
       abbreviation: "CLE",
-      name: "Cleveland Cavaliers",
       colors: ["#6F263D", "#FFB81C", "#041E42", "#000000"],
+      ctgName: "Cleveland",
+      name: "Cleveland Cavaliers",
     },
   ],
   [
     "DAL",
     {
       abbreviation: "DAL",
-      name: "Dallas Mavericks",
       colors: ["#0064B1", "#00285E", "#BBC4CA", "#000000"],
+      ctgName: "Dallas",
+      name: "Dallas Mavericks",
     },
   ],
   [
     "DEN",
     {
       abbreviation: "DEN",
-      name: "Denver Nuggets",
       colors: ["#0E2240", "#FEC524", "#8B2131", "#244289"],
+      ctgName: "Denver",
+      name: "Denver Nuggets",
     },
   ],
   [
     "DET",
     {
       abbreviation: "DET",
-      name: "Detroit Pistons",
       colors: ["#1D428A", "#C8102E", "#BEC0C2", "#000000", "#FFFFFF"],
+      ctgName: "Detroit",
+      name: "Detroit Pistons",
     },
   ],
   [
     "GSW",
     {
       abbreviation: "GSW",
-      name: "Golden State Warriors",
       colors: ["#1D428A", "#FDB927"],
+      ctgName: "Golden State",
+      name: "Golden State Warriors",
     },
   ],
   [
     "HOU",
     {
       abbreviation: "HOU",
-      name: "Houston Rockets",
       colors: ["#CE1141", "#9EA2A2", "#000000", "#373A36", "#FFFFFF"],
+      ctgName: "Houston",
+      name: "Houston Rockets",
     },
   ],
   [
     "IND",
     {
       abbreviation: "IND",
-      name: "Indiana Pacers",
       colors: ["#BEC0C2", "#FDBB30", "#002D62"],
+      ctgName: "Indiana",
+      name: "Indiana Pacers",
     },
   ],
   [
     "LAC",
     {
       abbreviation: "LAC",
-      name: "Los Angeles Clippers",
+      ctgName: "LA Clippers",
       colors: ["#C8102E", "#1D428A", "#000000", "#BEC0C2", "#FFFFFF"],
+      name: "Los Angeles Clippers",
     },
   ],
   [
     "LAL",
     {
       abbreviation: "LAL",
-      name: "Los Angeles Lakers",
+      ctgName: "LA Lakers",
       colors: ["#552583", "#FDB927", "#000000"],
+      name: "Los Angeles Lakers",
     },
   ],
   [
     "MEM",
     {
       abbreviation: "MEM",
-      name: "Memphis Grizzlies",
+      ctgName: "Memphis",
       colors: ["#5D76A9", "#12173F", "#707271", "#F5B112"],
+      name: "Memphis Grizzlies",
     },
   ],
   [
     "MIA",
     {
       abbreviation: "MIA",
-      name: "Miami Heat",
+      ctgName: "Miami",
       colors: ["#000000", "#98002E", "#F9A01B"],
+      name: "Miami Heat",
     },
   ],
   [
     "MIL",
     {
       abbreviation: "MIL",
-      name: "Milwaukee Bucks",
+      ctgName: "Milwaukee",
       // moved secondary to tertiary bc it matches the bg
       colors: ["#00471B", "#0077C0", "#EEE1C6", "#000000", "#FFFFFF"],
+      name: "Milwaukee Bucks",
     },
   ],
   [
     "MIN",
     {
       abbreviation: "MIN",
-      name: "Minnesota Timberwolves",
+      ctgName: "Minnesota",
       colors: ["#0C2340", "#78BE20", "#236192", "#9EA2A2", "#FFFFFF"],
+      name: "Minnesota Timberwolves",
     },
   ],
   [
     "NJN",
     {
       abbreviation: "NJN",
-      name: "New Jersey Nets",
       colors: ["#000000", "#FFFFFF", "#707271"],
+      name: "New Jersey Nets",
     },
   ],
   [
     "NOH",
     {
       abbreviation: "NOH",
-      name: "New Orleans Hornets",
       colors: ["#00788C", "#1D1160", "#A1A1A4", "#FFFFFF"],
+      name: "New Orleans Hornets",
       years: ["2003", "2014"],
     },
   ],
@@ -206,8 +228,9 @@ export const teams: Map<string, Team> = new Map([
     "NOP",
     {
       abbreviation: "NOP",
-      name: "New Orleans Pelicans",
+      ctgName: "New Orleans",
       colors: ["#0A2240", "#8C734B", "#CE0E2D"],
+      name: "New Orleans Pelicans",
       years: ["2014"],
     },
   ],
@@ -215,31 +238,33 @@ export const teams: Map<string, Team> = new Map([
     "NYK",
     {
       abbreviation: "NYK",
-      name: "New York Knicks",
+      ctgName: "New York",
       colors: ["#006BB6", "#F58426", "#BEC0C2", "#000000", "#FFFFFF"],
+      name: "New York Knicks",
     },
   ],
   [
     "OKC",
     {
       abbreviation: "OKC",
-      name: "Oklahoma City Thunder",
+      ctgName: "Oklahoma City",
       colors: ["#007AC1", "#EF3B24", "#FDBB30", "#002D62"],
+      name: "Oklahoma City Thunder",
     },
   ],
   [
     "ORL",
     {
       abbreviation: "ORL",
-      name: "Orlando Magic",
+      ctgName: "Orlando",
       colors: ["#0077C0", "#000000", "#C4CED4"],
+      name: "Orlando Magic",
     },
   ],
   [
     "PHI",
     {
       abbreviation: "PHI",
-      name: "Philadelphia 76ers",
       colors: [
         "#006BB6",
         "#C4CED4",
@@ -248,6 +273,8 @@ export const teams: Map<string, Team> = new Map([
         "#002B5C",
         "#FFFFFF",
       ],
+      ctgName: "Philadelphia",
+      name: "Philadelphia 76ers",
     },
   ],
   // the BBref spelling of PHX
@@ -255,48 +282,54 @@ export const teams: Map<string, Team> = new Map([
     "PHO",
     {
       abbreviation: "PHO",
-      name: "Phoenix Suns",
+      ctgName: "Phoenix",
       colors: ["#1D1160", "#E56020", "#000000", "#63727A", "#F9A01B"],
+      name: "Phoenix Suns",
     },
   ],
   [
     "PHX",
     {
       abbreviation: "PHX",
-      name: "Phoenix Suns",
+      ctgName: "Phoenix",
       colors: ["#1D1160", "#E56020", "#000000", "#63727A", "#F9A01B"],
+      name: "Phoenix Suns",
     },
   ],
   [
     "POR",
     {
       abbreviation: "POR",
-      name: "Portland Trailblazers",
+      ctgName: "Portland",
       colors: ["#E03A3E", "#FFFFFF", "#000000"],
+      name: "Portland Trailblazers",
     },
   ],
   [
     "SAC",
     {
       abbreviation: "SAC",
-      name: "Sacramento Kings",
+      ctgName: "Sacramento",
       colors: ["#5A2B81", "#63727A", "#000000"],
+      name: "Sacramento Kings",
     },
   ],
   [
     "SAS",
     {
       abbreviation: "SAS",
-      name: "San Antonio Spurs",
+      ctgName: "San Antonio",
       colors: ["#000000", "#C4CED4"],
+      name: "San Antonio Spurs",
     },
   ],
   [
     "TOR",
     {
       abbreviation: "TOR",
-      name: "Toronto Raptors",
+      ctgName: "Toronto",
       colors: ["#CE1141", "#000000", "#393A96", "#B4975A", "#FFFFFF"],
+      name: "Toronto Raptors",
     },
   ],
   [
@@ -313,16 +346,18 @@ export const teams: Map<string, Team> = new Map([
     "UTA",
     {
       abbreviation: "UTA",
-      name: "Utah Jazz",
+      ctgName: "Utah",
       colors: ["#F9A01B", "#00471B", "#002B5C"],
+      name: "Utah Jazz",
     },
   ],
   [
     "WAS",
     {
       abbreviation: "WAS",
-      name: "Washington Wizards",
+      ctgName: "Washington",
       colors: ["#002B5C", "#E31837", "#C4CED4", "#FFFFFF"],
+      name: "Washington Wizards",
     },
   ],
 ]);
