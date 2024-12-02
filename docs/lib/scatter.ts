@@ -1,9 +1,9 @@
-import * as Plot from "@observablehq/plot";
-import { label } from "./labels.js";
-import { teams } from "./teams.js";
+import * as Plot from "@observablehq/plot"
+import { label } from "./labels.js"
+import { teams } from "./teams.js"
 
 interface Player {
-  team_abbreviation: string;
+  team_abbreviation: string
 }
 
 export function nbascatter(
@@ -39,8 +39,8 @@ export function nbascatter(
       Plot.dot(data, {
         x,
         y,
-        fill: (d) => teams.get(d.team_abbreviation)?.colors[0],
-        stroke: (d) => teams.get(d.team_abbreviation)?.colors[1],
+        fill: d => teams.get(d.team_abbreviation)?.colors[0],
+        stroke: d => teams.get(d.team_abbreviation)?.colors[1],
         r: 8,
       }),
       Plot.tip(
@@ -48,9 +48,9 @@ export function nbascatter(
         Plot.pointer({
           x,
           y,
-          title: (d) => `${d.player_name}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+          title: d => `${d.player_name}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
         }),
       ),
     ],
-  });
+  })
 }

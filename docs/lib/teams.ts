@@ -1,15 +1,15 @@
 export interface Team {
-  abbreviation: string;
-  name: string;
-  colors: string[];
-  comment?: string;
+  abbreviation: string
+  name: string
+  colors: string[]
+  comment?: string
   // if present, represents the name that cleaning the glass uses for the team
-  ctgName?: string;
+  ctgName?: string
   // a pair representing the years the team were active, [start, end]
   // Inclusive, and use the end year of a season, so the 2014-15 season would
   // be "2015". If a team is currently active, a single year represents the
   // year they started playing
-  years?: [string, string] | [string];
+  years?: [string, string] | [string]
 }
 
 export const teams: Map<string, Team> = new Map([
@@ -360,4 +360,4 @@ export const teams: Map<string, Team> = new Map([
       name: "Washington Wizards",
     },
   ],
-]);
+])
