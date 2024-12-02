@@ -9,24 +9,24 @@ sql:
 # Most Improved Player
 
 ```js
-import { sql } from "npm:@observablehq/duckdb";
+import { sql } from "npm:@observablehq/duckdb"
 
-import { teams } from "./lib/teams.js";
-import { label } from "./lib/labels.js";
-import { sliceQuantile } from "./lib/util.js";
+import { teams } from "./lib/teams.js"
+import { label } from "./lib/labels.js"
+import { sliceQuantile } from "./lib/util.js"
 ```
 
 ```js
 const year = view(
   Inputs.range([2015, 2025], { value: "2025", label: "year", step: 1 }),
-);
+)
 const percentile = view(
   Inputs.range([5, 100], {
     value: "15",
     label: "top x% in min",
     step: 5,
   }),
-);
+)
 ```
 
 ```js
@@ -34,11 +34,11 @@ const allPlayers = (
   await sql([
     `SELECT p.player_id, p.player_name, p.team_abbreviation,
             -- the season we're looking at
-            p.fga fga_a, p.ts_pct ts_pct_a, p.usg_pct ust_pct_a,
+            p.fga fga_a, p.ts_pct ts_pct_a, p.usg_pct usg_pct_a,
             p.pts_per36 pts_per36_a, p.ast_per36 ast_per36_a,
             p.min min_a, p.year year_a,
             -- the previous season
-            q.fga fga_b, q.ts_pct ts_pct_b, q.usg_pct ust_pct_b,
+            q.fga fga_b, q.ts_pct ts_pct_b, q.usg_pct usg_pct_b,
             q.pts_per36 pts_per36_b, q.ast_per36 ast_per36_b,
             q.min min_b, q.year year_b,
             -- differences
@@ -56,14 +56,14 @@ const allPlayers = (
         AND p.year=${year}
         AND q.year=${year - 1};`,
   ])
-).toArray();
+).toArray()
 // display(allPlayers);
 ```
 
 ```js
-const x = "ast_diff";
-const y = "pt_diff";
-const data = sliceQuantile(allPlayers, "min_a", (100 - percentile) / 100);
+const x = "ast_diff"
+const y = "pt_diff"
+const data = sliceQuantile(allPlayers, "min_a", (100 - percentile) / 100)
 const graph = Plot.plot({
   width: 800,
   height: 800,
@@ -94,8 +94,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: (d) => teams.get(d.team_abbreviation).colors[0],
-      stroke: (d) => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbreviation).colors[0],
+      stroke: d => teams.get(d.team_abbreviation).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -103,19 +103,19 @@ const graph = Plot.plot({
       Plot.pointer({
         x,
         y,
-        title: (d) =>
+        title: d =>
           `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],
-});
-display(graph);
+})
+display(graph)
 ```
 
 ```js
-const x = "reb_diff";
-const y = "pt_diff";
-const data = sliceQuantile(allPlayers, "min_a", (100 - percentile) / 100);
+const x = "reb_diff"
+const y = "pt_diff"
+const data = sliceQuantile(allPlayers, "min_a", (100 - percentile) / 100)
 const graph = Plot.plot({
   width: 800,
   height: 800,
@@ -146,8 +146,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: (d) => teams.get(d.team_abbreviation).colors[0],
-      stroke: (d) => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbreviation).colors[0],
+      stroke: d => teams.get(d.team_abbreviation).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -155,19 +155,19 @@ const graph = Plot.plot({
       Plot.pointer({
         x,
         y,
-        title: (d) =>
+        title: d =>
           `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],
-});
-display(graph);
+})
+display(graph)
 ```
 
 ```js
-const x = "usg_diff";
-const y = "ts_diff";
-const data = sliceQuantile(allPlayers, "min_a", (100 - percentile) / 100);
+const x = "usg_diff"
+const y = "ts_diff"
+const data = sliceQuantile(allPlayers, "min_a", (100 - percentile) / 100)
 const graph = Plot.plot({
   width: 800,
   height: 800,
@@ -198,8 +198,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: (d) => teams.get(d.team_abbreviation).colors[0],
-      stroke: (d) => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbreviation).colors[0],
+      stroke: d => teams.get(d.team_abbreviation).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -207,19 +207,19 @@ const graph = Plot.plot({
       Plot.pointer({
         x,
         y,
-        title: (d) =>
+        title: d =>
           `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],
-});
-display(graph);
+})
+display(graph)
 ```
 
 ```js
-const x = "usg_diff";
-const y = "sum_diff";
-const data = sliceQuantile(allPlayers, "min_a", (100 - percentile) / 100);
+const x = "usg_diff"
+const y = "sum_diff"
+const data = sliceQuantile(allPlayers, "min_a", (100 - percentile) / 100)
 const graph = Plot.plot({
   width: 800,
   height: 800,
@@ -250,8 +250,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: (d) => teams.get(d.team_abbreviation).colors[0],
-      stroke: (d) => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbreviation).colors[0],
+      stroke: d => teams.get(d.team_abbreviation).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -259,23 +259,23 @@ const graph = Plot.plot({
       Plot.pointer({
         x,
         y,
-        title: (d) =>
+        title: d =>
           `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],
-});
-display(graph);
+})
+display(graph)
 ```
 
 ```js
-const x = "ts_diff";
-const y = "reb_ast_diff";
+const x = "ts_diff"
+const y = "reb_ast_diff"
 const data = sliceQuantile(
   allPlayers,
   "min_a",
   (100 - percentile) / 100,
-).filter((p) => p.ts_diff > -0.05 && p.reb_ast_diff > -0.05);
+).filter(p => p.ts_diff > -0.05 && p.reb_ast_diff > -0.05)
 const graph = Plot.plot({
   grid: true,
   width: 800,
@@ -308,8 +308,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: (d) => teams.get(d.team_abbreviation).colors[0],
-      stroke: (d) => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbreviation).colors[0],
+      stroke: d => teams.get(d.team_abbreviation).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -317,43 +317,43 @@ const graph = Plot.plot({
       Plot.pointer({
         x,
         y,
-        title: (d) =>
+        title: d =>
           `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],
-});
+})
 d3.select(graph)
   .select("svg")
   .style("padding-bottom", "40px")
   .style("overflow", "visible")
   .select('g[aria-label="x-axis label"]')
-  .style("font-size", "14px");
+  .style("font-size", "14px")
 d3.select(graph)
   .select('g[aria-label="y-axis label"]')
-  .style("font-size", "14px");
-display(graph);
+  .style("font-size", "14px")
+display(graph)
 ```
 
 ```js
-const salaries = await FileAttachment("data/bbref_salaries.json").json();
-const salPlayers = [];
-for (const player of allPlayers.filter((p) => p.year_a == Number(year))) {
-  const match = salaries.find((s) => s.player === player.player_name);
-  const p = { ...player };
+const salaries = await FileAttachment("data/bbref_salaries.json").json()
+const salPlayers = []
+for (const player of allPlayers.filter(p => p.year_a == Number(year))) {
+  const match = salaries.find(s => s.player === player.player_name)
+  const p = { ...player }
   if (match) {
-    p.salaries = match;
-    salPlayers.push(p);
+    p.salaries = match
+    salPlayers.push(p)
   }
-  salPlayers.push(p);
+  salPlayers.push(p)
 }
-display(salPlayers);
+display(salPlayers)
 const lowSal = salPlayers.filter(
-  (p) => p.salaries?.remain_gtd < 30_000_000 || !p.salaries,
-);
-const x = "ts_diff";
-const y = "reb_ast_diff";
-const data = sliceQuantile(lowSal, "min_a", (100 - percentile) / 100);
+  p => p.salaries?.remain_gtd < 30_000_000 || !p.salaries,
+)
+const x = "ts_diff"
+const y = "reb_ast_diff"
+const data = sliceQuantile(lowSal, "min_a", (100 - percentile) / 100)
 const graph = Plot.plot({
   grid: true,
   width: 800,
@@ -386,8 +386,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: (d) => teams.get(d.team_abbreviation).colors[0],
-      stroke: (d) => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbreviation).colors[0],
+      stroke: d => teams.get(d.team_abbreviation).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -395,20 +395,20 @@ const graph = Plot.plot({
       Plot.pointer({
         x,
         y,
-        title: (d) =>
+        title: d =>
           `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],
-});
+})
 d3.select(graph)
   .select("svg")
   .style("padding-bottom", "40px")
   .style("overflow", "visible")
   .select('g[aria-label="x-axis label"]')
-  .style("font-size", "14px");
+  .style("font-size", "14px")
 d3.select(graph)
   .select('g[aria-label="y-axis label"]')
-  .style("font-size", "14px");
-display(graph);
+  .style("font-size", "14px")
+display(graph)
 ```

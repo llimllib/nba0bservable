@@ -54,7 +54,7 @@ const selectedTeams = view(
 ```
 
 ```sql id=assists
-SELECT player_name, team_abbreviation, ast, tov, min
+SELECT player_name, team_abbreviation, ast, tov, tov_per100possessions tov_per100, min, usg_pct
 FROM players
 WHERE year=${year};
 ```
@@ -64,7 +64,6 @@ const x = "tov"
 const y = "ast"
 const selectedAbbrev = selectedTeams.map(t => t.abbreviation)
 const active = sliceQuantile(assists.toArray(), "min", (100 - percentile) / 100)
-display(active)
 const data = active.filter(d =>
   selectedAbbrev.length > 0
     ? selectedAbbrev.includes(d.team_abbreviation)
@@ -80,10 +79,11 @@ const fontOptions = {
   fill: "red",
   opacity: 0.4,
 }
+const size = 800
 display(
   Plot.plot({
-    width: 800,
-    height: 800,
+    width: size,
+    height: size,
     title: title,
     subtitle: `top ${percentile}% in minutes played`,
     marginRight: 40,
@@ -132,6 +132,72 @@ display(
         ],
         { x: "x", y: "y", strokeOpacity: 0.3 },
       ),
+      showBackground
+        ? Plot.dot(active, { x, y, fill: "grey", fillOpacity: 0.15, r: 8 })
+        : null,
+      label(data, {
+        x,
+        y,
+        label: "player_name",
+        padding: 10,
+        minCellSize: 2000,
+      }),
+      Plot.dot(data, {
+        x,
+        y,
+        fill: d => teams.get(d.team_abbreviation).colors[0],
+        stroke: d => teams.get(d.team_abbreviation).colors[1],
+        r: 8,
+      }),
+      Plot.tip(
+        data,
+        Plot.pointer({
+          x,
+          y,
+          title: d => `${d.player_name}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+        }),
+      ),
+    ],
+  }),
+)
+```
+
+```js
+const x = "usg_pct"
+const y = "tov_per100"
+const selectedAbbrev = selectedTeams.map(t => t.abbreviation)
+const active = sliceQuantile(assists.toArray(), "min", (100 - percentile) / 100)
+const data = active.filter(d =>
+  selectedAbbrev.length > 0
+    ? selectedAbbrev.includes(d.team_abbreviation)
+    : true,
+)
+const maxX = d3.max(active, d => d[x])
+const maxY = d3.max(active, d => d[y])
+const size = 500
+display(
+  Plot.plot({
+    width: size,
+    height: size,
+    title: "Turnovers by usage rate",
+    subtitle: `top ${percentile}% in minutes played`,
+    marginRight: 40,
+    grid: true,
+    x: {
+      domain: [0, maxX],
+      nice: true,
+      ticks: 5,
+      zero: true,
+      label: "usage %",
+    },
+    y: {
+      domain: [0, maxY],
+      nice: true,
+      ticks: 5,
+      zero: true,
+      label: "turnovers per 100 possessions",
+    },
+    marks: [
       showBackground
         ? Plot.dot(active, { x, y, fill: "grey", fillOpacity: 0.15, r: 8 })
         : null,
