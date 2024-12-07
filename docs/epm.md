@@ -7,40 +7,41 @@ toc: false
 # EPM data
 
 ```js
-import { epmDiamond } from "./lib/epmdiamond.js";
-import { teams } from "./lib/teams.js";
-import { label } from "./lib/labels.js";
-import { sliceQuantile } from "./lib/util.js";
+import { epmDiamond } from "./lib/epmdiamond.js"
+import { teams } from "./lib/teams.js"
+import { label } from "./lib/labels.js"
+import { sliceQuantile } from "./lib/util.js"
 ```
 
 ```js
 // epm comes through as objects with keys
-const epmEnvelope = (await FileAttachment("data/epm.json").json())[1].data;
-const epm = epmEnvelope.stats;
-const epmUpdated = epmEnvelope.date;
+const epmEnvelope = (await FileAttachment("data/epm.json").json())[1].data
+const epm = epmEnvelope.stats
+const epmUpdated = epmEnvelope.date
 // seasonEPM uses an updated format where seasonEPM[1].data.stats is an array
 // of arrays without keys; the keys are in seasonEPM[1].data.k
 const seasonEPMEnvelope = (
   await FileAttachment("./data/epm_season.json").json()
-)[1].data;
-const seasonEPMrows = seasonEPMEnvelope.stats;
-const seasonEPMKeys = seasonEPMEnvelope.k;
+)[1].data
+const seasonEPMrows = seasonEPMEnvelope.stats
+const seasonEPMKeys = seasonEPMEnvelope.k
 const keys = Object.entries(seasonEPMKeys)
   .sort((x, y) => x[1] > y[1])
-  .map((x) => x[0]);
-const seasonEPM = seasonEPMrows.map((row) => {
-  const obj = {};
+  .map(x => x[0])
+const seasonEPM = seasonEPMrows.map(row => {
+  const obj = {}
   row.forEach((value, index) => {
-    obj[keys[index]] = value;
-  });
-  return obj;
-});
+    obj[keys[index]] = value
+  })
+  return obj
+})
+display(seasonEPM)
 ```
 
 ```js
 const year = view(
   Inputs.range([2025, 2025], { value: "2025", label: "year", step: 1 }),
-);
+)
 // console.log("year", (await year.next()).value);
 const percentile = view(
   Inputs.range([5, 100], {
@@ -48,8 +49,8 @@ const percentile = view(
     label: "top x% by predicted minutes played",
     step: 5,
   }),
-);
-const showBackground = view(Inputs.toggle({ label: "Show rest of NBA" }));
+)
+const showBackground = view(Inputs.toggle({ label: "Show rest of NBA" }))
 ```
 
 ```js
@@ -62,23 +63,23 @@ const showBackground = view(Inputs.toggle({ label: "Show rest of NBA" }));
 const teamArr = teams
   .values()
   .toArray()
-  .filter((t) => t.abbreviation != "TOT")
+  .filter(t => t.abbreviation != "TOT")
   .filter(
-    (t) =>
+    t =>
       !t.years || (year >= t.years[0] && (!t.years[1] || year <= t.years[1])),
-  );
+  )
 const selectedTeams = view(
   Inputs.select(teamArr, {
     value: teamArr[0].name,
     label: "team filter",
-    format: (t) => t.name,
+    format: t => t.name,
     multiple: true,
   }),
-);
+)
 ```
 
 ```js
-const ts = selectedTeams.map((d) => d.abbreviation);
+const ts = selectedTeams.map(d => d.abbreviation)
 display(
   epmDiamond(epm, {
     by: "p_mp_48",
@@ -88,11 +89,11 @@ display(
     size: 600,
     title: "Prescriptive EPM",
   }),
-);
+)
 ```
 
 ```js
-const ts = selectedTeams.map((d) => d.abbreviation);
+const ts = selectedTeams.map(d => d.abbreviation)
 display(
   epmDiamond(seasonEPM, {
     by: "mp",
@@ -102,5 +103,5 @@ display(
     size: 600,
     title: "Season EPM",
   }),
-);
+)
 ```

@@ -115,3 +115,93 @@ const graph = Plot.plot({
 })
 display(graph)
 ```
+
+```js
+const x = "PACE"
+const y = "OFF_RATING"
+const facet = {
+  2010: [0, 0],
+  2011: [0, 1],
+  2012: [0, 2],
+  2013: [1, 0],
+  2014: [1, 1],
+  2015: [1, 2],
+  2016: [2, 0],
+  2017: [2, 1],
+  2018: [2, 2],
+  2019: [3, 0],
+  2020: [3, 1],
+  2021: [3, 2],
+  2022: [4, 0],
+  2023: [4, 1],
+  2024: [4, 2],
+  2025: [5, 1],
+}
+const fx = d => facet[d.year][1]
+const fy = d => facet[d.year][0]
+const graph = Plot.plot({
+  grid: true,
+  title: "Pace vs offensive efficiency",
+  subtitle: "2010-202",
+  y: {
+    label: "Offensive Efficiency",
+    labelAnchor: "center",
+    labelOffset: 40,
+    ticks: 3,
+    tickSize: 0,
+  },
+  x: {
+    label: "Pace",
+    labelAnchor: "center",
+    ticks: 5,
+    tickSize: 0,
+  },
+  fx: {
+    label: null,
+    tickLabel: () => "",
+  },
+  fy: {
+    label: null,
+    tickLabel: () => "",
+  },
+  marks: [
+    Plot.linearRegressionY(data, {
+      x,
+      y,
+      stroke: "blue",
+      fx,
+      fy,
+    }),
+    Plot.dot(data, {
+      x,
+      y,
+      fill: "grey",
+      fillOpacity: 0.3,
+      fx,
+      fy,
+      title: d =>
+        `${d.year} ${d.TEAM_NAME}\npace: ${d.PACE}\noff. eff: ${d.OFF_RATING}`,
+    }),
+    Plot.text(data, {
+      text: d => d.year,
+      fx,
+      fy,
+      frameAnchor: "top-left",
+      dx: 6,
+      dy: 6,
+    }),
+    Plot.tip(
+      data,
+      Plot.pointer({
+        x,
+        y,
+        fx,
+        fy,
+        title: d => `${d.year} ${d.TEAM_NAME}`,
+      }),
+    ),
+    Plot.frame(),
+  ],
+})
+display(graph)
+```

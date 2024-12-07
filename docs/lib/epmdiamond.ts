@@ -1,3 +1,4 @@
+import type { Selection } from "d3-selection"
 import type { Team } from "./teams.js"
 
 import { extent } from "d3-array"
@@ -17,6 +18,35 @@ function getTeam(abbrev: string): Team {
   return team
 }
 
+function handleTooltip(
+  tooltip: Selection<any, unknown, any, undefined>,
+  plot: any,
+) {
+  select(plot)
+    .selectAll("circle")
+    .on("mousemove", (evt, d) => {
+      // The <title> element and our tooltip will fight to display over one
+      // another, so remove the <title> element and save its contents to the __title
+      // attribute on the image
+      const t = select(evt.target)
+      if (!t.attr("__title")) {
+        const title = t.select("title")
+        t.attr("__title", title.html())
+        title.remove()
+      }
+      const text = t.attr("__title")
+      tooltip
+        .style("left", evt.pageX + 8 + "px")
+        .style("top", evt.pageY + 8 + "px")
+        .style("display", "block")
+        .html(text.replaceAll("\n", "<br>"))
+    })
+    .on("mouseout", evt => {
+      tooltip.style("display", "none")
+    })
+  return plot
+}
+
 export function epmDiamond(
   epm: { team_alias: string; p_mp_48: number }[],
   options: {
@@ -30,7 +60,6 @@ export function epmDiamond(
 ) {
   options.size ||= 600
   const { by, selectedTeams, percentile, showBackground, size, title } = options
-  console.log(options, selectedTeams)
 
   const x = "off"
   const y = "def"
@@ -46,8 +75,6 @@ export function epmDiamond(
 
   const width = options.size ?? 800
   const height = options.size ?? 800
-
-  console.log(data, "data", epm)
 
   const epmplot = Plot.plot({
     width: width,
@@ -83,6 +110,8 @@ export function epmDiamond(
         y,
         fill: d => getTeam(d.team_alias).colors[0],
         stroke: d => getTeam(d.team_alias).colors[1],
+        title: d =>
+          `${d.player_name}\n${d.team_alias}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
         r: 8,
       }),
     ],
@@ -91,7 +120,7 @@ export function epmDiamond(
   select(epmplot)
     .attr("transform", "rotate(-45)")
     .style("padding-left", `${size * 0.15}px`)
-  // .style("padding-top", `${size * 0.2}px`);
+    .style("overflow", "visible")
 
   const container = create("figure")
     .style("margin-bottom", "80px")
@@ -142,7 +171,6 @@ export function epmDiamond(
     [100, 0.8],
   ]
   gradStops.forEach(([offset, pct]) => {
-    console.log(offset, pct, grad(pct))
     return gradient
       .append("stop")
       .attr("offset", `${offset}%`)
@@ -160,13 +188,26 @@ export function epmDiamond(
     .attr("fill", "url(#myGradient)")
     .attr("fill-opacity", 0.4)
 
-  // TODO: add title back
-  // title: "Predictive EPM",
-  // subtitle: `Data by dunksandthrees.com. top ${percentile}% by predicted minutes played`,
-  // select(epmplot)
-  //   .style("transform", "rotate(-45deg)")
-  //   .style("padding-top", `${size * 0.2}px`);
-  // .style("padding", "140px");
+  if (!document.querySelector(".toolTip")) {
+    console.log("appending tooltip")
+    const tooltip = select("body")
+      .append("div")
+      .attr("class", "toolTip")
+      .style("position", "absolute")
+      .style("display", "none")
+      .style("min-width", "30px")
+      .style("max-width", "240px")
+      .style("border-radius", "4px")
+      .style("height", "auto")
+      .style("background", "rgba(250,250,250, 0.9)")
+      .style("border", "1px solid #DDD")
+      .style("padding", "4px 8px")
+      .style("font-size", ".85rem")
+      .style("text-align", "left")
+      .style("z-index", "1000")
+    handleTooltip(tooltip, epmplot)
+  }
+  handleTooltip(select(".toolTip"), epmplot)
 
   return container.node()
 }
