@@ -119,6 +119,50 @@ display(graph)
 ```js
 const x = "PACE"
 const y = "OFF_RATING"
+const graph = Plot.plot({
+  grid: true,
+  title: "Pace vs offensive efficiency",
+  y: {
+    label: "Offensive Efficiency",
+    labelAnchor: "center",
+    labelOffset: 40,
+    ticks: 3,
+    tickSize: 0,
+  },
+  x: {
+    label: "Pace",
+    labelAnchor: "center",
+    ticks: 5,
+    tickSize: 0,
+  },
+  marks: [
+    Plot.image(
+      data.filter(d => d.year == "2025"),
+      {
+        x,
+        y,
+        width: 24,
+        height: 24,
+        src: d =>
+          `https://llimllib.github.io/nbastats/logos/${d.TEAM_NAME}.svg`,
+      },
+    ),
+    Plot.tip(
+      data.filter(d => d.year == "2025"),
+      Plot.pointer({
+        x,
+        y,
+        title: d => `${d.year} ${d.TEAM_NAME}`,
+      }),
+    ),
+  ],
+})
+display(graph)
+```
+
+```js
+const x = "PACE"
+const y = "OFF_RATING"
 const facet = {
   2010: [0, 0],
   2011: [0, 1],
