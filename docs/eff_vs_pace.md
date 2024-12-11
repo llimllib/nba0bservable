@@ -249,3 +249,84 @@ const graph = Plot.plot({
 })
 display(graph)
 ```
+
+```js echo
+display(
+  d3.least(
+    data.filter(d => d.year === "2024"),
+    d => d.DEF_RATING,
+  ),
+)
+const y = "year"
+const x = "DEF_RATING"
+const graph = Plot.plot({
+  title: "Best and worst defenses",
+  subtitle: "2009-10 through 2024-25; lower defensive rating is better",
+  height: 640,
+  marginLeft: 50,
+  y: {
+    label: null,
+    labelAnchor: "center",
+    labelOffset: 48,
+    ticks: 3,
+    tickSize: 0,
+    type: "point",
+  },
+  x: {
+    inset: 20,
+    label: "Defensive rating",
+    labelAnchor: "center",
+    labelArrow: "right",
+    labelOffset: 30,
+    reverse: true,
+    ticks: 5,
+    tickSize: 0,
+  },
+  marks: [
+    Plot.dot(data, { x, y, fill: "grey", fillOpacity: 0.4 }),
+    // make the best team each year have an image
+    Plot.image(
+      new Set(data.map(d => d.year)).values().map(year =>
+        d3.least(
+          data.filter(d => d.year === year),
+          d => d.DEF_RATING,
+        ),
+      ),
+      {
+        x,
+        y,
+        width: 35,
+        height: 35,
+        src: d =>
+          `https://llimllib.github.io/nbastats/logos/${d.TEAM_NAME}.svg`,
+      },
+    ),
+    // and the worst
+    Plot.image(
+      new Set(data.map(d => d.year)).values().map(year =>
+        d3.greatest(
+          data.filter(d => d.year === year),
+          d => d.DEF_RATING,
+        ),
+      ),
+      {
+        x,
+        y,
+        width: 35,
+        height: 35,
+        src: d =>
+          `https://llimllib.github.io/nbastats/logos/${d.TEAM_NAME}.svg`,
+      },
+    ),
+    Plot.tip(
+      data,
+      Plot.pointer({
+        x,
+        y,
+        title: d => `${d.year} ${d.TEAM_NAME}`,
+      }),
+    ),
+  ],
+})
+display(graph)
+```
