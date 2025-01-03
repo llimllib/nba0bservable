@@ -20,9 +20,11 @@ const epm = epmEnvelope.stats
 const epmUpdated = epmEnvelope.date
 // seasonEPM uses an updated format where seasonEPM[1].data.stats is an array
 // of arrays without keys; the keys are in seasonEPM[1].data.k
+// 1/3/25: recently this moved into [2] instead of [1], I don't know why; the
+// first two are empty
 const seasonEPMEnvelope = (
   await FileAttachment("./data/epm_season.json").json()
-)[1].data
+)[2].data
 const seasonEPMrows = seasonEPMEnvelope.stats
 const seasonEPMKeys = seasonEPMEnvelope.k
 const keys = Object.entries(seasonEPMKeys)
