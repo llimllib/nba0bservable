@@ -123,16 +123,16 @@ display(
       //   x2: "x2",
       //   y2: "y2",
       // }),
-      Plot.text([[xMin + 0.01, yMin]], {
+      Plot.text([[xMin + 0.01, yMin - 10]], {
         text: ["Few attempts\nFew free throws"],
         ...fontOptions,
       }),
-      Plot.text([[xMax - 0.01, yMin]], {
-        text: ["Lots of attempts\nFew free throws"],
+      Plot.text([[xMax - 0.01, yMin - 10]], {
+        text: ["Few attempts\nLots of free throws"],
         ...fontOptions,
       }),
       Plot.text([[xMin + 0.01, yMax]], {
-        text: ["Few attempts\nLots of free throws"],
+        text: ["Lots of attempts\nFew free throws"],
         ...fontOptions,
       }),
       Plot.text([[xMax - 0.01, yMax]], {
