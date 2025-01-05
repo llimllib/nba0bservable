@@ -5,12 +5,12 @@ toc: false
 ---
 
 ```js
-import { teams } from "./lib/teams.js";
-const data = await FileAttachment("data/cleantheglass_teams.json").json();
+import { teams } from "./lib/teams.js"
+const data = await FileAttachment("data/cleantheglass_teams.json").json()
 ```
 
 ```js
-const last2weeks = view(Inputs.toggle({ label: "last 2 weeks only" }));
+const last2weeks = view(Inputs.toggle({ label: "last 2 weeks only" }))
 ```
 
 ```js
@@ -29,7 +29,7 @@ const tooltip = d3
   .style("padding", "4px 8px")
   .style("font-size", ".85rem")
   .style("text-align", "left")
-  .style("z-index", "1000");
+  .style("z-index", "1000")
 function handleTooltip(plot) {
   d3.select(plot)
     .selectAll("image")
@@ -37,46 +37,46 @@ function handleTooltip(plot) {
       // The <title> element and our tooltip will fight to display over one
       // another, so remove the <title> element and save its contents to the __title
       // attribute on the image
-      const t = d3.select(evt.target);
+      const t = d3.select(evt.target)
       if (!t.attr("__title")) {
-        const title = t.select("title");
-        t.attr("__title", title.html());
-        title.remove();
+        const title = t.select("title")
+        t.attr("__title", title.html())
+        title.remove()
       }
-      const text = t.attr("__title");
+      const text = t.attr("__title")
       tooltip
         .style("left", evt.pageX + 8 + "px")
         .style("top", evt.pageY + 8 + "px")
         .style("display", "block")
-        .html(text.replaceAll("\n", "<br>"));
+        .html(text.replaceAll("\n", "<br>"))
     })
-    .on("mouseout", (evt) => {
-      tooltip.style("display", "none");
-    });
-  return plot;
+    .on("mouseout", evt => {
+      tooltip.style("display", "none")
+    })
+  return plot
 }
 ```
 
 ```js
 function getName(s) {
-  return teams.values().find((x) => x.ctgName == s).name;
+  return teams.values().find(x => x.ctgName == s).name
 }
 
-const [xMin, xMax] = d3.extent(data, (d) =>
+const [xMin, xMax] = d3.extent(data, d =>
   last2weeks ? d.offense_last2wk : d.offense,
-);
-const [yMin, yMax] = d3.extent(data, (d) =>
+)
+const [yMin, yMax] = d3.extent(data, d =>
   last2weeks ? d.defense_last2wk : d.defense,
-);
-const xMid = xMin + (xMax - xMin) / 2;
-const yMid = yMin + (yMax - yMin) / 2;
+)
+const xMid = xMin + (xMax - xMin) / 2
+const yMid = yMin + (yMax - yMin) / 2
 const rects = [
   [xMin, yMin, xMid, yMid],
   [xMid, yMin, xMax, yMid],
   [xMin, yMid, xMax, yMax],
   [xMid, yMid, xMax, yMax],
-];
-const size = 600;
+]
+const size = 600
 const diamond3 = Plot.plot({
   width: size,
   height: size,
@@ -136,22 +136,22 @@ const diamond3 = Plot.plot({
       width: 40,
       height: 40,
       rotate: 45,
-      src: (d) =>
+      src: d =>
         `https://llimllib.github.io/nbastats/logos/${getName(d.team)}.svg`,
-      title: (d) =>
-        `${d.TEAM_NAME}
+      title: d =>
+        `${d.team}
 Record: ${last2weeks ? d.w_last2wk : d.w} - ${last2weeks ? d.l_last2wk : d.l}
 Offensive rating: ${last2weeks ? d.offense_last2wk : d.offense}
 Defensive rating: ${last2weeks ? d.defense_last2wk : d.defense}`,
     }),
   ],
-});
-handleTooltip(diamond3);
+})
+handleTooltip(diamond3)
 
 const container = d3
   .create("figure")
   .style("position", "relative")
-  .style("max-width", "1000px");
+  .style("max-width", "1000px")
 
 d3.select(diamond3)
   .selectAll("text")
@@ -164,10 +164,10 @@ d3.select(diamond3)
   //   return d3.select(this).text() == "Good O, Good D";
   // })
   .each(function each_(d, i) {
-    console.log("each", d3.select(this), d, i);
-    const bbox = this.getBBox();
-    console.log("bbox", bbox);
-  });
+    console.log("each", d3.select(this), d, i)
+    const bbox = this.getBBox()
+    console.log("bbox", bbox)
+  })
 
 // Title and subtitle
 container
@@ -175,7 +175,7 @@ container
   .text("Team Efficiency")
   .style("position", "relative")
   .style("top", "70px")
-  .style("left", "10px");
+  .style("left", "10px")
 container
   .append("h3")
   .style("position", "relative")
@@ -183,14 +183,14 @@ container
   .style("left", "10px")
   .html(
     `${last2weeks ? "last 2 weeks only" : "full season"}<p style="margin-top:3px">data per cleaning the glass`,
-  );
+  )
 
 // add the graph
 container
   .append(() => diamond3)
   .style("overflow", "visible")
   .style("transform", "rotate(-45deg)")
-  .style("padding", "90px");
+  .style("padding", "90px")
 
-display(container.node());
+display(container.node())
 ```
