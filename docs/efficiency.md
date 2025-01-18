@@ -275,3 +275,101 @@ d3.select(graph)
   .style("font-size", "14px")
 display(graph)
 ```
+
+```js
+const allPlayers = await sql([
+  `SELECT player_name, team_abbreviation, fga, ts_pct, usg_pct, pts_per36, ast_per36 + reb_per36 ar_per36, min
+       FROM players
+      WHERE year=${year}`,
+])
+const selectedAbbrev = selectedTeams.map(t => t.abbreviation)
+const active = allPlayers
+  .toArray()
+  .filter(d =>
+    selectedAbbrev.length > 0
+      ? selectedAbbrev.includes(d.team_abbreviation)
+      : true,
+  )
+
+const x = "ar_per36"
+const y = "pts_per36"
+const data = sliceQuantile(active, "min", (100 - percentile) / 100)
+// Used if the "show rest of NBA" option is selected, to show the rest of the
+// league as background data
+const background = sliceQuantile(
+  allPlayers.toArray(),
+  "fga",
+  (100 - percentile) / 100,
+)
+const [xMin, xMax] = d3.extent(showBackground ? background : data, d => d[x])
+const [yMin, yMax] = d3.extent(showBackground ? background : data, d => d[y])
+
+// common options for the explanatory text font
+const fontOptions = {
+  fontSize: 20,
+  fontStyle: "italic",
+  //stroke: "black",
+  fill: "red",
+  opacity: 0.2,
+}
+const graph = Plot.plot({
+  width: 800,
+  height: 800,
+  title: "Points and assists + rebounds per 36",
+  subtitle: `top ${percentile}% by minutes played, to Jan 15`,
+  marginRight: 40,
+  grid: true,
+  x: {
+    inset: 50,
+    nice: true,
+    ticks: 5,
+    label: "Assists+Rebounds per 36",
+    labelAnchor: "center",
+  },
+  y: {
+    nice: true,
+    ticks: 5,
+    label: "Points per 36",
+    labelAnchor: "center",
+    labelOffset: 38,
+  },
+  marks: [
+    label(data, {
+      x,
+      y,
+      label: "player_name",
+      padding: 10,
+      minCellSize: 2000,
+    }),
+    showBackground
+      ? Plot.dot(background, { x, y, fill: "grey", fillOpacity: 0.15, r: 8 })
+      : null,
+    Plot.dot(data, {
+      x,
+      y,
+      fill: d => teams.get(d.team_abbreviation).colors[0],
+      stroke: d => teams.get(d.team_abbreviation).colors[1],
+      r: 8,
+    }),
+    Plot.tip(
+      data,
+      Plot.pointer({
+        x,
+        y,
+        title: d =>
+          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+      }),
+    ),
+  ],
+})
+d3.select(graph)
+  .select("svg")
+  .style("padding-bottom", "40px")
+  .style("overflow", "visible")
+  .select('g[aria-label="x-axis label"]')
+  .style("font-size", "14px")
+d3.select(graph)
+  .select('g[aria-label="y-axis label"]')
+  .style("font-size", "14px")
+display(graph)
+```
