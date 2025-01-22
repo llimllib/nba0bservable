@@ -250,13 +250,81 @@ const graph = Plot.plot({
 display(graph)
 ```
 
-```js echo
-display(
-  d3.least(
-    data.filter(d => d.year === "2024"),
-    d => d.DEF_RATING,
-  ),
-)
+```js
+const y = "year"
+const x = "OFF_RATING"
+const graph = Plot.plot({
+  title: "Best and worst offenses",
+  subtitle: "Offensive Efficiency 2009-10 through 2024-25",
+  height: 640,
+  marginLeft: 50,
+  y: {
+    label: null,
+    labelAnchor: "center",
+    labelOffset: 48,
+    ticks: 3,
+    tickSize: 0,
+    type: "point",
+  },
+  x: {
+    inset: 20,
+    label: "Offensive rating",
+    labelAnchor: "center",
+    labelArrow: "right",
+    labelOffset: 30,
+    ticks: 5,
+    tickSize: 0,
+  },
+  marks: [
+    Plot.dot(data, { x, y, fill: "grey", fillOpacity: 0.4 }),
+    // make the best team each year have an image
+    Plot.image(
+      new Set(data.map(d => d.year)).values().map(year =>
+        d3.least(
+          data.filter(d => d.year === year),
+          d => d[x],
+        ),
+      ),
+      {
+        x,
+        y,
+        width: 35,
+        height: 35,
+        src: d =>
+          `https://llimllib.github.io/nbastats/logos/${d.TEAM_NAME}.svg`,
+      },
+    ),
+    // and the worst
+    Plot.image(
+      new Set(data.map(d => d.year)).values().map(year =>
+        d3.greatest(
+          data.filter(d => d.year === year),
+          d => d[x],
+        ),
+      ),
+      {
+        x,
+        y,
+        width: 35,
+        height: 35,
+        src: d =>
+          `https://llimllib.github.io/nbastats/logos/${d.TEAM_NAME}.svg`,
+      },
+    ),
+    Plot.tip(
+      data,
+      Plot.pointer({
+        x,
+        y,
+        title: d => `${d.year} ${d.TEAM_NAME}`,
+      }),
+    ),
+  ],
+})
+display(graph)
+```
+
+```js
 const y = "year"
 const x = "DEF_RATING"
 const graph = Plot.plot({
@@ -289,7 +357,7 @@ const graph = Plot.plot({
       new Set(data.map(d => d.year)).values().map(year =>
         d3.least(
           data.filter(d => d.year === year),
-          d => d.DEF_RATING,
+          d => d[x],
         ),
       ),
       {
@@ -306,7 +374,7 @@ const graph = Plot.plot({
       new Set(data.map(d => d.year)).values().map(year =>
         d3.greatest(
           data.filter(d => d.year === year),
-          d => d.DEF_RATING,
+          d => d[x],
         ),
       ),
       {
