@@ -22,6 +22,21 @@ const season_year = view(
 )
 ```
 
+<!-- uncomment to show a table of all available stats
+```sql id=all
+SELECT * FROM playerlogs pl, gamelogs gl
+WHERE pl.gameid=gl.game_id
+  AND pl.teamTricode=gl.team_abbreviation
+  AND gl.season_year=${season_year}
+  AND pl.minutes != ''
+ORDER BY game_date
+```
+
+```js
+Inputs.table(all)
+```
+-->
+
 ```sql id=players
 -- TODO: right now we only have 24-25 game logs; it would be cool to show a
 -- player's career progress through their whole career
@@ -30,7 +45,7 @@ SELECT gl.game_date, pl.firstName ||' '|| pl.familyName as name, pl.points,
   pl.fieldGoalsMade fg, pl.fieldGoalsAttempted fga, pl.freeThrowsAttempted fta,
   pl.freeThrowsMade ft, pl.reboundsOffensive orb, pl.reboundsDefensive drb, pl.
   steals, pl.assists, pl.blocks, pl.foulsPersonal pf, pl.turnovers tov,
-  pl.usagePercentage usage
+  pl.usagePercentage usage, pl.trueShootingPercentage ts_pct
 FROM playerlogs pl, gamelogs gl
 WHERE pl.gameid=gl.game_id
   AND pl.teamTricode=gl.team_abbreviation
@@ -155,6 +170,46 @@ const y = "usage"
 display(
   Plot.plot({
     title: `Usage for ${player}`,
+    subtitle: `${n}-day rolling window`,
+    grid: true,
+    x: {
+      nice: true,
+      label: "game date",
+    },
+    y: {
+      nice: true,
+      ticks: 5,
+      zero: true,
+      label: "usage",
+    },
+    marks: [
+      Plot.dot(plogs, {
+        x,
+        y,
+        fill: "green",
+        stroke: null,
+      }),
+      Plot.lineY(plogs, Plot.windowY({ k: n, anchor: "end" }, { x, y })),
+      Plot.tip(
+        plogs,
+        Plot.pointer({
+          x,
+          y,
+          // TODO: formate game date and gamescore
+          title: d => `${x}: ${d[x]}\n${y}: ${d[y]}`,
+        }),
+      ),
+    ],
+  }),
+)
+```
+
+```js
+const x = "game_date"
+const y = "ts_pct"
+display(
+  Plot.plot({
+    title: `True Shooting for ${player}`,
     subtitle: `${n}-day rolling window`,
     grid: true,
     x: {
