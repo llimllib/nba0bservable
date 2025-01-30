@@ -130,7 +130,7 @@ const y = "gamescore"
 display(
   Plot.plot({
     title: `Game scores for ${player}`,
-    subtitle: `${n}-day rolling window`,
+    subtitle: `${n}-game rolling window`,
     grid: true,
     x: {
       nice: true,
@@ -170,7 +170,7 @@ const y = "usage"
 display(
   Plot.plot({
     title: `Usage for ${player}`,
-    subtitle: `${n}-day rolling window`,
+    subtitle: `${n}-game rolling window`,
     grid: true,
     x: {
       nice: true,
@@ -210,7 +210,7 @@ const y = "ts_pct"
 display(
   Plot.plot({
     title: `True Shooting for ${player}`,
-    subtitle: `${n}-day rolling window`,
+    subtitle: `${n}-game rolling window`,
     grid: true,
     x: {
       nice: true,
