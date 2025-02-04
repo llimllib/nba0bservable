@@ -1,5 +1,4 @@
-#!/usr/bin/env
-set -x
+#!/usr/bin/env bash
 curl -s https://dunksandthrees.com/epm/actual | grep 'const data' > /tmp/epmSeason.js
 printf "\nconsole.log(JSON.stringify(data));" >> /tmp/epmSeason.js
 node /tmp/epmSeason.js
