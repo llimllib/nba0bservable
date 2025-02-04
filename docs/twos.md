@@ -9,25 +9,25 @@ sql:
 # two Point Shooting
 
 ```js
-import { sql } from "npm:@observablehq/duckdb";
+import { sql } from "npm:@observablehq/duckdb"
 
-import { teams } from "./lib/teams.js";
-import { label } from "./lib/labels.js";
-import { sliceQuantile } from "./lib/util.js";
+import { teams } from "./lib/teams.js"
+import { label } from "./lib/labels.js"
+import { sliceQuantile } from "./lib/util.js"
 ```
 
 ```js
 const year = view(
   Inputs.range([2014, 2025], { value: "2025", label: "year", step: 1 }),
-);
+)
 // console.log("year", (await year.next()).value);
 const percentile = view(
   Inputs.range([5, 100], {
     value: "15",
-    label: "top x% in 3pa",
+    label: "top x% in 2pa",
     step: 5,
   }),
-);
+)
 ```
 
 ```js
@@ -40,28 +40,28 @@ const percentile = view(
 const teamArr = teams
   .values()
   .toArray()
-  .filter((t) => t.abbreviation != "TOT")
+  .filter(t => t.abbreviation != "TOT")
   .filter(
-    (t) =>
+    t =>
       !t.years || (year >= t.years[0] && (!t.years[1] || year <= t.years[1])),
-  );
+  )
 const selectedTeams = view(
   Inputs.select(teamArr, {
     value: teamArr[0].name,
     label: "team filter",
-    format: (t) => t.name,
+    format: t => t.name,
     multiple: true,
   }),
-);
+)
 ```
 
 ```js
-console.log(selectedTeams);
+console.log(selectedTeams)
 const teamFilter =
   selectedTeams.length > 0
-    ? `AND team_abbreviation in (${selectedTeams.map((t) => `'${t.abbreviation}'`).join(",")});`
-    : "";
-console.log("teamFilter", teamFilter);
+    ? `AND team_abbreviation in (${selectedTeams.map(t => `'${t.abbreviation}'`).join(",")});`
+    : ""
+console.log("teamFilter", teamFilter)
 ```
 
 ```js
@@ -70,21 +70,21 @@ console.log(
        FROM players
       WHERE year=${year}
         ${teamFilter}`,
-);
+)
 const twopoints = await sql([
   `SELECT player_name, team_abbreviation, fg2m, fg2a, fg2a_frequency, fg2_pct, (fg2a/min)*36 as fg2a_per36
        FROM players
       WHERE year=${year}
         ${teamFilter}`,
-]);
+])
 
-const x = "fg2a_per36";
-const y = "fg2_pct";
+const x = "fg2a_per36"
+const y = "fg2_pct"
 const data = sliceQuantile(
   twopoints.toArray(),
   "fg2a",
   (100 - percentile) / 100,
-);
+)
 display(
   Plot.plot({
     width: 800,
@@ -116,8 +116,8 @@ display(
       Plot.dot(data, {
         x,
         y,
-        fill: (d) => teams.get(d.team_abbreviation).colors[0],
-        stroke: (d) => teams.get(d.team_abbreviation).colors[1],
+        fill: d => teams.get(d.team_abbreviation).colors[0],
+        stroke: d => teams.get(d.team_abbreviation).colors[1],
         r: 8,
       }),
       Plot.tip(
@@ -125,19 +125,19 @@ display(
         Plot.pointer({
           x,
           y,
-          title: (d) =>
+          title: d =>
             `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
         }),
       ),
     ],
   }),
-);
+)
 ```
 
 ```js
-const x = "fg2a";
-const y = "fg2m";
-const data = twopoints;
+const x = "fg2a"
+const y = "fg2m"
+const data = twopoints
 display(
   Plot.plot({
     width: 800,
@@ -158,8 +158,8 @@ display(
       Plot.dot(data, {
         x,
         y,
-        fill: (d) => teams.get(d.team_abbreviation).colors[0],
-        stroke: (d) => teams.get(d.team_abbreviation).colors[1],
+        fill: d => teams.get(d.team_abbreviation).colors[0],
+        stroke: d => teams.get(d.team_abbreviation).colors[1],
         r: 8,
       }),
       Plot.tip(
@@ -167,10 +167,10 @@ display(
         Plot.pointer({
           x,
           y,
-          title: (d) => `${d.player_name}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+          title: d => `${d.player_name}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
         }),
       ),
     ],
   }),
-);
+)
 ```
