@@ -14,8 +14,11 @@ import { sliceQuantile } from "./lib/util.js"
 ```
 
 ```js
-// epm comes through as objects with keys
-const epmEnvelope = (await FileAttachment("data/epm.json").json())[1].data
+// epm comes through as objects with keys.
+// Feb 5 25: I just had to switch [1] to [2], I don't know why there are three
+// objects, two of which are empty. If I have to do this more, could search for
+// whichever one is non-empty
+const epmEnvelope = (await FileAttachment("data/epm.json").json())[2].data
 const epm = epmEnvelope.stats
 const epmUpdated = epmEnvelope.date
 // seasonEPM uses an updated format where seasonEPM[1].data.stats is an array
@@ -37,7 +40,6 @@ const seasonEPM = seasonEPMrows.map(row => {
   })
   return obj
 })
-display(seasonEPM)
 ```
 
 ```js
