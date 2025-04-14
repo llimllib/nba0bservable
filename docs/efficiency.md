@@ -316,7 +316,7 @@ const graph = Plot.plot({
   width: 800,
   height: 800,
   title: "Points and assists + rebounds per 36",
-  subtitle: `top ${percentile}% by minutes played, to Jan 15`,
+  subtitle: `top ${percentile}% by minutes played`,
   marginRight: 40,
   grid: true,
   x: {

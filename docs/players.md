@@ -115,7 +115,7 @@ const plogs = players
 ```
 
 ```js
-const n = view(
+const k = view(
   Inputs.range([2, 15], {
     value: "5",
     label: "size of window",
@@ -127,10 +127,11 @@ const n = view(
 ```js
 const x = "game_date"
 const y = "gamescore"
+
 display(
   Plot.plot({
     title: `Game scores for ${player}`,
-    subtitle: `${n}-game rolling window`,
+    subtitle: `${k}-game rolling window`,
     grid: true,
     x: {
       nice: true,
@@ -143,13 +144,51 @@ display(
       label: "game score",
     },
     marks: [
+      Plot.areaY(plogs, {
+        x,
+        y: Plot.windowY(
+          {
+            k,
+            anchor: "end",
+            reduce: values => {
+              const mean = values.reduce((a, b) => a + b, 0) / values.length
+              const variance =
+                values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) /
+                values.length
+              return mean - Math.sqrt(variance)
+            },
+          },
+          { x, y },
+        ),
+        //y2: Plot.windowY(
+        //  {
+        //    k,
+        //    anchor: "end",
+        //    reduce: values => {
+        //      const mean = values.reduce((a, b) => a + b, 0) / values.length
+        //      const variance =
+        //        values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) /
+        //        values.length
+        //      return mean + Math.sqrt(variance)
+        //    },
+        //  },
+        //  { x, y },
+        //),
+        fill: "green",
+        fillOpacity: 0.2,
+        stroke: null,
+      }),
       Plot.dot(plogs, {
         x: "game_date",
         y: "gamescore",
         fill: "green",
         stroke: null,
       }),
-      Plot.lineY(plogs, Plot.windowY({ k: n, anchor: "end" }, { x, y })),
+      Plot.lineY(plogs, Plot.windowY({ k, anchor: "end" }, { x, y })),
+      // Plot.lineY(
+      //   plogs,
+      //   Plot.windowY({ k: n, anchor: "end", reduce: "variance" }, { x, y }),
+      // ),
       Plot.tip(
         plogs,
         Plot.pointer({
@@ -170,7 +209,7 @@ const y = "usage"
 display(
   Plot.plot({
     title: `Usage for ${player}`,
-    subtitle: `${n}-game rolling window`,
+    subtitle: `${k}-game rolling window`,
     grid: true,
     x: {
       nice: true,
@@ -189,7 +228,7 @@ display(
         fill: "green",
         stroke: null,
       }),
-      Plot.lineY(plogs, Plot.windowY({ k: n, anchor: "end" }, { x, y })),
+      Plot.lineY(plogs, Plot.windowY({ k, anchor: "end" }, { x, y })),
       Plot.tip(
         plogs,
         Plot.pointer({
@@ -210,7 +249,7 @@ const y = "ts_pct"
 display(
   Plot.plot({
     title: `True Shooting for ${player}`,
-    subtitle: `${n}-game rolling window`,
+    subtitle: `${k}-game rolling window`,
     grid: true,
     x: {
       nice: true,
@@ -229,7 +268,7 @@ display(
         fill: "green",
         stroke: null,
       }),
-      Plot.lineY(plogs, Plot.windowY({ k: n, anchor: "end" }, { x, y })),
+      Plot.lineY(plogs, Plot.windowY({ k, anchor: "end" }, { x, y })),
       Plot.tip(
         plogs,
         Plot.pointer({
