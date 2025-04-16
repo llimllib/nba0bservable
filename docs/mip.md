@@ -269,6 +269,63 @@ display(graph)
 ```
 
 ```js
+const x = "usg_diff"
+const y = "sum_diff"
+const data = sliceQuantile(
+  allPlayers,
+  "min_a",
+  (100 - percentile) / 100,
+).filter(d => d.usg_diff > 0.01 && d.sum_diff > 0.01)
+const graph = Plot.plot({
+  width: 400,
+  height: 400,
+  title: "change in true shooting % + rebound % + assist %",
+  subtitle: `difference between ${year} and ${year - 1}. Top ${percentile}% by minutes, >1% improvement only`,
+  grid: true,
+  x: {
+    insetLeft: 80,
+    nice: true,
+    ticks: 5,
+    label: "Difference in usage",
+    labelAnchor: "center",
+  },
+  y: {
+    nice: true,
+    ticks: 5,
+    label: "Difference in ts% + reb% + ast%",
+    labelAnchor: "center",
+    labelOffset: 40,
+  },
+  marks: [
+    label(data, {
+      x,
+      y,
+      label: "player_name",
+      padding: 10,
+      minCellSize: 2000,
+    }),
+    Plot.dot(data, {
+      x,
+      y,
+      fill: d => teams.get(d.team_abbreviation).colors[0],
+      stroke: d => teams.get(d.team_abbreviation).colors[1],
+      r: 8,
+    }),
+    Plot.tip(
+      data,
+      Plot.pointer({
+        x,
+        y,
+        title: d =>
+          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+      }),
+    ),
+  ],
+})
+display(graph)
+```
+
+```js
 const x = "ts_diff"
 const y = "reb_ast_diff"
 const data = sliceQuantile(
