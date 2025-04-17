@@ -5,6 +5,7 @@ export default {
     ".js": ["node", "--no-warnings=ExperimentalWarning"],
     ".mjs": ["node", "--no-warnings=ExperimentalWarning"],
   },
+  root: "docs",
 
   // The pages and sections in the sidebar. If you don’t specify this option,
   // all pages will be listed in alphabetical order. Listing pages explicitly
@@ -28,4 +29,4 @@ export default {
   // root: "docs", // path to the source root for preview
   // output: "dist", // path to the output root for build
   // search: true, // activate search
-};
+}
