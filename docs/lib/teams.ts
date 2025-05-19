@@ -3,8 +3,13 @@ export interface Team {
   name: string
   colors: string[]
   comment?: string
+
   // if present, represents the name that cleaning the glass uses for the team
   ctgName?: string
+
+  // if present, the name ESPN uses for the team
+  espnName?: string
+
   // a pair representing the years the team were active, [start, end]
   // Inclusive, and use the end year of a season, so the 2014-15 season would
   // be "2015". If a team is currently active, a single year represents the
@@ -319,6 +324,7 @@ export const teams: Map<string, Team> = new Map([
     {
       abbreviation: "SAS",
       ctgName: "San Antonio",
+      espnName: "SAN",
       colors: ["#000000", "#C4CED4"],
       name: "San Antonio Spurs",
     },
