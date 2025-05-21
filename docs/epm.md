@@ -26,18 +26,12 @@ const epmUpdated = epmEnvelope.date
 const seasonEPMEnvelope = (
   await FileAttachment("./data/epm_season.json").json()
 )[2].data
-const seasonEPMrows = seasonEPMEnvelope.stats
-const seasonEPMKeys = seasonEPMEnvelope.k
-const keys = Object.entries(seasonEPMKeys)
-  .sort((x, y) => x[1] > y[1])
-  .map(x => x[0])
-const seasonEPM = seasonEPMrows.map(row => {
-  const obj = {}
-  row.forEach((value, index) => {
-    obj[keys[index]] = value
-  })
-  return obj
-})
+const seasonEPM = seasonEPMEnvelope.stats
+```
+
+```js
+display(epm)
+display(seasonEPM)
 ```
 
 ```js
@@ -100,7 +94,7 @@ display(
 ```js
 display(
   epmDiamond(seasonEPM, {
-    by: "mp",
+    by: "p_mp_48",
     selectedTeams: ts,
     percentile,
     showBackground,
