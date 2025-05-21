@@ -103,7 +103,15 @@ export function epmDiamond(
         rotate: 45,
       }),
       showBackground
-        ? Plot.dot(background, { x, y, fill: "grey", fillOpacity: 0.1, r: 8 })
+        ? Plot.dot(background, {
+          x,
+          y,
+          fill: "grey",
+          fillOpacity: 0.1,
+          title: d =>
+            `${d.player_name}\n${d.team_alias}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+          r: 8,
+        })
         : null,
       Plot.dot(data, {
         x,
