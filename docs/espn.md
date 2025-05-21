@@ -54,9 +54,7 @@ SELECT
   ) / count(*) AS minutesPerG,
 from players
 where season=2024
-and game_id not in (
-  SELECT game_id from gamelogs
-)
+and game_id LIKE '0042%'
 group by player_id, name, team
 having n > 2
 order by tNetPts desc
@@ -137,6 +135,74 @@ display(
     x: "oNetPtsPerG",
     y: "dNetPtsPerG",
     extraSubtitle: " per game",
+  }),
+)
+```
+
+# single-player charts
+
+```js
+const selectedPlayer = view(
+  Inputs.select(
+    agg
+      .toArray()
+      .map(p => p.name)
+      .sort(),
+    {
+      value: "AJ Green", // why this not working
+      label: "player",
+    },
+  ),
+)
+```
+
+```js
+const data = alldata
+  .toArray()
+  .map(p => ({ ...p }))
+  .filter(x => x.name == selectedPlayer)
+  .sort((a, b) => a.game_id > b.game_id)
+let i = 1
+data.forEach(pt => {
+  pt.gameN = i++
+})
+console.log(data)
+const exploded = data
+  .map(pg => {
+    return [
+      {
+        name: pg.name,
+        gameN: pg.gameN,
+        val: pg.dNetPts,
+        tot: pg.tNetPts,
+        type: "defensive net points",
+      },
+      {
+        name: pg.name,
+        gameN: pg.gameN,
+        val: pg.oNetPts,
+        tot: pg.tNetPts,
+        type: "offensive net points",
+      },
+    ]
+  })
+  .flat()
+console.log(exploded)
+view(
+  Plot.plot({
+    title: `Postseason net points for ${selectedPlayer}`,
+    color: { legend: true, scheme: "BuRd" },
+    y: { axis: null },
+    facet: { label: "game" },
+    marks: [
+      Plot.barX(exploded, {
+        x: "val",
+        y: 1,
+        fy: "gameN",
+        fill: "type", // d => (d.type === "off" ? "#1f78b4" : "#33a02c"),
+      }),
+      Plot.ruleX(data, { x: "tNetPts", fy: "gameN" }),
+    ],
   }),
 )
 ```
