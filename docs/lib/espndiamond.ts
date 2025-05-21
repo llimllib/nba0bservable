@@ -74,10 +74,20 @@ export function espnDiamond(
   },
 ) {
   options.size ||= 600
-  const { by, selectedTeams, percentile, showBackground, size, title } = options
-
-  const x = options.x || "oNetPts"
-  const y = options.y || "dNetPts"
+  options.extraSubtitle ||= ""
+  options.x ||= "oNetPts"
+  options.y ||= "dNetPts"
+  const {
+    by,
+    selectedTeams,
+    percentile,
+    showBackground,
+    size,
+    title,
+    extraSubtitle,
+    x,
+    y,
+  } = options
 
   let data = sliceQuantile(espnData, by, (100 - percentile) / 100)
   if (selectedTeams?.length > 0) {
@@ -158,7 +168,7 @@ export function espnDiamond(
     .style("top", "60px")
     .style("left", "10px")
     .html(
-      `Top ${percentile}% by minutes${options.extraSubtitle}<br>Data by espnanalytics.com`,
+      `Top ${percentile}% by minutes${extraSubtitle}<br>Data by espnanalytics.com`,
     )
   container
     .append("div")
