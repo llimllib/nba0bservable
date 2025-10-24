@@ -4,7 +4,6 @@ title: Net Points
 toc: false
 sql:
   players: ./data/espn.players.parquet
-  gamelogs: ./data/gamelogs.parquet
 ---
 
 # Net Points
@@ -16,21 +15,16 @@ import { teams } from "./lib/teams.js"
 
 ```sql id=alldata
 SELECT * from players
-where season=2024
-and game_id LIKE '0042%'
+where season=2025
+-- regular season and cup
+and game_id LIKE '002%' or game_id LIKE '003%'
+-- limit to playoffs:
+-- and game_id LIKE '004%'
 ;
 ```
 
 ```js
 display(Inputs.table(alldata))
-```
-
-```sql id=gamelogs
-SELECT * from gamelogs;
-```
-
-```js
-display(Inputs.table(gamelogs))
 ```
 
 ```sql id=agg
@@ -53,10 +47,16 @@ SELECT
     CAST(SPLIT_PART(minutes_played, ':', 2) AS FLOAT) / 60
   ) / count(*) AS minutesPerG,
 from players
-where season=2024
-and game_id LIKE '0042%'
+where season=2025
+-- preseason: 001
+-- regular season and cup (I think it's 003?)
+and game_id LIKE '002%' or game_id LIKE '003%'
+-- playoffs
+-- and game_id LIKE '004%'
 group by player_id, name, team
-having n > 2
+-- eventually, require a higher n. Maybe set this to something like 10% of the
+-- max games value or something?
+having n > 0
 order by tNetPts desc
 ```
 
@@ -66,14 +66,14 @@ display(Inputs.table(agg))
 
 ```js
 const year = view(
-  Inputs.range([2025, 2025], { value: "2025", label: "year", step: 1 }),
+  Inputs.range([2026, 2026], { value: "2025", label: "year", step: 1 }),
 )
 
 // console.log("year", (await year.next()).value);
 const percentile = view(
   Inputs.range([5, 100], {
     value: "15",
-    label: "top x% by predicted minutes played",
+    label: "top x% by minutes played",
     step: 5,
   }),
 )
@@ -107,7 +107,7 @@ const selectedTeams = view(
 ```
 
 ```js
-const ts = selectedTeams.map(d => d.abbreviation)
+const ts = selectedTeams.map(d => d.espnName || d.abbreviation)
 ```
 
 ```js

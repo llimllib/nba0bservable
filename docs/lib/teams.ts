@@ -235,6 +235,7 @@ export const teams: Map<string, Team> = new Map([
       abbreviation: "NOP",
       ctgName: "New Orleans",
       colors: ["#0A2240", "#8C734B", "#CE0E2D"],
+      espnName: "NOR",
       name: "New Orleans Pelicans",
       years: ["2014"],
     },

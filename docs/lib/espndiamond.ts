@@ -1,7 +1,6 @@
 import type { Selection } from "d3-selection"
 import type { Team } from "./teams.js"
 
-import { extent } from "d3-array"
 import { create, select } from "d3-selection"
 import { interpolatePRGn } from "d3-scale-chromatic"
 import * as Plot from "@observablehq/plot"
@@ -13,6 +12,7 @@ import { sliceQuantile } from "./util.js"
 function getTeam(abbrev: string): Team {
   // if there's an espnName that matches, use it
   const eteam = Array.from(teams.values()).filter(t => t.espnName == abbrev)
+  console.log("got eteam", eteam, "from abbrev", abbrev)
   if (eteam.length > 0) return eteam[0]
 
   // otherwise match on the key name
@@ -129,13 +129,13 @@ export function espnDiamond(
       }),
       showBackground
         ? Plot.dot(background, {
-          x,
-          y,
-          fill: "grey",
-          fillOpacity: 0.1,
-          r: 8,
-          title: d => `${d.name}\n${d.team}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
-        })
+            x,
+            y,
+            fill: "grey",
+            fillOpacity: 0.1,
+            r: 8,
+            title: d => `${d.name}\n${d.team}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+          })
         : null,
       Plot.dot(data, {
         x,
