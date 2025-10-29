@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-curl -L https://github.com/llimllib/nba_data/raw/refs/heads/main/data/espn/player_box.parquet
+curl -L https://llimllib.github.io/nba_data/espn/player_box.parquet.gz

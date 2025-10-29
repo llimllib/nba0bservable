@@ -1,1 +1,2 @@
-curl -L https://github.com/llimllib/nba_data/raw/refs/heads/main/data/playerstats.parquet
+#!/usr/bin/env bash
+curl -L https://llimllib.github.io/nba_data/playerstats.parquet
