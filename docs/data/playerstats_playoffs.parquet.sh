@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-curl -L https://llimllib.github.io/nba_data/playerstats_playoffs.parquet.gz
+curl -L https://nba-data.sfo3.cdn.digitaloceanspaces.com/playerstats_playoffs.parquet
