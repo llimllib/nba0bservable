@@ -26,12 +26,22 @@ const epmUpdated = epmEnvelope.date
 const seasonEPMEnvelope = (
   await FileAttachment("./data/epm_season.json").json()
 )[2].data
-const seasonEPM = seasonEPMEnvelope.stats
+
+// merge the keys into the stats to turn them from arrays into objects
+const seasonEPM = seasonEPMEnvelope.stats.map(row =>
+  Object.fromEntries(
+    Object.entries(seasonEPMEnvelope.k).map(([key, index]) => [
+      key,
+      row[index],
+    ]),
+  ),
+)
 ```
 
 ```js
 display(epm)
 display(seasonEPM)
+display(epmUpdated)
 ```
 
 ```js
@@ -92,9 +102,11 @@ display(
 ```
 
 ```js
+// TODO: the author added mpg_attr following mpg, which includes percentile.
+// Perhaps we should use that?
 display(
   epmDiamond(seasonEPM, {
-    by: "p_mp_48",
+    by: "mpg",
     selectedTeams: ts,
     percentile,
     showBackground,
