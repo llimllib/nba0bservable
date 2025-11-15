@@ -7,18 +7,19 @@ on:
     branches: ["main"]
 permissions:
   contents: write
+  issues: write
 jobs:
   build:
     concurrency: ci-${{ github.ref }} # Recommended if you intend to make multiple deployments in quick succession.
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: "npm"
 
       - name: Install dependencies
@@ -42,9 +43,53 @@ jobs:
           AWS_DEFAULT_REGION: us-east-1 # maybe necessary to avoid an aws cli error?
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: ./dist
+
+      # if there's a failure:
+      # - check for an existing ticket
+      # - make one if not found
+      # - otherwise add the failure to the ticket
+      #
+      # the idea here is to avoid getting an avalanche of tickets when something breaks
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const issueTitle = 'Observable notebook build failed';
+
+            // Search for an open issue with our title
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              creator: 'github-actions[bot]'
+            });
+
+            const existingIssue = issues.data.find(issue => issue.title === issueTitle);
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            if (existingIssue) {
+              // Add a comment to the existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: `Another failure detected in workflow run: ${runUrl}`
+              });
+              console.log(`Added comment to existing issue #${existingIssue.number}`);
+            } else {
+              // Create a new issue
+              const newIssue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issueTitle,
+                body: `Workflow run failed: ${runUrl}\n\nPlease check the workflow logs for details.`
+              });
+              console.log(`Created new issue #${newIssue.data.number}`);
+            }
 
   deploy:
     needs: build
