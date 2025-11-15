@@ -1,15 +1,15 @@
 #!/usr/bin/env node
-// const res = await fetch("https://dunksandthrees.com/epm/actual")
-// if (!res.ok) {
-//   console.log(JSON.stringify({ error: "unable to fetch" }))
-//   process.exit(1)
-// }
-// const body = await res.text()
+const res = await fetch("https://dunksandthrees.com/epm/actual")
+if (!res.ok) {
+  console.log(JSON.stringify({ error: "unable to fetch" }))
+  process.exit(1)
+}
+const body = await res.text()
 
 // for testing
-import fs from "node:fs"
-
-const body = fs.readFileSync("/tmp/epmseason.html").toString()
+// import fs from "node:fs"
+//
+// const body = fs.readFileSync("/tmp/epmseason.html").toString()
 
 // Find the starting position
 const startPattern = "data:{stats:["
