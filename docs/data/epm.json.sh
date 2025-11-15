@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 printf "const data = " > /tmp/epm.js
 # grab the javascript-formatted object from the source
-curl -s https://dunksandthrees.com/epm | sed -n 's/.*data: \(\[.*\]\).*/\1/p' >> /tmp/epm.js
+curl -s https://dunksandthrees.com/epm | sed -n 's/.*\({type:"data",data:{date.*\)].*/[\1]/p' >> /tmp/epm.js
 # and use node to turn it into JSON
-printf "\nconsole.log(JSON.stringify(data));" >> /tmp/epm.js
+printf "\nconsole.log(JSON.stringify(data[2]));" >> /tmp/epm.js
 node /tmp/epm.js
