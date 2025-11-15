@@ -112,6 +112,6 @@ display(
 
 ```js
 Inputs.table(data, {
-  columns: ["player_name", "usg_pct", "ts_pct", "mp", "fga"],
+  columns: ["player_name", "usg_pct", "ts_pct", "fga"],
 })
 ```
