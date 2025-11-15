@@ -42,6 +42,14 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SPACES_SECRET }}
           AWS_DEFAULT_REGION: us-east-1 # maybe necessary to avoid an aws cli error?
 
+      - name: Purge DigitalOcean CDN Cache
+        run: |
+          curl -X DELETE \
+            -H "Authorization: Bearer ${{ secrets.DO_CDN_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"files": ["*"]}' \
+            "https://api.digitalocean.com/v2/cdn/endpoints/${{ secrets.DO_NBA_SPACES_ID }}/cache"
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
