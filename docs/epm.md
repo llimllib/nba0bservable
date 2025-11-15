@@ -137,7 +137,7 @@ netpoints.forEach(p => {
   if (p.tm == "NO") p.tm = "NOP"
   if (p.tm == "GS") p.tm = "GSW"
   if (p.tm == "WSH") p.tm = "WAS"
-  if (p.tm == "SA") p.tm = "SAS"
+  if (p.tm == "SA" || p.tm == "SAN") p.tm = "SAS"
   if (p.tm == "NY") p.tm = "NYK"
 })
 
