@@ -15,6 +15,7 @@ import { teams } from "./lib/teams.js"
 
 ```sql id=alldata
 SELECT * from players
+-- ESPN data uses the start year not end year; 2025 -> 25-26
 where season=2025
 -- regular season and cup
 and game_id LIKE '002%' or game_id LIKE '003%'

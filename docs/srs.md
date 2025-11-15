@@ -7,23 +7,23 @@ toc: false
 # Net rating by schedule difficulty
 
 ```js
-import { teams } from "./lib/teams.js";
-import { label } from "./lib/labels.js";
-import { sliceQuantile } from "./lib/util.js";
+import { teams } from "./lib/teams.js"
+import { label } from "./lib/labels.js"
+import { sliceQuantile } from "./lib/util.js"
 ```
 
 ```js
-const bbref = (await FileAttachment("data/bbref_2025.json").json()).advanced;
-display(bbref);
-const width = 640;
-const height = 400;
+const bbref = (await FileAttachment("data/bbref_2025.json").json()).advanced
+display(bbref)
+const width = 640
+const height = 400
 const fontOptions = {
   fontSize: 16,
   // fontStyle: "italic",
   //stroke: "black",
   fill: "black",
   opacity: 0.8,
-};
+}
 const sos = Plot.plot({
   title: "Net rating by strength of schedule",
   subtitle: "data from basketball-reference",
@@ -47,9 +47,9 @@ const sos = Plot.plot({
       y: "sos",
       width: 40,
       height: 40,
-      src: (d) => {
-        console.log(d.team, teams.get(d.team));
-        return `https://llimllib.github.io/nbastats/logos/${teams.get(d.team)?.name}.svg`;
+      src: d => {
+        console.log(d.team, teams.get(d.team))
+        return `https://llimllib.github.io/nbastats/logos/${teams.get(d.team)?.name}.svg`
       },
     }),
     Plot.ruleY([0]),
@@ -70,7 +70,7 @@ const sos = Plot.plot({
       }),
     ),
   ],
-});
+})
 
 const gradient = d3
   .select(sos)
@@ -81,23 +81,23 @@ const gradient = d3
   .attr("x1", "0%")
   .attr("y1", "0%")
   .attr("x2", "0%")
-  .attr("y2", "100%");
+  .attr("y2", "100%")
 
-const grad = d3.interpolatePRGn;
+const grad = d3.interpolatePRGn
 const gradStops = [
   [0, 0.2],
   [30, 0.5],
   [70, 0.5],
   [100, 0.8],
-];
+]
 gradStops.forEach(([offset, pct]) => {
-  console.log(offset, pct, grad(pct));
+  console.log(offset, pct, grad(pct))
   return gradient
     .append("stop")
     .attr("offset", `${offset}%`)
-    .attr("stop-color", grad(pct));
-});
-const margin = 30;
+    .attr("stop-color", grad(pct))
+})
+const margin = 30
 d3.select(sos)
   .select("svg")
   .insert("rect", ":first-child")
@@ -106,11 +106,11 @@ d3.select(sos)
   .attr("width", width)
   .attr("height", height - margin)
   .attr("fill", "url(#myGradient)")
-  .attr("fill-opacity", 0.4);
+  .attr("fill-opacity", 0.4)
 
 // couldn't figure out how to remove the y axis ticks without resorting to
 // killing them later
-d3.select(sos).select('g[aria-label="y-axis tick"]').remove();
-d3.select(sos).select('g[aria-label="y-axis tick label"]').remove();
-display(sos);
+d3.select(sos).select('g[aria-label="y-axis tick"]').remove()
+d3.select(sos).select('g[aria-label="y-axis tick label"]').remove()
+display(sos)
 ```

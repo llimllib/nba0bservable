@@ -30,7 +30,7 @@ display(epmUpdated)
 
 ```js
 const year = view(
-  Inputs.range([2025, 2025], { value: "2025", label: "year", step: 1 }),
+  Inputs.range([2025, 2026], { value: "2026", label: "year", step: 1 }),
 )
 // console.log("year", (await year.next()).value);
 const percentile = view(

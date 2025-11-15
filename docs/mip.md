@@ -18,7 +18,7 @@ import { sliceQuantile } from "./lib/util.js"
 
 ```js
 const year = view(
-  Inputs.range([2015, 2025], { value: "2025", label: "year", step: 1 }),
+  Inputs.range([2015, 2026], { value: "2026", label: "year", step: 1 }),
 )
 const percentile = view(
   Inputs.range([5, 100], {

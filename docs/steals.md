@@ -9,36 +9,36 @@ sql:
 # Steals and blocks
 
 ```js
-import { teams } from "./lib/teams.js";
-import { label } from "./lib/labels.js";
-import { sliceQuantile } from "./lib/util.js";
+import { teams } from "./lib/teams.js"
+import { label } from "./lib/labels.js"
+import { sliceQuantile } from "./lib/util.js"
 ```
 
 ```js
 const year = view(
-  Inputs.range([2014, 2025], { value: "2025", label: "year", step: 1 }),
-);
+  Inputs.range([2014, 2026], { value: "2026", label: "year", step: 1 }),
+)
 ```
 
 ```sql id=steals
 SELECT player_name, team_abbreviation, stl, blk
 FROM players
-WHERE year=2025
+WHERE year=${year}
   AND (stl >= (
     SELECT PERCENTILE_CONT(0.85) WITHIN GROUP (order by stl)
     FROM players
-    WHERE year=2025)
+    WHERE year=${year})
   OR blk >= (
     SELECT PERCENTILE_CONT(0.85) WITHIN GROUP (order by blk)
     FROM players
-    WHERE year=2025))
+    WHERE year=${year}))
 ```
 
 ```js
-const x = "stl";
-const y = "blk";
-const data = steals.toArray();
-const title = "Steals and Blocks";
+const x = "stl"
+const y = "blk"
+const data = steals.toArray()
+const title = "Steals and Blocks"
 display(
   Plot.plot({
     width: 800,
@@ -52,7 +52,7 @@ display(
       Plot.line(
         [
           { x: 0, y: 0 },
-          { x: d3.max(data, (d) => d[x]), y: d3.max(data, (d) => d[y]) },
+          { x: d3.max(data, d => d[x]), y: d3.max(data, d => d[y]) },
         ],
         { x: "x", y: "y", strokeOpacity: 0.3 },
       ),
@@ -66,8 +66,8 @@ display(
       Plot.dot(data, {
         x,
         y,
-        fill: (d) => teams.get(d.team_abbreviation).colors[0],
-        stroke: (d) => teams.get(d.team_abbreviation).colors[1],
+        fill: d => teams.get(d.team_abbreviation).colors[0],
+        stroke: d => teams.get(d.team_abbreviation).colors[1],
         r: 8,
       }),
       Plot.tip(
@@ -75,10 +75,10 @@ display(
         Plot.pointer({
           x,
           y,
-          title: (d) => `${d.player_name}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+          title: d => `${d.player_name}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
         }),
       ),
     ],
   }),
-);
+)
 ```
