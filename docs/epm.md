@@ -16,26 +16,10 @@ import { teams } from "./lib/teams.js"
 // Feb 5 25: I just had to switch [1] to [2], I don't know why there are three
 // objects, two of which are empty. If I have to do this more, could search for
 // whichever one is non-empty
-const epmEnvelope = (await FileAttachment("data/epm.json").json())[2].data
+const epmEnvelope = (await FileAttachment("data/epm.json").json()).data
 const epm = epmEnvelope.stats
 const epmUpdated = epmEnvelope.date
-// seasonEPM uses an updated format where seasonEPM[1].data.stats is an array
-// of arrays without keys; the keys are in seasonEPM[1].data.k
-// 1/3/25: recently this moved into [2] instead of [1], I don't know why; the
-// first two are empty
-const seasonEPMEnvelope = (
-  await FileAttachment("./data/epm_season.json").json()
-)[2].data
-
-// merge the keys into the stats to turn them from arrays into objects
-const seasonEPM = seasonEPMEnvelope.stats.map(row =>
-  Object.fromEntries(
-    Object.entries(seasonEPMEnvelope.k).map(([key, index]) => [
-      key,
-      row[index],
-    ]),
-  ),
-)
+const seasonEPM = await FileAttachment("./data/epm_season.json").json()
 ```
 
 ```js
