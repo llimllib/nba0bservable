@@ -13,7 +13,7 @@ import { sliceQuantile } from "./lib/util.js"
 ```
 
 ```js
-const bbref = (await FileAttachment("data/bbref_2025.json").json()).advanced
+const bbref = (await FileAttachment("data/bbref_2026.json").json()).advanced
 display(bbref)
 const width = 640
 const height = 400
@@ -38,7 +38,7 @@ const sos = Plot.plot({
     // nice: true,
     // ticks: 7,
     ticks: null,
-    domain: [-3, 2.5],
+    domain: [-4, 4],
     inset: 20,
   },
   marks: [
@@ -53,11 +53,11 @@ const sos = Plot.plot({
       },
     }),
     Plot.ruleY([0]),
-    Plot.text([[-1, 2.8]], {
+    Plot.text([[-1, 4.5]], {
       text: ["↑ Harder Schedule"],
       ...fontOptions,
     }),
-    Plot.text([[-11, -3]], {
+    Plot.text([[-12, -4]], {
       text: ["→ Net Rating"],
       ...fontOptions,
       fill: "black",

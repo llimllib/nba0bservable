@@ -1,5 +1,5 @@
 const res = await fetch(
-  "https://www.basketball-reference.com/leagues/NBA_2025.html",
+  "https://www.basketball-reference.com/leagues/NBA_2026.html",
 )
 const data = await res.text()
 
