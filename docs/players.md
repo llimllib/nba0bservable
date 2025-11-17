@@ -14,11 +14,11 @@ import { sliceQuantile } from "./lib/util.js"
 ```
 
 ```js
-const seasons = [...Array(11).keys()].map(
+const seasons = [...Array(12).keys()].map(
   x => String(x + 2014) + "-" + String(x + 15),
 )
 const season_year = view(
-  Inputs.select(seasons, { value: "2024-25", label: "year" }),
+  Inputs.select(seasons, { value: "2025-26", label: "year" }),
 )
 ```
 
@@ -144,40 +144,40 @@ display(
       label: "game score",
     },
     marks: [
-      Plot.areaY(plogs, {
-        x,
-        y: Plot.windowY(
-          {
-            k,
-            anchor: "end",
-            reduce: values => {
-              const mean = values.reduce((a, b) => a + b, 0) / values.length
-              const variance =
-                values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) /
-                values.length
-              return mean - Math.sqrt(variance)
-            },
-          },
-          { x, y },
-        ),
-        //y2: Plot.windowY(
-        //  {
-        //    k,
-        //    anchor: "end",
-        //    reduce: values => {
-        //      const mean = values.reduce((a, b) => a + b, 0) / values.length
-        //      const variance =
-        //        values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) /
-        //        values.length
-        //      return mean + Math.sqrt(variance)
-        //    },
-        //  },
-        //  { x, y },
-        //),
-        fill: "green",
-        fillOpacity: 0.2,
-        stroke: null,
-      }),
+      // Plot.areaY(plogs, {
+      //   x,
+      //   y: Plot.windowY(
+      //     {
+      //       k,
+      //       anchor: "end",
+      //       reduce: values => {
+      //         const mean = values.reduce((a, b) => a + b, 0) / values.length
+      //         const variance =
+      //           values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) /
+      //           values.length
+      //         return mean - Math.sqrt(variance)
+      //       },
+      //     },
+      //     { x, y },
+      //   ),
+      //   //y2: Plot.windowY(
+      //   //  {
+      //   //    k,
+      //   //    anchor: "end",
+      //   //    reduce: values => {
+      //   //      const mean = values.reduce((a, b) => a + b, 0) / values.length
+      //   //      const variance =
+      //   //        values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) /
+      //   //        values.length
+      //   //      return mean + Math.sqrt(variance)
+      //   //    },
+      //   //  },
+      //   //  { x, y },
+      //   //),
+      //   fill: "green",
+      //   fillOpacity: 0.2,
+      //   stroke: null,
+      // }),
       Plot.dot(plogs, {
         x: "game_date",
         y: "gamescore",

@@ -16,11 +16,11 @@ import { sliceQuantile } from "./lib/util.js"
 ```
 
 ```js
-const seasons = [...Array(11).keys()].map(
+const seasons = [...Array(12).keys()].map(
   x => String(x + 2014) + "-" + String(x + 15),
 )
 const season_year = view(
-  Inputs.select(seasons, { value: "2024-25", label: "year" }),
+  Inputs.select(seasons, { value: "2025-26", label: "year" }),
 )
 ```
 
