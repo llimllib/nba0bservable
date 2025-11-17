@@ -4,6 +4,7 @@ title: Net Points
 toc: false
 sql:
   players: ./data/espn.players.parquet
+  gamelogs: ./data/gamelogs.parquet
 ---
 
 # Net Points
@@ -25,7 +26,7 @@ and game_id LIKE '002%' or game_id LIKE '003%'
 ```
 
 ```js
-display(Inputs.table(alldata))
+// display(Inputs.table(alldata))
 ```
 
 ```sql id=agg
@@ -62,7 +63,7 @@ order by tNetPts desc
 ```
 
 ```js
-display(Inputs.table(agg))
+// display(Inputs.table(agg))
 ```
 
 ```js
@@ -206,4 +207,192 @@ view(
     ],
   }),
 )
+```
+
+```sql id=debug
+SELECT * from gamelogs
+-- ESPN data uses the start year not end year; 2025 -> 25-26
+-- where year=2026
+-- regular season and cup
+-- and game_id LIKE '002%' or game_id LIKE '003%'
+-- limit to playoffs:
+-- and game_id LIKE '004%'
+;
+```
+
+```js
+Inputs.table(debug)
+```
+
+```sql id=delta
+SELECT DISTINCT
+  p.game_id,
+  p.player_id,
+  p.name,
+  p.team,
+  p.oNetPts,
+  p.dNetPts,
+  p.tNetPts,
+  g.matchup,
+  -- g.game_date,
+  strftime(g.game_date::TIMESTAMP, '%b %d') as game_date,
+  abs(oNetPts-dNetPts) delta,
+from players p
+left join (
+  SELECT DISTINCT ON (game_id)
+    game_id, matchup, game_date
+  FROM gamelogs
+) g ON p.game_id = g.game_id
+where p.season=2025
+-- preseason: 001
+-- regular season and cup (I think it's 003?)
+and p.game_id LIKE '002%' or p.game_id LIKE '003%'
+order by delta desc
+```
+
+```js
+Inputs.table(delta)
+```
+
+```js
+const top10 = delta.toArray().slice(0, 10)
+
+// Color scales for offensive and defensive net points
+// const oExtent = d3.extent(top10, d => d.oNetPts)
+// const dExtent = d3.extent(top10, d => d.dNetPts)
+const oExtent = [-5, 20]
+const dExtent = [-10, 1]
+
+// Green for positive, red for negative
+const oColorScale = d3
+  .scaleLinear()
+  .domain([Math.min(oExtent[0], 0), 0, Math.max(oExtent[1], 0)])
+  .range([
+    d3.interpolatePRGn(0.2),
+    d3.interpolatePRGn(0.5),
+    d3.interpolatePRGn(0.8),
+  ])
+
+const dColorScale = d3
+  .scaleLinear()
+  .domain([Math.min(dExtent[0], 0), 0, Math.max(dExtent[1], 0)])
+  .range([
+    d3.interpolatePRGn(0.2),
+    d3.interpolatePRGn(0.5),
+    d3.interpolatePRGn(0.8),
+  ])
+
+const container = d3
+  .create("div")
+  .style("font-family", "system-ui, sans-serif")
+  .style("max-width", "1000px")
+
+container
+  .append("h3")
+  .style("margin-top", "40px")
+  .style("margin-bottom", "4px")
+  .style("font-size", "24px")
+  .style("font-weight", "700")
+  .text("Top 10 Offensive/Defensive split games")
+
+// Subtitle
+container
+  .append("p")
+  .style("margin-top", "0")
+  .style("margin-bottom", "0px")
+  .style("font-size", "14px")
+  .style("color", "#666")
+  .style("font-weight", "600")
+  .text("2025-26 season, data via espnanalytics.com")
+
+const table = container
+  .append("table")
+  .style("width", "100%")
+  .style("border-collapse", "collapse")
+  .style("margin-top", "0px")
+
+// Header
+const thead = table.append("thead")
+thead
+  .append("tr")
+  .selectAll("th")
+  .data([
+    "Player",
+    "Offensive Net Points",
+    "Defensive Net Points",
+    "Difference",
+  ])
+  .join("th")
+  .style("text-align", (d, i) => (i === 0 ? "left" : "center"))
+  .style("padding", "12px")
+  .style("border-bottom", "2px solid #333")
+  .style("font-weight", "600")
+  .text(d => d)
+
+// Body
+const tbody = table.append("tbody")
+const rows = tbody
+  .selectAll("tr")
+  .data(top10)
+  .join("tr")
+  .style("border-bottom", "1px solid #ddd")
+
+// Column 1: Player info with image
+rows
+  .append("td")
+  .style("padding", "12px")
+  .style("display", "flex")
+  .style("align-items", "center")
+  .style("gap", "12px")
+  .html(d => {
+    // ESPN player image URL pattern - you may need to adjust this
+    const playerImg = `https://cdn.nba.com/headshots/nba/latest/260x190/${d.player_id}.png`
+    return `
+      <img src="${playerImg}"
+           width="50"
+           height="50"
+           style="border-radius: 4px; object-fit: cover;"
+           onerror="this.style.display='none'">
+      <div>
+        <div style="font-weight: 600; font-size: 14px;">${d.name}</div>
+        <div style="font-size: 12px; color: #666;">${d.game_date} • ${d.matchup}</div>
+      </div>
+    `
+  })
+
+// Column 2: Offensive Net Points
+rows
+  .append("td")
+  .style("padding", "12px")
+  .style("text-align", "center")
+  .style("font-weight", "600")
+  .style("font-size", "16px")
+  .style("background-color", d => oColorScale(d.oNetPts))
+  .style("vertical-align", "middle")
+  .style("color", d => "#333")
+  .text(d => d.oNetPts.toFixed(1))
+
+// Column 3: Defensive Net Points
+rows
+  .append("td")
+  .style("padding", "12px")
+  .style("text-align", "center")
+  .style("font-weight", "600")
+  .style("font-size", "16px")
+  .style("background-color", d => dColorScale(d.dNetPts))
+  .style("vertical-align", "middle")
+  .style("color", d => "#333")
+  .text(d => d.dNetPts.toFixed(1))
+
+// Column 4: Delta
+rows
+  .append("td")
+  .style("padding", "12px")
+  .style("text-align", "center")
+  .style("font-weight", "700")
+  .style("font-size", "16px")
+  .style("vertical-align", "middle")
+  .text(d => d.delta.toFixed(1))
+
+display(container.node())
 ```
