@@ -194,3 +194,290 @@ container
 
 display(container.node())
 ```
+
+```js
+const datas = data.map(d => ({
+  ...d,
+  net: d.offense - d.defense,
+  bias: d.offense + d.defense,
+}))
+const [minX, maxX] = d3.extent(datas, d => d.bias)
+const medianX = d3.median(datas, d => d.bias)
+// center the x-axis on the median
+const domainX =
+  medianX - minX > maxX - medianX
+    ? [minX, medianX + (medianX - minX)]
+    : [medianX - (maxX - medianX), maxX]
+const [minY, maxY] = d3.extent(datas, d => d.net)
+
+// Create diagonal lines for offensive efficiency
+const offenseLines = [100, 110, 120].flatMap(o => [
+  { x: domainX[0], y: 2 * o - domainX[0], offense: o },
+  { x: domainX[1], y: 2 * o - domainX[1], offense: o },
+])
+const defenseLines = [100, 110, 120].flatMap(d => [
+  { x: domainX[0], y: domainX[0] - 2 * d, defense: d },
+  { x: domainX[1], y: domainX[1] - 2 * d, defense: d },
+])
+display(
+  Plot.plot({
+    width: 500,
+    height: 500,
+    margin: 20,
+    title: "Net Ratings",
+    x: { axis: null, inset: 20, domain: domainX },
+    y: {
+      domain: [minY - 1, maxY + 1],
+      inset: 20,
+      grid: true,
+      // label: "net rating",
+      // labelAnchor: "bottom",
+      ticks: 5,
+    },
+    marks: [
+      Plot.line(offenseLines, {
+        x: "x",
+        y: "y",
+        z: "offense",
+        stroke: "lightgray",
+        strokeDasharray: "2,2",
+        strokeWidth: 1,
+      }),
+      Plot.line(defenseLines, {
+        x: "x",
+        y: "y",
+        z: "defense",
+        stroke: "lightgray",
+        strokeDasharray: "2,2",
+        strokeWidth: 1,
+      }),
+      Plot.ruleX([medianX], { stroke: "gray", strokeDasharray: "4,4" }),
+      Plot.text([[medianX - 2, minY - 4]], {
+        text: ["← Defensive"],
+        fill: "gray",
+        fontSize: 12,
+        textAnchor: "end",
+      }),
+      Plot.text([[medianX + 2, minY - 4]], {
+        text: ["Offensive →"],
+        fill: "gray",
+        fontSize: 12,
+        textAnchor: "start",
+      }),
+      Plot.image(datas, {
+        x: "bias",
+        y: "net",
+        src: d =>
+          `https://llimllib.github.io/nbastats/logos/${getName(d.team)}.svg`,
+        width: 30,
+        opacity: 0.9,
+      }),
+      Plot.tip(
+        datas,
+        Plot.pointer({
+          x: "bias",
+          y: "net",
+          title: team =>
+            `${team.team}\nNet rating: ${d3.format(".1f")(team.net)}\nOffensive rating: ${team.offense}\nDefensive rating: ${team.defense}`,
+        }),
+      ),
+      Plot.text([[domainX[1] + 2, maxY + 3]], {
+        text: ["data: Cleaning the Glass"],
+        fontSize: 12,
+        fill: "gray",
+        textAnchor: "end",
+      }),
+    ],
+  }),
+)
+```
+
+```js
+// Prepare data for the table with net ratings
+const tableData = datas
+  .map(d => ({
+    team: d.team,
+    name: getName(d.team),
+    offense: d.offense,
+    defense: d.defense,
+    net: d.net,
+    bias: d.bias,
+  }))
+  .sort((a, b) => b.net - a.net) // Sort by net rating descending
+
+// Calculate table height based on number of rows (approximate)
+const rowHeight = 33
+const headerHeight = 40
+const tableHeight = tableData.length * rowHeight + headerHeight
+
+// Create the graph (similar to the second plot)
+const sideGraph = Plot.plot({
+  width: 400,
+  height: tableHeight,
+  marginLeft: 0,
+  marginRight: 20,
+  marginTop: 40,
+  marginBottom: 30,
+  x: { axis: null, domain: domainX, inset: 20, label: null },
+  y: {
+    domain: [minY - 1, maxY + 1],
+    axis: null,
+    grid: false,
+    label: null,
+    labelAnchor: "top",
+  },
+  marks: [
+    Plot.ruleX([medianX], { stroke: "gray", strokeDasharray: "4,4" }),
+    Plot.ruleY([0], { stroke: "black", strokeWidth: 1 }),
+    Plot.image(datas, {
+      x: "bias",
+      y: "net",
+      src: d =>
+        `https://llimllib.github.io/nbastats/logos/${getName(d.team)}.svg`,
+      width: 25,
+      opacity: 0.9,
+    }),
+    Plot.tip(
+      datas,
+      Plot.pointer({
+        x: "bias",
+        y: "net",
+        title: team =>
+          `${team.team}\nNet: ${d3.format(".1f")(team.net)}\nOff: ${team.offense}\nDef: ${team.defense}`,
+      }),
+    ),
+  ],
+})
+
+const netScale = d3
+  .scaleSequential(d3.interpolatePRGn)
+  .domain([
+    d3.min(tableData, d => d.net) * 2.0,
+    d3.max(tableData, d => d.net) * 1.8,
+  ])
+
+const offenseScale = d3
+  .scaleSequential(d3.interpolatePRGn)
+  .domain([
+    d3.min(tableData, d => d.offense) * 0.8,
+    d3.max(tableData, d => d.offense) * 1.2,
+  ])
+
+const defenseScale = d3
+  .scaleSequential(d3.interpolatePRGn)
+  .domain([
+    d3.max(tableData, d => d.defense) * 1.2,
+    d3.min(tableData, d => d.defense) * 0.8,
+  ]) // Reversed: lower is better
+
+// Create the table with HTML
+const tableContainer = d3
+  .create("div")
+  .style("flex", "0 0 auto")
+  .style("overflow-y", "auto")
+  .style("max-height", tableHeight + "px")
+
+const table = tableContainer
+  .append("table")
+  .style("border-collapse", "collapse")
+  .style("font-size", "14px")
+  .style("width", "100%")
+
+// Table header
+// TODO: make table sortable
+const thead = table.append("thead")
+const headerRow = thead
+  .append("tr")
+  .style("position", "sticky")
+  .style("top", "0")
+  .style("z-index", "10")
+
+headerRow
+  .append("th")
+  .text("")
+  .style("padding", "8px")
+  .style("text-align", "left")
+  .style("font-weight", "600")
+
+headerRow
+  .append("th")
+  .text("Offensive rating")
+  .style("padding", "8px")
+  .style("text-align", "right")
+  .style("font-weight", "600")
+
+headerRow
+  .append("th")
+  .text("Defensive rating")
+  .style("padding", "8px")
+  .style("text-align", "right")
+  .style("font-weight", "600")
+
+headerRow
+  .append("th")
+  .text("Net")
+  .style("padding", "8px")
+  .style("text-align", "right")
+  .style("font-weight", "600")
+
+// Table body
+const tbody = table.append("tbody")
+const rows = tbody
+  .selectAll("tr")
+  .data(tableData)
+  .join("tr")
+  .style("border-bottom", "1px solid #aaa")
+
+// Team name + logo column
+rows
+  .append("td")
+  // .style("padding", "6px 8px")
+  .style("display", "flex")
+  .style("align-items", "center")
+  .style("gap", "8px")
+  .html(
+    d => `
+    <img src="https://llimllib.github.io/nbastats/logos/${d.name}.svg" 
+         width="24" height="24" style="display: block;">
+    <span>${d.team}</span>
+  `,
+  )
+
+// Offensive efficiency
+rows
+  .append("td")
+  .text(d => d3.format(".1f")(d.offense))
+  .style("padding", "6px 8px")
+  .style("text-align", "right")
+  .style("background-color", d => offenseScale(d.offense))
+
+// Defensive efficiency
+rows
+  .append("td")
+  .text(d => d3.format(".1f")(d.defense))
+  .style("padding", "6px 8px")
+  .style("text-align", "right")
+  .style("background-color", d => defenseScale(d.defense))
+
+// Net efficiency
+rows
+  .append("td")
+  .text(d => d3.format(".1f")(d.net))
+  .style("padding", "6px 8px")
+  .style("text-align", "right")
+  .style("font-weight", "600")
+  .style("background-color", d => netScale(d.net))
+
+// Create flex container
+const flexContainer = d3
+  .create("div")
+  .style("display", "flex")
+  .style("align-items", "flex-start")
+  .style("gap", "20px")
+  .style("margin", "20px 0")
+
+flexContainer.append(() => tableContainer.node())
+flexContainer.append(() => sideGraph)
+
+display(flexContainer.node())
+```
