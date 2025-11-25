@@ -349,26 +349,25 @@ const sideGraph = Plot.plot({
   ],
 })
 
+function expandDomain(values, paddingPercent = 0.9) {
+  const min = d3.min(values)
+  const max = d3.max(values)
+  const range = max - min
+  const padding = range * paddingPercent
+  return [min - padding, max + padding]
+}
+
 const netScale = d3
   .scaleSequential(d3.interpolatePRGn)
-  .domain([
-    d3.min(tableData, d => d.net) * 2.0,
-    d3.max(tableData, d => d.net) * 1.8,
-  ])
+  .domain(expandDomain(tableData.map(d => d.net)))
 
 const offenseScale = d3
   .scaleSequential(d3.interpolatePRGn)
-  .domain([
-    d3.min(tableData, d => d.offense) * 0.8,
-    d3.max(tableData, d => d.offense) * 1.2,
-  ])
+  .domain(expandDomain(tableData.map(d => d.offense)))
 
 const defenseScale = d3
   .scaleSequential(d3.interpolatePRGn)
-  .domain([
-    d3.max(tableData, d => d.defense) * 1.2,
-    d3.min(tableData, d => d.defense) * 0.8,
-  ]) // Reversed: lower is better
+  .domain(expandDomain(tableData.map(d => d.defense)).reverse()) // Reversed: lower is better
 
 // Create the table with HTML
 const tableContainer = d3
