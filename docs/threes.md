@@ -177,3 +177,99 @@ display(
   }),
 )
 ```
+
+```sql id=higher_volume
+SELECT p1.player_id,
+  p1.player_name,
+  p2.team_abbreviation,
+  p1.fg3a_per36 as fg3a_per36_prev,
+  p2.fg3a_per36 as fg3a_per36_curr,
+  p1.fg3a as fg3a_prev,
+  p2.fg3a as fg3a_curr,
+  p1.fg3_pct as fg3_pct_prev,
+  p2.fg3_pct as fg3_pct_curr,
+  p2.fg3a_per36 - p1.fg3a_per36 as fg3a_change,
+  ((p2.fg3a_per36 - p1.fg3a_per36) / p1.fg3a_per36) * 100 as fg3a_percent_change,
+  p2.fg3_pct - p1.fg3_pct as fg3_pct_change
+FROM players p1, players p2
+WHERE p1.player_id=p2.player_id
+  AND p1.year=${year - 1}
+  AND p2.year=${year}
+  AND p2.fg3a_per36 > p1.fg3a_per36 * 1.1
+  AND p1.fg3a > 250
+  AND p2.fg3a > 50
+ORDER BY fg3a_change DESC
+```
+
+```js
+display(Inputs.table(higher_volume))
+```
+
+```js
+const volumeData = [...higher_volume].filter(p =>
+  activeTeams.length > 0 ? activeTeams.includes(p.team_abbreviation) : true,
+)
+
+const volumeGraph = Plot.plot({
+  width: 800,
+  height: 600,
+  title: `Players shooting 10%+ more 3s per 36 (${year - 1} → ${year})`,
+  subtitle:
+    "Change in 3P% vs. change in 3PA per 36 (min: 250 3PA '25, 50 3PA '26)",
+  marginRight: 40,
+  marginBottom: 60,
+  grid: true,
+  x: {
+    label: "Increase in 3PA per 36 minutes",
+    labelAnchor: "center",
+    labelOffset: 40,
+    inset: 90,
+    ticks: 5,
+    tickSize: 0,
+  },
+  y: {
+    label: "Change in 3 point %",
+    labelAnchor: "center",
+    labelOffset: 60,
+    tickFormat: d => `${(d * 100).toFixed(1)}%`,
+    ticks: 5,
+    tickSize: 0,
+  },
+  marks: [
+    label(volumeData, {
+      x: "fg3a_change",
+      y: "fg3_pct_change",
+      label: "player_name",
+      padding: 10,
+      minCellSize: 2000,
+    }),
+    Plot.dot(volumeData, {
+      x: "fg3a_change",
+      y: "fg3_pct_change",
+      fill: d => teams.get(d.team_abbreviation).colors[0],
+      stroke: d => teams.get(d.team_abbreviation).colors[1],
+      r: 8,
+    }),
+    Plot.tip(
+      volumeData,
+      Plot.pointer({
+        x: "fg3a_change",
+        y: "fg3_pct_change",
+        title: d =>
+          `${d.player_name} (${d.team_abbreviation})
+${year - 1}: ${d.fg3a_per36_prev.toFixed(1)} 3PA/36, ${(d.fg3_pct_prev * 100).toFixed(1)}%
+${year}: ${d.fg3a_per36_curr.toFixed(1)} 3PA/36, ${(d.fg3_pct_curr * 100).toFixed(1)}%
+Change: +${d.fg3a_change.toFixed(1)} 3PA/36 (+${d.fg3a_percent_change.toFixed(1)}%)
+        ${d.fg3_pct_change >= 0 ? "+" : ""}${(d.fg3_pct_change * 100).toFixed(1)}% in 3P%`,
+      }),
+    ),
+  ],
+})
+
+d3.select(volumeGraph)
+  .select("svg")
+  .style("padding-bottom", "40px")
+  .style("overflow", "visible")
+
+display(volumeGraph)
+```
