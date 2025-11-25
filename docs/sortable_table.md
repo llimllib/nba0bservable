@@ -10,8 +10,6 @@ const data = await FileAttachment("data/cleantheglass_teams.json").json()
 ```
 
 ```js
-const last2weeks = view(Inputs.toggle({ label: "last 2 weeks only" }))
-
 function getName(s) {
   return teams.values().find(x => x.ctgName == s).name
 }
@@ -66,10 +64,10 @@ const g = svg
 const graphInnerWidth = graphWidth - graphMargin.left - graphMargin.right
 const graphInnerHeight = graphHeight - graphMargin.top - graphMargin.bottom
 
-// Create y scale (will be updated on sort)
+// Create y scale (initialize with correct domain for initial sort: net desc)
 const yScale = d3
   .scaleLinear()
-  .domain([minY - 1, maxY + 1])
+  .domain([minY - 1, maxY + 1]) // High values at top for desc sort
   .range([graphInnerHeight, 0])
 
 // Add median line
@@ -168,8 +166,6 @@ const images = g
   .attr("y", d => yScale(d.net) - 12.5)
   .style("opacity", 0.9)
   .style("cursor", "pointer")
-
-// ...existing code (expandDomain function and scales)...
 
 function expandDomain(values, paddingPercent = 0.9) {
   const min = d3.min(values)
@@ -270,24 +266,33 @@ function updateVisualization() {
 
   if (sortColumn === "net") {
     const [min, max] = d3.extent(tableData, d => d.net)
-    yDomain = [min - 1, max + 1]
+    yDomain =
+      sortDirection === "desc"
+        ? [min - 1, max + 1] // High values at top
+        : [max + 1, min - 1] // Low values at top
     yAccessor = d => d.net
     medianValue = d3.median(tableData, d => d.net)
   } else if (sortColumn === "offense") {
     const [min, max] = d3.extent(tableData, d => d.offense)
-    yDomain = [min - 1, max + 1]
+    yDomain =
+      sortDirection === "desc"
+        ? [min - 1, max + 1] // High values at top
+        : [max + 1, min - 1] // Low values at top
     yAccessor = d => d.offense
     medianValue = d3.median(tableData, d => d.offense)
   } else {
-    // defense - lower is better, so reverse
+    // defense
     const [min, max] = d3.extent(tableData, d => d.defense)
-    yDomain = [max + 1, min - 1]
+    yDomain =
+      sortDirection === "asc"
+        ? [max + 1, min - 1] // Low values at top (best defense first)
+        : [min - 1, max + 1] // High values at top (worst defense first)
     yAccessor = d => d.defense
     medianValue = d3.median(tableData, d => d.defense)
   }
 
-  // Update y scale
-  yScale.domain(yDomain)
+  // Update y scale with consistent range
+  yScale.domain(yDomain).range([graphInnerHeight, 0])
 
   // Calculate x positions to avoid overlap
   const xPositions = calculateXPositions(datas, yAccessor, yScale)
