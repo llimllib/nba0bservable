@@ -4,6 +4,9 @@ export interface Team {
   colors: string[]
   comment?: string
 
+  // if present, represents the abbreviation that bbref uses for the team
+  bbrefAbbrev?: string
+
   // if present, represents the name that cleaning the glass uses for the team
   ctgName?: string
 
@@ -41,16 +44,7 @@ export const teams: Map<string, Team> = new Map([
     {
       abbreviation: "BKN",
       colors: ["#000000", "#FFFFFF", "#707271"],
-      ctgName: "Brooklyn",
-      name: "Brooklyn Nets",
-    },
-  ],
-  // the bbref spelling of BKN
-  [
-    "BRK",
-    {
-      abbreviation: "BRK",
-      colors: ["#000000", "#FFFFFF", "#707271"],
+      bbrefAbbrev: "BRK",
       ctgName: "Brooklyn",
       name: "Brooklyn Nets",
     },
@@ -79,17 +73,7 @@ export const teams: Map<string, Team> = new Map([
     {
       abbreviation: "CHA",
       colors: ["#00788C", "#1D1160", "#A1A1A4", "#FFFFFF"],
-      ctgName: "Charlotte",
-      name: "Charlotte Hornets",
-    },
-  ],
-  // A duplicate of CHA, because bbref uses CHA but nba.com uses CHO. I _think_
-  // bbref uses CHA for the Bobcats, but haven't verified that.
-  [
-    "CHO",
-    {
-      abbreviation: "CHO",
-      colors: ["#00788C", "#1D1160", "#A1A1A4", "#FFFFFF"],
+      bbrefAbbrev: "CHO",
       ctgName: "Charlotte",
       name: "Charlotte Hornets",
     },
@@ -283,20 +267,11 @@ export const teams: Map<string, Team> = new Map([
       name: "Philadelphia 76ers",
     },
   ],
-  // the BBref spelling of PHX
-  [
-    "PHO",
-    {
-      abbreviation: "PHO",
-      ctgName: "Phoenix",
-      colors: ["#1D1160", "#E56020", "#000000", "#63727A", "#F9A01B"],
-      name: "Phoenix Suns",
-    },
-  ],
   [
     "PHX",
     {
       abbreviation: "PHX",
+      bbrefAbbrev: "PHO",
       ctgName: "Phoenix",
       colors: ["#1D1160", "#E56020", "#000000", "#63727A", "#F9A01B"],
       name: "Phoenix Suns",
@@ -368,3 +343,16 @@ export const teams: Map<string, Team> = new Map([
     },
   ],
 ])
+
+export function espnAbbrev(abbrev: string): string {
+  const t = [...teams.values()].filter(
+    t => t.abbreviation === abbrev || t.espnName === abbrev,
+  )?.[0]
+
+  // for some reason, the ESPN utah jazz logo is utah.png not anything related to the team abbreviation, so special case it
+  if (t.abbreviation === "UTA") return "utah"
+  if (!t) {
+    throw new Error(`unable to find team ${abbrev}`)
+  }
+  return t.espnName || t.abbreviation
+}

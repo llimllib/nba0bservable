@@ -63,7 +63,11 @@ const allPlayers = (
 ```js
 const x = "ast_diff"
 const y = "pt_diff"
-const data = sliceQuantile(allPlayers, "min_a", (100 - percentile) / 100)
+const data = sliceQuantile(
+  allPlayers,
+  "min_a",
+  (100 - percentile) / 100,
+).filter(d => d[x] > 0 && d[y] > 0)
 const graph = Plot.plot({
   width: 800,
   height: 800,
@@ -115,12 +119,16 @@ display(graph)
 ```js
 const x = "reb_diff"
 const y = "pt_diff"
-const data = sliceQuantile(allPlayers, "min_a", (100 - percentile) / 100)
+const data = sliceQuantile(
+  allPlayers,
+  "min_a",
+  (100 - percentile) / 100,
+).filter(d => d[x] > 0 && d[y] > 0 && d[x] + d[y] > 2)
 const graph = Plot.plot({
   width: 800,
   height: 800,
   title: "Points per 36 and Rebounds per 36 change",
-  subtitle: `difference between ${year} and ${year - 1}. Top ${percentile}% by minutes`,
+  subtitle: `difference between ${year} and ${year - 1}. Top ${percentile}% by minutes, improvements only`,
   x: {
     inset: 50,
     nice: true,
@@ -167,25 +175,30 @@ display(graph)
 ```js
 const x = "usg_diff"
 const y = "ts_diff"
-const data = sliceQuantile(allPlayers, "min_a", (100 - percentile) / 100)
+const data = sliceQuantile(
+  allPlayers,
+  "min_a",
+  (100 - percentile) / 100,
+).filter(d => d[x] > 0 && d[y] > 0 && d[x] + d[y] > 0.04)
 const graph = Plot.plot({
   width: 800,
   height: 800,
-  title: "True shooting and usage change",
-  subtitle: `difference between ${year} and ${year - 1}. Top ${percentile}% by minutes`,
+  marginLeft: 50,
+  title: "Who's scoring more efficiently?",
+  subtitle: `Usage and TS% increase ${year} -> ${year - 1}. Top ${percentile}% by minutes, positive only`,
   x: {
     inset: 50,
     nice: true,
     ticks: 5,
-    label: "Difference in usage",
+    label: "Increase in usage",
     labelAnchor: "center",
   },
   y: {
     nice: true,
     ticks: 5,
-    label: "Difference in true shooting",
+    label: "Increase true shooting %",
     labelAnchor: "center",
-    labelOffset: 38,
+    labelOffset: 50,
   },
   marks: [
     label(data, {
