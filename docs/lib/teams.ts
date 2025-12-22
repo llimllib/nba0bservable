@@ -43,9 +43,10 @@ export const teams: Map<string, Team> = new Map([
     "BKN",
     {
       abbreviation: "BKN",
-      colors: ["#000000", "#FFFFFF", "#707271"],
       bbrefAbbrev: "BRK",
+      colors: ["#000000", "#FFFFFF", "#707271"],
       ctgName: "Brooklyn",
+      espnName: "BRK",
       name: "Brooklyn Nets",
     },
   ],
@@ -272,8 +273,9 @@ export const teams: Map<string, Team> = new Map([
     {
       abbreviation: "PHX",
       bbrefAbbrev: "PHO",
-      ctgName: "Phoenix",
       colors: ["#1D1160", "#E56020", "#000000", "#63727A", "#F9A01B"],
+      ctgName: "Phoenix",
+      espnName: "PHO",
       name: "Phoenix Suns",
     },
   ],
