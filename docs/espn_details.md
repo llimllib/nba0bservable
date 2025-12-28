@@ -9,7 +9,7 @@ sql:
 
 ```js
 import { label } from "./lib/labels.js"
-import { teams } from "./lib/teams.js"
+import { normalizeESPN, teams } from "./lib/teams.js"
 import { sliceQuantile } from "./lib/util.js"
 ```
 
@@ -39,13 +39,6 @@ group by playerId, name, team, fga
 ```
 
 ```js
-function t(name) {
-  if (name == "SAN") return teams.get("SAS")
-  if (name == "NOR") return teams.get("NOP")
-  console.log(name)
-  return teams.get(name)
-}
-
 const x = "twos"
 const y = "threes"
 const data = sliceQuantile(
@@ -81,8 +74,8 @@ display(
       Plot.dot(data, {
         x,
         y,
-        fill: d => t(d.team).colors[0],
-        stroke: d => t(d.team).colors[1],
+        fill: d => teams.get(normalizeESPN(d.team)).colors[0],
+        stroke: d => teams.get(normalizeESPN(d.team)).colors[1],
         r: 8,
       }),
       Plot.tip(
