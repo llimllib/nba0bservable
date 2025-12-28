@@ -8,7 +8,7 @@ toc: false
 
 ```js
 import { epmDiamond, netPointsDiamond } from "./lib/epmdiamond.js"
-import { teams } from "./lib/teams.js"
+import { normalizeESPN, teams } from "./lib/teams.js"
 ```
 
 ```js
@@ -101,6 +101,10 @@ display(
 ```
 
 ```js
+
+```
+
+```js
 function norm(name) {
   return name
     .toLowerCase()
@@ -131,14 +135,7 @@ netpoints.forEach(p => {
     return
   }
   p.mp = matches[0].mp
-
-  // normalize team abbreviations
-  if (p.tm == "UTAH") p.tm = "UTA"
-  if (p.tm == "NO") p.tm = "NOP"
-  if (p.tm == "GS") p.tm = "GSW"
-  if (p.tm == "WSH") p.tm = "WAS"
-  if (p.tm == "SA" || p.tm == "SAN") p.tm = "SAS"
-  if (p.tm == "NY") p.tm = "NYK"
+  p.tm = normalizeESPN(p.tm)
 })
 
 // remove the un-matched players
@@ -147,13 +144,6 @@ console.log(
   netpoints.filter(p => !p.mp).map(p => p.full_nm),
 )
 const netpoints_matched = netpoints.filter(p => p.mp)
-
-// display(Inputs.table(netpoints_matched))
-// Why isn't it matching Mitchell Robinson? I dunno.
-// display(Inputs.table(netpoints.filter(p => p.full_nm.match(/Mitchell Rob/))))
-// display(
-//   Inputs.table(seasonEPM.filter(p => p.player_name.match(/Mitchell Rob/))),
-// )
 
 display(
   netPointsDiamond(netpoints_matched, {

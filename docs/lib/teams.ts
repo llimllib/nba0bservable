@@ -358,3 +358,14 @@ export function espnAbbrev(abbrev: string): string {
   }
   return t.espnName || t.abbreviation
 }
+
+/* normalize an ESPN abbreviation into our abbreviation */
+export function normalizeESPN(abbrev: string): string {
+  const t = [...teams.values()].filter(
+    t => t.abbreviation === abbrev || t.espnName === abbrev,
+  )?.[0]
+  if (!t) {
+    throw new Error(`unable to find team ${abbrev}`)
+  }
+  return t.abbreviation
+}
