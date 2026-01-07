@@ -151,7 +151,7 @@ const selectedPlayer = view(
       .map(p => p.name)
       .sort(),
     {
-      value: "AJ Green", // why this not working
+      value: "Derrick White",
       label: "player",
     },
   ),
@@ -168,7 +168,7 @@ let i = 1
 data.forEach(pt => {
   pt.gameN = i++
 })
-console.log(data)
+console.log("single player data", data)
 const exploded = data
   .map(pg => {
     return [
@@ -189,10 +189,9 @@ const exploded = data
     ]
   })
   .flat()
-console.log(exploded)
 view(
   Plot.plot({
-    title: `Postseason net points for ${selectedPlayer}`,
+    title: `Net points for ${selectedPlayer}`,
     color: { legend: true, scheme: "BuRd" },
     y: { axis: null },
     facet: { label: "game" },
@@ -204,6 +203,86 @@ view(
         fill: "type", // d => (d.type === "off" ? "#1f78b4" : "#33a02c"),
       }),
       Plot.ruleX(data, { x: "tNetPts", fy: "gameN" }),
+    ],
+  }),
+)
+```
+
+```js
+const oNetColor = "#01cdfe"
+const dNetColor = "#b967ff"
+const tNetColor = "#ff71ce"
+const movingColor = "#05ffa1"
+const componentOpacity = 0.9
+view(
+  Plot.plot({
+    title: `Net points for ${selectedPlayer}`,
+    x: { axis: null, inset: 10 },
+    // How to make a custom legend is intentionally (!) not documented. Fil
+    // tells us how to do it here:
+    // https://github.com/observablehq/plot/discussions/2007#discussioncomment-8623183
+    color: {
+      legend: true,
+      domain: [oNetColor, dNetColor, tNetColor, movingColor],
+      range: [oNetColor, dNetColor, tNetColor, movingColor],
+      tickFormat: d => {
+        switch (d) {
+          case oNetColor:
+            return "Offensive Net Points"
+          case dNetColor:
+            return "Defensive"
+          case tNetColor:
+            return "Total"
+          case movingColor:
+            return "Moving Total Average"
+        }
+      },
+    },
+    marks: [
+      Plot.ruleY([0]),
+      // total points
+      Plot.ruleX(data, {
+        x: "gameN",
+        y: "tNetPts",
+        stroke: tNetColor,
+        strokeOpacity: 1,
+        strokeWidth: 10,
+      }),
+      // oNetPts
+      Plot.ruleY(data, {
+        x1: "gameN",
+        x2: "gameN",
+        // dx: -2,
+        y: "oNetPts",
+        stroke: oNetColor,
+        strokeOpacity: componentOpacity,
+        strokeWidth: 5,
+        insetRight: 4,
+        insetLeft: 4,
+      }),
+      // dNetPts
+      Plot.dot(data, {
+        x: "gameN",
+        y: "dNetPts",
+        dx: 2,
+        // manual stacking implementation, if we represent them as bars
+        // y2: d =>
+        //   d.oNetPts > 0 && d.dNetPts > 0 ? d.dNetPts + d.oNetPts : d.dNetPts,
+        // y1: d => (d.oNetPts > 0 && d.dNetPts > 0 ? d.oNetPts : 0),
+        fill: dNetColor,
+        fillOpacity: componentOpacity,
+        insetRight: 10,
+        insetLeft: 10,
+      }),
+      // moving average line
+      Plot.lineY(
+        data,
+        Plot.windowY(5, {
+          x: "gameN",
+          y: "tNetPts",
+          stroke: movingColor,
+        }),
+      ),
     ],
   }),
 )

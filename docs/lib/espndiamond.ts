@@ -12,7 +12,6 @@ import { sliceQuantile } from "./util.js"
 function getTeam(abbrev: string): Team {
   // if there's an espnName that matches, use it
   const eteam = Array.from(teams.values()).filter(t => t.espnName == abbrev)
-  console.log("got eteam", eteam, "from abbrev", abbrev)
   if (eteam.length > 0) return eteam[0]
 
   // otherwise match on the key name
