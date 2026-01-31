@@ -1,4 +1,11 @@
-const res = await fetch("https://cleaningtheglass.com/stats/league/summary")
+try {
+  const res = await fetch("https://cleaningtheglass.com/stats/league/summary")
+} catch (e) {
+  console.error(
+    "failed to fetch https://cleaningtheglass.com/stats/league/summary",
+  )
+  process.exit(0)
+}
 const data = await res.text()
 
 // download the web page and uncomment this for debugging
