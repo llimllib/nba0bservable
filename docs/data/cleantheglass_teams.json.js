@@ -1,5 +1,6 @@
+let res
 try {
-  const res = await fetch("https://cleaningtheglass.com/stats/league/summary")
+  res = await fetch("https://cleaningtheglass.com/stats/league/summary")
 } catch (e) {
   console.error(
     "failed to fetch https://cleaningtheglass.com/stats/league/summary",
