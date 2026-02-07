@@ -398,6 +398,7 @@ function getTitleFromHash() {
 }
 
 const titleInput = Inputs.text({
+  label: "Title",
   placeholder: "Override title...",
   value: getTitleFromHash(),
   width: 300,
@@ -420,6 +421,7 @@ function getSubtitleFromHash() {
 }
 
 const subtitleInput = Inputs.text({
+  label: "Subtitle",
   placeholder: "Add a subtitle...",
   value: getSubtitleFromHash(),
   width: 300,
@@ -489,14 +491,8 @@ const chips =
 
   <div style="margin-top: 15px; display: flex; gap: 20px; flex-wrap: wrap; align-items: end;">
     <div>${metricSelect}</div>
-    <div style="width: 100%">
-      <label style="font-size: 14px; margin-right: 8px;">Chart title:</label>
-      ${titleInput}
-    </div>
-    <div>
-      <label style="font-size: 14px; margin-right: 8px;">Chart subtitle:</label>
-      ${subtitleInput}
-    </div>
+    <div style="width: 100%">${titleInput}</div>
+    <div>${subtitleInput}</div>
   </div>
 </div>
 
