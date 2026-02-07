@@ -11,7 +11,7 @@ sql:
 # Cumulative Stats
 
 ```js
-import { teams } from "./lib/teams.js"
+import { lineEndLabels } from "./lib/lineEndLabels.js"
 ```
 
 ```js
@@ -592,20 +592,14 @@ display(
               title: d =>
                 `${d.name}\nGame ${d.gameN}\nCumulative: ${formatValue(d.cumValue)}\nThis game: ${formatValue(d.gameValue)}`,
             }),
-            Plot.text(
-              cumulativeData.filter(d => {
-                const playerData = cumulativeData.filter(p => p.name === d.name)
-                return d.gameN === Math.max(...playerData.map(p => p.gameN))
-              }),
-              {
-                x: "gameN",
-                y: "cumValue",
-                text: "name",
-                dx: 5,
-                textAnchor: "start",
-                fill: "black",
-              },
-            ),
+            lineEndLabels(cumulativeData, {
+              x: "gameN",
+              y: "cumValue",
+              z: "name",
+              label: "name",
+              padding: 5,
+              lineHeight: 12,
+            }),
           ],
         })
 
