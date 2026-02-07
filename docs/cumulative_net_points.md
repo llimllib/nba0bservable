@@ -1,16 +1,87 @@
 ---
 theme: cotton
-title: Cumulative Net Points
+title: Cumulative Stats
 toc: false
 sql:
   players: ./data/espn.players.parquet
   gamelogs_raw: ./data/gamelogs.parquet
 ---
 
-# Cumulative Net Points
+# Cumulative Stats
 
 ```js
 import { teams } from "./lib/teams.js"
+```
+
+```js
+// Define available metrics for the select box
+const metricLabels = {
+  tNetPts: "Total Net Points",
+  oNetPts: "Offensive Net Points",
+  dNetPts: "Defensive Net Points",
+  tWPA: "Total Win Probability Added",
+  oWPA: "Offensive Win Probability Added",
+  dWPA: "Defensive Win Probability Added",
+  pts: "Points Scored",
+  plusMinusPoints: "Plus/Minus",
+  fgmplyr: "Field Goals Made",
+  fgaplyr: "Field Goals Attempted",
+  fg3mplyr: "3-Pointers Made",
+  fg3aplyr: "3-Pointers Attempted",
+  ftmplyr: "Free Throws Made",
+  ftaplyr: "Free Throws Attempted",
+  rebounder: "Total Rebounds",
+  orebounder: "Offensive Rebounds",
+  drebounder: "Defensive Rebounds",
+  assister: "Assists",
+  stlr: "Steals",
+  blockplyr: "Blocks",
+  tov1: "Turnovers",
+  dfoulplyr: "Defensive Fouls",
+  ofoulplyr: "Offensive Fouls",
+}
+
+const metricKeys = Object.keys(metricLabels)
+
+// Get metric from URL hash
+function getMetricFromHash() {
+  const hash = window.location.hash.slice(1)
+  if (!hash) return "tNetPts"
+  try {
+    const params = new URLSearchParams(hash)
+    const metric = params.get("metric")
+    return metricKeys.includes(metric) ? metric : "tNetPts"
+  } catch (e) {
+    return "tNetPts"
+  }
+}
+
+const metricSelect = Inputs.select(metricKeys, {
+  value: getMetricFromHash(),
+  format: d => metricLabels[d],
+  label: "Stat to chart:",
+})
+
+const selectedMetric = Generators.input(metricSelect)
+```
+
+```js
+// Update URL when metric changes (separate block so selectedMetric is resolved)
+const selectedMetricLabel = metricLabels[selectedMetric]
+{
+  const params = new URLSearchParams(window.location.hash.slice(1))
+  if (selectedMetric && selectedMetric !== "tNetPts") {
+    params.set("metric", selectedMetric)
+  } else {
+    params.delete("metric")
+  }
+  const newHash = params.toString()
+  history.replaceState(
+    null,
+    "",
+    newHash ? `#${newHash}` : window.location.pathname,
+  )
+}
 ```
 
 ```sql id=alldata
@@ -46,6 +117,13 @@ order by tNetPts desc
 ```
 
 ```js
+// Get the metric column dynamically from the data
+function getMetricValue(row, metric) {
+  return row[metric] ?? 0
+}
+```
+
+```js
 const allPlayerNames = agg
   .toArray()
   .map(p => p.name)
@@ -76,7 +154,11 @@ function updateHash(players) {
     params.set("players", players.join(","))
   }
   const newHash = params.toString()
-  history.replaceState(null, "", newHash ? `#${newHash}` : window.location.pathname)
+  history.replaceState(
+    null,
+    "",
+    newHash ? `#${newHash}` : window.location.pathname,
+  )
 }
 
 // Reactive state for selected players, initialized from URL
@@ -124,13 +206,18 @@ function getFilteredPlayers(search) {
 
 ```js
 // Build the entire search UI imperatively to avoid Observable reactivity issues
-const searchContainer = html`<div style="position: relative; flex: 1; max-width: 300px;">
+const searchContainer = html`<div
+  style="position: relative; flex: 1; max-width: 300px;"
+>
   <input
     type="text"
     placeholder="Search for a player..."
     style="width: 100%; padding: 6px 10px; font-size: 14px; border: 1px solid var(--theme-foreground-fainter); border-radius: 4px;"
   />
-  <div class="dropdown-container" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000;"></div>
+  <div
+    class="dropdown-container"
+    style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000;"
+  ></div>
 </div>`
 
 const searchInput = searchContainer.querySelector("input")
@@ -139,23 +226,25 @@ const dropdownEl = searchContainer.querySelector(".dropdown-container")
 function updateDropdown() {
   const searchText = searchInput.value
   const filtered = getFilteredPlayers(searchText)
-  
+
   if (searchText.length === 0) {
     dropdownEl.innerHTML = ""
     return
   }
-  
+
   if (filtered.length === 0) {
     dropdownEl.innerHTML = `<div style="padding: 8px 12px; background: var(--theme-background); border: 1px solid var(--theme-foreground-fainter); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); color: var(--theme-foreground-muted); font-style: italic; margin-top: 2px;">No players found</div>`
     return
   }
-  
+
   const items = filtered.slice(0, 20).map(name => {
     const div = document.createElement("div")
     div.textContent = name
-    div.style.cssText = "padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--theme-foreground-faintest);"
-    div.onmouseenter = () => div.style.background = "var(--theme-foreground-faintest)"
-    div.onmouseleave = () => div.style.background = "transparent"
+    div.style.cssText =
+      "padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--theme-foreground-faintest);"
+    div.onmouseenter = () =>
+      (div.style.background = "var(--theme-foreground-faintest)")
+    div.onmouseleave = () => (div.style.background = "transparent")
     div.onmousedown = () => {
       addPlayer(name)
       searchInput.value = ""
@@ -163,25 +252,27 @@ function updateDropdown() {
     }
     return div
   })
-  
+
   const container = document.createElement("div")
-  container.style.cssText = "max-height: 250px; overflow-y: auto; background: var(--theme-background); border: 1px solid var(--theme-foreground-fainter); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-top: 2px;"
+  container.style.cssText =
+    "max-height: 250px; overflow-y: auto; background: var(--theme-background); border: 1px solid var(--theme-foreground-fainter); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-top: 2px;"
   items.forEach(item => container.appendChild(item))
-  
+
   if (filtered.length > 20) {
     const more = document.createElement("div")
-    more.style.cssText = "padding: 8px 12px; color: var(--theme-foreground-muted); font-style: italic;"
+    more.style.cssText =
+      "padding: 8px 12px; color: var(--theme-foreground-muted); font-style: italic;"
     more.textContent = `...and ${filtered.length - 20} more`
     container.appendChild(more)
   }
-  
+
   dropdownEl.innerHTML = ""
   dropdownEl.appendChild(container)
 }
 
 searchInput.oninput = updateDropdown
 
-searchInput.onkeydown = (e) => {
+searchInput.onkeydown = e => {
   if (e.key === "Enter") {
     const filtered = getFilteredPlayers(searchInput.value)
     if (filtered.length >= 1) {
@@ -196,7 +287,9 @@ searchInput.onkeydown = (e) => {
 }
 
 searchInput.onblur = () => {
-  setTimeout(() => { dropdownEl.innerHTML = "" }, 150)
+  setTimeout(() => {
+    dropdownEl.innerHTML = ""
+  }, 150)
 }
 
 searchInput.onfocus = () => {
@@ -224,8 +317,10 @@ const subtitleInput = Inputs.text({
 })
 
 const subtitle = Generators.input(subtitleInput)
+```
 
-// Update URL when subtitle changes
+```js
+// Update URL when subtitle changes (separate block so subtitle is resolved)
 {
   const params = new URLSearchParams(window.location.hash.slice(1))
   if (subtitle) {
@@ -234,26 +329,41 @@ const subtitle = Generators.input(subtitleInput)
     params.delete("subtitle")
   }
   const newHash = params.toString()
-  history.replaceState(null, "", newHash ? `#${newHash}` : window.location.pathname)
+  history.replaceState(
+    null,
+    "",
+    newHash ? `#${newHash}` : window.location.pathname,
+  )
 }
 ```
 
 ```js
 // Reactively update chips
-const chips = selectedPlayers.length === 0
-  ? html`<span style="color: var(--theme-foreground-muted); font-style: italic;">No players selected. Search above to add players.</span>`
-  : html`${selectedPlayers.map(name => html`<span style="display: inline-flex; align-items: center; gap: 5px; background: var(--theme-foreground-faintest); border: 1px solid var(--theme-foreground-fainter); border-radius: 16px; padding: 4px 8px 4px 12px; font-size: 14px;">
-      ${name}
-      <button
-        onclick=${() => removePlayer(name)}
-        style="background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 16px; line-height: 1; border-radius: 50%; display: flex; align-items: center; justify-content: center;"
-        title="Remove ${name}"
-      >×</button>
-    </span>`)}`
+const chips =
+  selectedPlayers.length === 0
+    ? html`<span
+        style="color: var(--theme-foreground-muted); font-style: italic;"
+        >No players selected. Search above to add players.</span
+      >`
+    : html`${selectedPlayers.map(
+        name =>
+          html`<span
+            style="display: inline-flex; align-items: center; gap: 5px; background: var(--theme-foreground-faintest); border: 1px solid var(--theme-foreground-fainter); border-radius: 16px; padding: 4px 8px 4px 12px; font-size: 14px;"
+          >
+            ${name}
+            <button
+              onclick=${() => removePlayer(name)}
+              style="background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 16px; line-height: 1; border-radius: 50%; display: flex; align-items: center; justify-content: center;"
+              title="Remove ${name}"
+            >
+              ×
+            </button>
+          </span>`,
+      )}`
 ```
 
 <div class="card">
-  <h2>Select Players</h2>
+  <h2>Select Players & Stat</h2>
   <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
     ${searchContainer}
     <button onclick=${clearAll} style="padding: 5px 10px; cursor: pointer;">Clear All</button>
@@ -263,14 +373,17 @@ const chips = selectedPlayers.length === 0
     ${chips}
   </div>
 
-  <div style="margin-top: 15px;">
-    <label style="font-size: 14px; margin-right: 8px;">Chart subtitle:</label>
-    ${subtitleInput}
+  <div style="margin-top: 15px; display: flex; gap: 20px; flex-wrap: wrap; align-items: end;">
+    <div>${metricSelect}</div>
+    <div>
+      <label style="font-size: 14px; margin-right: 8px;">Chart subtitle:</label>
+      ${subtitleInput}
+    </div>
   </div>
 </div>
 
 ```js
-// Calculate cumulative net points for each player
+// Calculate cumulative stats for each player using the selected metric
 const cumulativeData = []
 const playerCumulatives = new Map()
 
@@ -284,27 +397,29 @@ const sortedForCumulative = alldata
   })
 
 sortedForCumulative.forEach(pt => {
+  const metricValue = getMetricValue(pt, selectedMetric)
+
   if (!playerCumulatives.has(pt.name)) {
-    playerCumulatives.set(pt.name, { gameN: 0, cumNetPts: 0 })
+    playerCumulatives.set(pt.name, { gameN: 0, cumValue: 0 })
     // Add starting point at zero
     cumulativeData.push({
       name: pt.name,
       gameN: 0,
-      cumNetPts: 0,
+      cumValue: 0,
       gameDate: null,
-      tNetPts: 0,
+      gameValue: 0,
     })
   }
   const state = playerCumulatives.get(pt.name)
   state.gameN += 1
-  state.cumNetPts += pt.tNetPts
+  state.cumValue += metricValue
 
   cumulativeData.push({
     name: pt.name,
     gameN: state.gameN,
-    cumNetPts: state.cumNetPts,
+    cumValue: state.cumValue,
     gameDate: dates.get(pt.game_id),
-    tNetPts: pt.tNetPts,
+    gameValue: metricValue,
   })
 })
 
@@ -321,13 +436,23 @@ display(
         style="text-align: center; padding: 40px; color: var(--theme-foreground-muted);"
       >
         <p>
-          Select players above to see their cumulative net points over the
-          season.
+          Select players above to see their cumulative stats over the season.
         </p>
       </div>`
     : (() => {
+        // Format values - use decimals for floating point metrics, integers for counts
+        const isFloatMetric = [
+          "tNetPts",
+          "oNetPts",
+          "dNetPts",
+          "tWPA",
+          "oWPA",
+          "dWPA",
+        ].includes(selectedMetric)
+        const formatValue = v => (isFloatMetric ? v.toFixed(1) : Math.round(v))
+
         const plot = Plot.plot({
-          title: `Cumulative Net Points`,
+          title: `${selectedMetricLabel}`,
           subtitle: subtitle || undefined,
           caption: "Data from espnanalytics.com",
           width: 928,
@@ -343,32 +468,32 @@ display(
             Plot.ruleY([0], { stroke: "#ccc" }),
             Plot.line(cumulativeData, {
               x: "gameN",
-              y: "cumNetPts",
+              y: "cumValue",
               stroke: "name",
               strokeWidth: 2,
               curve: "catmull-rom",
               tip: true,
               title: d =>
-                `${d.name}\nGame ${d.gameN}\nCumulative: ${d.cumNetPts.toFixed(1)}\nThis game: ${d.tNetPts.toFixed(1)}`,
+                `${d.name}\nGame ${d.gameN}\nCumulative: ${formatValue(d.cumValue)}\nThis game: ${formatValue(d.gameValue)}`,
             }),
             Plot.text(
               cumulativeData.filter(d => {
                 const playerData = cumulativeData.filter(p => p.name === d.name)
                 return d.gameN === Math.max(...playerData.map(p => p.gameN))
               }),
-            {
-              x: "gameN",
-              y: "cumNetPts",
-              text: "name",
-              dx: 5,
-              textAnchor: "start",
-              fill: "black",
-            },
-          ),
-        ],
-      })
-        
+              {
+                x: "gameN",
+                y: "cumValue",
+                text: "name",
+                dx: 5,
+                textAnchor: "start",
+                fill: "black",
+              },
+            ),
+          ],
+        })
+
         return plot
-    })(),
+      })(),
 )
 ```
