@@ -454,7 +454,7 @@ display(
         const plot = Plot.plot({
           title: `${selectedMetricLabel}`,
           subtitle: subtitle || undefined,
-          caption: "Data from espnanalytics.com | billmill.org/nba",
+          caption: html`Data: espnanalytics.com<br>Chart: billmill.org/nba`,
           width: 928,
           height: 500,
           marginRight: 60,
