@@ -31,6 +31,7 @@ interface LabelData {
   y: number
   originalY: number
   text: string
+  color: string
   data: any
 }
 
@@ -72,11 +73,13 @@ export class LineEndLabels extends Plot.Mark {
     const lastPoints = this.findLastPoints()
 
     // Convert to screen coordinates
+    const colorScale = scales.color
     const labels: LabelData[] = lastPoints.map(d => ({
       x: scales.x(d[this.xField]),
       y: scales.y(d[this.yField]),
       originalY: scales.y(d[this.yField]),
       text: d[this.labelField],
+      color: colorScale ? colorScale(d[this.zField]) : "currentColor",
       data: d,
     }))
 
@@ -86,21 +89,62 @@ export class LineEndLabels extends Plot.Mark {
     // Resolve collisions
     this.resolveCollisions(labels, 0, style.height)
 
-    // Render the labels
+    // Render the labels with background for better visibility
     const g = create("svg:g")
-    select(g.node())
-      .style("font", "10px sans-serif")
-      .selectAll("text")
+    const node = g.node()
+    const selection = select(node).style("font", "10px sans-serif")
+
+    // Create a group for each label containing background + text
+    const labelGroups = selection
+      .selectAll("g")
       .data(labels)
-      .join("text")
-      .attr("x", d => d.x + this.padding)
-      .attr("y", d => d.y)
+      .join("g")
+      .attr("transform", d => `translate(${d.x + this.padding}, ${d.y})`)
+
+    // Add placeholder rects (will be sized after DOM attachment)
+    labelGroups
+      .append("rect")
+      .attr("class", "label-bg")
+      .attr("fill", "white")
+      .attr("fill-opacity", 0.65)
+      .attr("rx", 2)
+      .attr("ry", 2)
+
+    // Add colored dot to match line color
+    labelGroups
+      .append("circle")
+      .attr("cx", 4)
+      .attr("cy", 0)
+      .attr("r", 3)
+      .attr("fill", d => d.color)
+
+    // Add the text (offset to account for dot)
+    labelGroups
+      .append("text")
+      .attr("x", 10)
       .attr("dy", "0.35em")
       .attr("text-anchor", "start")
       .attr("fill", this.fill)
       .text(d => d.text)
 
-    return g.node()
+    // Use requestAnimationFrame to measure text after DOM attachment
+    requestAnimationFrame(() => {
+      labelGroups.each(function () {
+        const group = select(this)
+        const text = group.select("text")
+        const rect = group.select("rect.label-bg")
+        const textBbox = (text.node() as SVGTextElement).getBBox()
+
+        // Background covers dot + text
+        rect
+          .attr("x", -1)
+          .attr("y", textBbox.y - 1)
+          .attr("width", textBbox.x + textBbox.width + 3)
+          .attr("height", textBbox.height + 2)
+      })
+    })
+
+    return node
   }
 
   /**
