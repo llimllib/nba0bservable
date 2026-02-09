@@ -87,6 +87,68 @@ const selectedMetricLabel = metricLabels[selectedMetric]
 }
 ```
 
+```js
+// Season range picker
+const availableSeasons = [2021, 2022, 2023, 2024, 2025]
+const seasonLabels = {
+  2021: "2020-21",
+  2022: "2021-22", 
+  2023: "2022-23",
+  2024: "2023-24",
+  2025: "2024-25",
+}
+
+function getSeasonFromHash(param, defaultVal) {
+  const hash = window.location.hash.slice(1)
+  if (!hash) return defaultVal
+  try {
+    const params = new URLSearchParams(hash)
+    const val = parseInt(params.get(param))
+    return availableSeasons.includes(val) ? val : defaultVal
+  } catch (e) {
+    return defaultVal
+  }
+}
+
+const startSeasonSelect = Inputs.select(availableSeasons, {
+  value: getSeasonFromHash("startSeason", 2021),
+  format: d => seasonLabels[d],
+  label: "From:",
+})
+
+const endSeasonSelect = Inputs.select(availableSeasons, {
+  value: getSeasonFromHash("endSeason", 2025),
+  format: d => seasonLabels[d],
+  label: "To:",
+})
+
+const startSeason = Generators.input(startSeasonSelect)
+const endSeason = Generators.input(endSeasonSelect)
+```
+
+```js
+// Update URL when seasons change
+{
+  const params = new URLSearchParams(window.location.hash.slice(1))
+  if (startSeason && startSeason !== 2021) {
+    params.set("startSeason", startSeason)
+  } else {
+    params.delete("startSeason")
+  }
+  if (endSeason && endSeason !== 2025) {
+    params.set("endSeason", endSeason)
+  } else {
+    params.delete("endSeason")
+  }
+  const newHash = params.toString()
+  history.replaceState(
+    null,
+    "",
+    newHash ? `#${newHash}` : window.location.pathname,
+  )
+}
+```
+
 ```sql id=alldata
 SELECT *
 FROM players
@@ -429,20 +491,34 @@ const chips =
 
   <div style="margin-top: 15px; display: flex; gap: 20px; flex-wrap: wrap; align-items: end;">
     <div>${metricSelect}</div>
+    <div style="display: flex; gap: 10px; align-items: end;">
+      ${startSeasonSelect}
+      ${endSeasonSelect}
+    </div>
     <div style="width: 100%">${titleInput}</div>
     <div>${subtitleInput}</div>
   </div>
 </div>
 
 ```js
+// Ensure valid season range (swap if needed)
+const effectiveStartSeason = Math.min(startSeason, endSeason)
+const effectiveEndSeason = Math.max(startSeason, endSeason)
+```
+
+```js
 // Calculate cumulative stats for each player using the selected metric
-// across their entire career (all seasons)
+// filtered by season range
 // Uses pre-built playerGamesMap for fast lookups
 const cumulativeData = []
 
 for (const name of selectedPlayers) {
-  const games = playerGamesMap.get(name)
-  if (!games) continue
+  const allGames = playerGamesMap.get(name)
+  if (!allGames) continue
+  
+  // Filter games by season range
+  const games = allGames.filter(g => g.season >= effectiveStartSeason && g.season <= effectiveEndSeason)
+  if (games.length === 0) continue
   
   // Add starting point at zero
   cumulativeData.push({
