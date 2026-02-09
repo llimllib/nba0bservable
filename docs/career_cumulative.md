@@ -577,8 +577,8 @@ display(
           caption: html`Data: espnanalytics.com<br />Chart: billmill.org/nba`,
           width: 928,
           height: 500,
-          marginRight: 60,
-          x: { label: "Career Games Played", labelAnchor: "right", nice: true },
+          marginRight: 120,
+          x: { label: "Career Games Played", labelAnchor: "center", nice: true },
           y: { label: null, nice: true, grid: true },
           color: {
             type: "categorical",
