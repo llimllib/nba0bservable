@@ -91,11 +91,11 @@ const selectedMetricLabel = metricLabels[selectedMetric]
 // Season range picker
 const availableSeasons = [2021, 2022, 2023, 2024, 2025]
 const seasonLabels = {
-  2021: "2020-21",
-  2022: "2021-22", 
-  2023: "2022-23",
-  2024: "2023-24",
-  2025: "2024-25",
+  2021: "2021-22",
+  2022: "2022-23", 
+  2023: "2023-24",
+  2024: "2024-25",
+  2025: "2025-26",
 }
 
 function getSeasonFromHash(param, defaultVal) {
