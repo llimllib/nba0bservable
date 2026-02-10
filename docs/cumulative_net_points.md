@@ -211,10 +211,44 @@ function isDetailMetric(metric) {
 ```
 
 ```js
-const allPlayerNames = agg
-  .toArray()
-  .map(p => p.name)
-  .sort()
+// Build player options including team-specific entries for traded players
+// For players on multiple teams, we create "Name (TEAM)" entries plus "Name (TOT)"
+const aggArray = agg.toArray()
+
+// Group by player name to find multi-team players
+const playerTeams = new Map()
+aggArray.forEach(p => {
+  if (!playerTeams.has(p.name)) {
+    playerTeams.set(p.name, [])
+  }
+  playerTeams.get(p.name).push(p.team)
+})
+
+// Build the list of selectable player options
+// Format: { displayName, name, team } where team is null for TOT
+const playerOptions = []
+playerTeams.forEach((teams, name) => {
+  if (teams.length > 1) {
+    // Multi-team player: add team-specific and TOT entries
+    teams.forEach(team => {
+      playerOptions.push({ displayName: `${name} (${team})`, name, team })
+    })
+    playerOptions.push({ displayName: `${name} (TOT)`, name, team: null })
+  } else {
+    // Single-team player: just use their name
+    playerOptions.push({ displayName: name, name, team: teams[0] })
+  }
+})
+
+// Sort by display name
+playerOptions.sort((a, b) => a.displayName.localeCompare(b.displayName))
+
+const allPlayerNames = playerOptions.map(p => p.displayName)
+
+// Map from displayName to { name, team } for filtering data
+const playerLookup = new Map(
+  playerOptions.map(p => [p.displayName, { name: p.name, team: p.team }])
+)
 ```
 
 ```js
@@ -507,36 +541,60 @@ const useDetails = isDetailMetric(selectedMetric)
 const dataSource = useDetails ? details : alldata
 const gameIdField = useDetails ? "gameId" : "game_id"
 
+// Filter data based on selected players (which may include team constraints)
+const selectedPlayerInfo = selectedPlayers.map(dp => ({
+  displayName: dp,
+  ...playerLookup.get(dp)
+})).filter(p => p.name) // filter out any that weren't found
+
 const sortedForCumulative = dataSource
   .toArray()
   .map(p => ({ ...p }))
-  .filter(x => selectedPlayers.includes(x.name))
+  .filter(row => {
+    // Check if this row matches any selected player
+    return selectedPlayerInfo.some(sel => {
+      if (row.name !== sel.name) return false
+      // If team is null (TOT), include all teams; otherwise match team
+      if (sel.team === null) return true
+      return row.team === sel.team
+    })
+  })
+  .map(row => {
+    // Add displayName to each row for grouping
+    const match = selectedPlayerInfo.find(sel => {
+      if (row.name !== sel.name) return false
+      if (sel.team === null) return true
+      return row.team === sel.team
+    })
+    return { ...row, displayName: match?.displayName || row.name }
+  })
   .sort((a, b) => {
-    if (a.name !== b.name) return a.name.localeCompare(b.name)
+    if (a.displayName !== b.displayName) return a.displayName.localeCompare(b.displayName)
     return a[gameIdField].localeCompare(b[gameIdField])
   })
 
 sortedForCumulative.forEach(pt => {
   const metricValue = getMetricValue(pt, selectedMetric)
   const gameId = pt[gameIdField]
+  const key = pt.displayName
 
-  if (!playerCumulatives.has(pt.name)) {
-    playerCumulatives.set(pt.name, { gameN: 0, cumValue: 0 })
+  if (!playerCumulatives.has(key)) {
+    playerCumulatives.set(key, { gameN: 0, cumValue: 0 })
     // Add starting point at zero
     cumulativeData.push({
-      name: pt.name,
+      name: key,
       gameN: 0,
       cumValue: 0,
       gameDate: null,
       gameValue: 0,
     })
   }
-  const state = playerCumulatives.get(pt.name)
+  const state = playerCumulatives.get(key)
   state.gameN += 1
   state.cumValue += metricValue
 
   cumulativeData.push({
-    name: pt.name,
+    name: key,
     gameN: state.gameN,
     cumValue: state.cumValue,
     gameDate: dates.get(gameId),
