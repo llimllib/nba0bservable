@@ -462,6 +462,13 @@ const subtitleInput = Inputs.text({
 })
 
 const subtitle = Generators.input(subtitleInput)
+
+const showDotsCheckbox = Inputs.toggle({
+  label: "Show game dots",
+  value: false,
+})
+
+const showDots = Generators.input(showDotsCheckbox)
 ```
 
 ```js
@@ -525,6 +532,7 @@ const chips =
 
   <div style="margin-top: 15px; display: flex; gap: 20px; flex-wrap: wrap; align-items: end;">
     <div>${metricSelect}</div>
+    <div>${showDotsCheckbox}</div>
     <div style="width: 100%">${titleInput}</div>
     <div>${subtitleInput}</div>
   </div>
@@ -637,6 +645,19 @@ display(
           color: {
             type: "categorical",
             domain: selectedPlayers,
+            // Custom range that avoids yellow early (hard to see on linen background)
+            range: [
+              "#4269d0", // blue
+              "#ff725c", // red-orange
+              "#6cc5b0", // teal
+              "#a463f2", // purple
+              "#ff8ab7", // pink
+              "#97bbf5", // light blue
+              "#9c6b4e", // brown
+              "#3ca951", // green
+              "#efb118", // yellow/gold (moved to end)
+              "#9498a0", // gray
+            ],
           },
           marks: [
             Plot.ruleY([0], { stroke: "#ccc" }),
@@ -650,6 +671,18 @@ display(
               title: d =>
                 `${d.name}\nGame ${d.gameN}\nCumulative: ${formatValue(d.cumValue)}\nThis game: ${formatValue(d.gameValue)}`,
             }),
+            showDots
+              ? Plot.dot(
+                  cumulativeData.filter(d => d.gameN > 0),
+                  {
+                    x: "gameN",
+                    y: "gameValue",
+                    fill: "name",
+                    r: 2.5,
+                    fillOpacity: 0.5,
+                  },
+                )
+              : null,
             lineEndLabels(cumulativeData, {
               x: "gameN",
               y: "cumValue",
