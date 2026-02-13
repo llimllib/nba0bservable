@@ -15,6 +15,49 @@ import { lineEndLabels } from "./lib/lineEndLabels.js"
 ```
 
 ```js
+// Season selector
+const availableSeasons = [2025, 2024, 2023, 2022, 2021]
+
+function getSeasonFromHash() {
+  const hash = window.location.hash.slice(1)
+  if (!hash) return 2025
+  try {
+    const params = new URLSearchParams(hash)
+    const season = parseInt(params.get("season"))
+    return availableSeasons.includes(season) ? season : 2025
+  } catch (e) {
+    return 2025
+  }
+}
+
+const seasonSelect = Inputs.select(availableSeasons, {
+  value: getSeasonFromHash(),
+  format: d => `${d}-${String(d+1).slice(2)}`,
+  label: "Season:",
+})
+
+const selectedSeason = Generators.input(seasonSelect)
+```
+
+```js
+// Update URL when season changes
+{
+  const params = new URLSearchParams(window.location.hash.slice(1))
+  if (selectedSeason && selectedSeason !== 2025) {
+    params.set("season", selectedSeason)
+  } else {
+    params.delete("season")
+  }
+  const newHash = params.toString()
+  history.replaceState(
+    null,
+    "",
+    newHash ? `#${newHash}` : window.location.pathname,
+  )
+}
+```
+
+```js
 // Define available metrics for the select box
 const metricLabels = {
   // Overall Net Points
@@ -155,24 +198,27 @@ const selectedMetricLabel = metricLabels[selectedMetric]
 }
 ```
 
-```sql id=alldata
+```js
+// Dynamic data loading based on selected season
+const alldata = await sql`
 SELECT *
 from players
-where season=2025
-and game_id LIKE '002%' or game_id LIKE '003%'
-;
-```
+where season=${selectedSeason}
+and (game_id LIKE '002%' or game_id LIKE '003%')
+`
 
-```sql id=details
+const details = await sql`
 SELECT *
 from player_details
-where season=2025
-and gameId LIKE '002%' or gameId LIKE '003%'
-;
-```
+where season=${selectedSeason}
+and (gameId LIKE '002%' or gameId LIKE '003%')
+`
 
-```sql id=gamelogs
-select game_id, game_date from gamelogs_raw where season_year='2025-26'
+// ESPN season 2025 = 2025-26 season, gamelogs uses "2025-26" format
+const seasonYearStr = `${selectedSeason}-${String(selectedSeason+1).slice(2)}`
+const gamelogs = await sql`
+select game_id, game_date from gamelogs_raw where season_year=${seasonYearStr}
+`
 ```
 
 ```js
@@ -181,18 +227,20 @@ const dates = new Map(
 )
 ```
 
-```sql id=agg
+```js
+const agg = await sql`
 SELECT
   name,
   team,
   count(*) n,
-  sum(tNetPts) tNetPts,
+  sum(tNetPts) tNetPts
 from players
-where season=2025
-and game_id LIKE '002%' or game_id LIKE '003%'
+where season=${selectedSeason}
+and (game_id LIKE '002%' or game_id LIKE '003%')
 group by player_id, name, team
 having n > 0
 order by tNetPts desc
+`
 ```
 
 ```js
@@ -531,6 +579,7 @@ const chips =
   </div>
 
   <div style="margin-top: 15px; display: flex; gap: 20px; flex-wrap: wrap; align-items: end;">
+    <div>${seasonSelect}</div>
     <div>${metricSelect}</div>
     <div>${showDotsCheckbox}</div>
     <div style="width: 100%">${titleInput}</div>
