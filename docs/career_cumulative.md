@@ -89,8 +89,11 @@ const selectedMetricLabel = metricLabels[selectedMetric]
 
 ```js
 // Season range picker
-const availableSeasons = [2021, 2022, 2023, 2024, 2025]
+const availableSeasons = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
 const seasonLabels = {
+  2018: "2018-19",
+  2019: "2019-20",
+  2020: "2020-21",
   2021: "2021-22",
   2022: "2022-23", 
   2023: "2023-24",
@@ -111,7 +114,7 @@ function getSeasonFromHash(param, defaultVal) {
 }
 
 const startSeasonSelect = Inputs.select(availableSeasons, {
-  value: getSeasonFromHash("startSeason", 2021),
+  value: getSeasonFromHash("startSeason", 2018),
   format: d => seasonLabels[d],
   label: "From:",
 })
@@ -130,7 +133,7 @@ const endSeason = Generators.input(endSeasonSelect)
 // Update URL when seasons change
 {
   const params = new URLSearchParams(window.location.hash.slice(1))
-  if (startSeason && startSeason !== 2021) {
+  if (startSeason && startSeason !== 2018) {
     params.set("startSeason", startSeason)
   } else {
     params.delete("startSeason")
@@ -486,7 +489,7 @@ const chips =
 
 <div class="card">
   <h2>Select Players & Stat</h2>
-  <p style="color: var(--theme-foreground-muted); margin-bottom: 15px;">Career stats from 2020-21 season onwards (regular season + playoffs)</p>
+  <p style="color: var(--theme-foreground-muted); margin-bottom: 15px;">Career stats from 2018-19 season onwards (regular season + playoffs)</p>
   <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
     ${searchContainer}
     <button onclick=${clearAll} style="margin-left: 20px;padding: 5px 10px; cursor: pointer;">Clear All</button>

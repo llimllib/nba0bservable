@@ -16,7 +16,7 @@ import { lineEndLabels } from "./lib/lineEndLabels.js"
 
 ```js
 // Season selector
-const availableSeasons = [2025, 2024, 2023, 2022, 2021]
+const availableSeasons = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018]
 
 function getSeasonFromHash() {
   const hash = window.location.hash.slice(1)
