@@ -16,8 +16,7 @@ import { teams } from "./lib/teams.js"
 
 ```sql id=alldata
 SELECT * from players
--- ESPN data uses the start year not end year; 2025 -> 25-26
-where season=2025
+where season=2026
 -- regular season and cup
 and game_id LIKE '002%' or game_id LIKE '003%'
 -- limit to playoffs:
@@ -49,7 +48,7 @@ SELECT
     CAST(SPLIT_PART(minutes_played, ':', 2) AS FLOAT) / 60
   ) / count(*) AS minutesPerG,
 from players
-where season=2025
+where season=2026
 -- preseason: 001
 -- regular season and cup (I think it's 003?)
 and game_id LIKE '002%' or game_id LIKE '003%'
@@ -68,7 +67,7 @@ order by tNetPts desc
 
 ```js
 const year = view(
-  Inputs.range([2026, 2026], { value: "2025", label: "year", step: 1 }),
+  Inputs.range([2026, 2026], { value: "2026", label: "year", step: 1 }),
 )
 
 // console.log("year", (await year.next()).value);
@@ -307,7 +306,7 @@ left join (
     game_id, matchup, game_date
   FROM gamelogs
 ) g ON p.game_id = g.game_id
-where p.season=2025
+where p.season=2026
 -- preseason: 001
 -- regular season and cup (I think it's 003?)
 and p.game_id LIKE '002%' or p.game_id LIKE '003%'
@@ -480,7 +479,7 @@ left join (
     game_id, matchup, game_date
   FROM gamelogs
 ) g ON p.game_id = g.game_id
-where p.season=2025
+where p.season=2026
 and dNetPts > oNetPts
 -- preseason: 001
 -- regular season and cup (I think it's 003?)
@@ -654,7 +653,7 @@ left join (
     game_id, matchup, game_date
   FROM gamelogs
 ) g ON p.game_id = g.game_id
-where p.season=2025
+where p.season=2026
 and abs(oNetPts) > 4 and abs(dNetPts) > 4
 and (dNetPts <0 or oNetPts < 0)
 -- preseason: 001

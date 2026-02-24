@@ -22,7 +22,7 @@ const percentile = view(
     step: 5,
   }),
 )
-const year = 2025
+const year = 2026
 ```
 
 ```sql id=twos_vs_threes

@@ -89,16 +89,16 @@ const selectedMetricLabel = metricLabels[selectedMetric]
 
 ```js
 // Season range picker
-const availableSeasons = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+const availableSeasons = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
 const seasonLabels = {
-  2018: "2018-19",
-  2019: "2019-20",
-  2020: "2020-21",
-  2021: "2021-22",
-  2022: "2022-23", 
-  2023: "2023-24",
-  2024: "2024-25",
-  2025: "2025-26",
+  2019: "2018-19",
+  2020: "2019-20",
+  2021: "2020-21",
+  2022: "2021-22",
+  2023: "2022-23", 
+  2024: "2023-24",
+  2025: "2024-25",
+  2026: "2025-26",
 }
 
 function getSeasonFromHash(param, defaultVal) {
@@ -114,13 +114,13 @@ function getSeasonFromHash(param, defaultVal) {
 }
 
 const startSeasonSelect = Inputs.select(availableSeasons, {
-  value: getSeasonFromHash("startSeason", 2018),
+  value: getSeasonFromHash("startSeason", 2019),
   format: d => seasonLabels[d],
   label: "From:",
 })
 
 const endSeasonSelect = Inputs.select(availableSeasons, {
-  value: getSeasonFromHash("endSeason", 2025),
+  value: getSeasonFromHash("endSeason", 2026),
   format: d => seasonLabels[d],
   label: "To:",
 })
@@ -138,7 +138,7 @@ const endSeason = Generators.input(endSeasonSelect)
   } else {
     params.delete("startSeason")
   }
-  if (endSeason && endSeason !== 2025) {
+  if (endSeason && endSeason !== 2026) {
     params.set("endSeason", endSeason)
   } else {
     params.delete("endSeason")

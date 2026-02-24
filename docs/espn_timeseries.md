@@ -12,8 +12,7 @@ SELECT *
 FROM players
 WHERE game_id LIKE '002%' or game_id LIKE '003%'
 ORDER by game_id asc
--- ESPN data uses the start year not end year; 2025 -> 25-26
--- where season=2025
+-- where season=2026
 -- regular season and cup
 -- limit to playoffs:
 -- and game_id LIKE '004%'
@@ -46,7 +45,7 @@ SELECT
     CAST(SPLIT_PART(minutes_played, ':', 2) AS FLOAT) / 60
   ) / count(*) AS minutesPerG,
 from players
-where season=2025
+where season=2026
 -- preseason: 001
 -- regular season and cup (I think it's 003?)
 and game_id LIKE '002%' or game_id LIKE '003%'
