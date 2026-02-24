@@ -12,27 +12,29 @@ sql:
 
 ```js
 import { lineEndLabels } from "./lib/lineEndLabels.js"
+
+const CURRENT_SEASON = 2026
 ```
 
 ```js
 // Season selector
-const availableSeasons = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018]
+const availableSeasons = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019]
 
 function getSeasonFromHash() {
   const hash = window.location.hash.slice(1)
-  if (!hash) return 2025
+  if (!hash) return CURRENT_SEASON
   try {
     const params = new URLSearchParams(hash)
     const season = parseInt(params.get("season"))
-    return availableSeasons.includes(season) ? season : 2025
+    return availableSeasons.includes(season) ? season : CURRENT_SEASON
   } catch (e) {
-    return 2025
+    return CURRENT_SEASON
   }
 }
 
 const seasonSelect = Inputs.select(availableSeasons, {
   value: getSeasonFromHash(),
-  format: d => `${d}-${String(d+1).slice(2)}`,
+  format: d => `${String(d - 1)}-${String(d).slice(2)}`,
   label: "Season:",
 })
 
@@ -43,7 +45,7 @@ const selectedSeason = Generators.input(seasonSelect)
 // Update URL when season changes
 {
   const params = new URLSearchParams(window.location.hash.slice(1))
-  if (selectedSeason && selectedSeason !== 2025) {
+  if (selectedSeason && selectedSeason !== CURRENT_SEASON) {
     params.set("season", selectedSeason)
   } else {
     params.delete("season")
@@ -215,7 +217,7 @@ and (gameId LIKE '002%' or gameId LIKE '003%')
 `
 
 // ESPN season 2025 = 2025-26 season, gamelogs uses "2025-26" format
-const seasonYearStr = `${selectedSeason}-${String(selectedSeason+1).slice(2)}`
+const seasonYearStr = `${selectedSeason}-${String(selectedSeason + 1).slice(2)}`
 const gamelogs = await sql`
 select game_id, game_date from gamelogs_raw where season_year=${seasonYearStr}
 `
@@ -295,7 +297,7 @@ const allPlayerNames = playerOptions.map(p => p.displayName)
 
 // Map from displayName to { name, team } for filtering data
 const playerLookup = new Map(
-  playerOptions.map(p => [p.displayName, { name: p.name, team: p.team }])
+  playerOptions.map(p => [p.displayName, { name: p.name, team: p.team }]),
 )
 ```
 
@@ -599,10 +601,12 @@ const dataSource = useDetails ? details : alldata
 const gameIdField = useDetails ? "gameId" : "game_id"
 
 // Filter data based on selected players (which may include team constraints)
-const selectedPlayerInfo = selectedPlayers.map(dp => ({
-  displayName: dp,
-  ...playerLookup.get(dp)
-})).filter(p => p.name) // filter out any that weren't found
+const selectedPlayerInfo = selectedPlayers
+  .map(dp => ({
+    displayName: dp,
+    ...playerLookup.get(dp),
+  }))
+  .filter(p => p.name) // filter out any that weren't found
 
 const sortedForCumulative = dataSource
   .toArray()
@@ -626,7 +630,8 @@ const sortedForCumulative = dataSource
     return { ...row, displayName: match?.displayName || row.name }
   })
   .sort((a, b) => {
-    if (a.displayName !== b.displayName) return a.displayName.localeCompare(b.displayName)
+    if (a.displayName !== b.displayName)
+      return a.displayName.localeCompare(b.displayName)
     return a[gameIdField].localeCompare(b[gameIdField])
   })
 
