@@ -358,3 +358,112 @@ const tableData = data
 
 display(Inputs.table(tableData))
 ```
+
+---
+
+## The Four Factors, Collapsed
+
+The [four factors](https://www.basketball-reference.com/about/factors.html) of basketball offense — eFG%, turnover rate, offensive rebounding, and free throw rate — can be collapsed into two dimensions:
+
+- **True Shooting % (TS%):** How many points you score per shooting opportunity, combining field goal efficiency and free throw value into a single number.
+- **Opportunity Rate (1 − TOV% + ORB%):** How many shooting opportunities you generate per possession — by avoiding turnovers and grabbing offensive rebounds.
+
+The product of these two axes approximates offensive rating, so teams along the same diagonal have similar offenses — but arrive there by very different paths.
+
+```js
+const rawdata = await FileAttachment("data/team_summary.json").json()
+```
+
+```js
+const summaryTeams = rawdata.data[String(year)]
+const fourFactorsData = summaryTeams
+  ? Object.entries(summaryTeams).map(([abbr, t]) => ({
+      team: abbr,
+      name: t.TEAM_NAME,
+      ts_pct: t.TS_PCT,
+      tov_pct: t.TM_TOV_PCT,
+      oreb_pct: t.OREB_PCT,
+      efg_pct: t.EFG_PCT,
+      opp_rate: 1 - t.TM_TOV_PCT + t.OREB_PCT,
+      off_rating: t.OFF_RATING,
+    }))
+  : []
+```
+
+```js
+const x3 = "ts_pct"
+const y3 = "opp_rate"
+
+const avgX3 = d3.mean(fourFactorsData, d => d[x3])
+const avgY3 = d3.mean(fourFactorsData, d => d[y3])
+
+const graph3 = Plot.plot({
+  width: 600,
+  height: 600,
+  title: "Shot Quality vs Opportunity Rate",
+  subtitle: "Different paths to offensive efficiency",
+  x: {
+    label: "True Shooting % →",
+    labelAnchor: "center",
+    nice: true,
+    ticks: 5,
+    tickFormat: d => `${(d * 100).toFixed(0)}%`,
+  },
+  y: {
+    label: "↑ Opportunity Rate (1 − TOV% + ORB%)",
+    labelAnchor: "center",
+    nice: true,
+    ticks: 5,
+  },
+  marginLeft: 60,
+  marks: [
+    Plot.ruleX([avgX3], { stroke: "grey", strokeDasharray: "4,4" }),
+    Plot.ruleY([avgY3], { stroke: "grey", strokeDasharray: "4,4" }),
+    Plot.image(fourFactorsData, {
+      x: x3,
+      y: y3,
+      width: 30,
+      height: 30,
+      src: d =>
+        `https://llimllib.github.io/nbastats/logos/${getName(d.team)}.svg`,
+      title: d =>
+        `${d.name}
+TS%: ${(d.ts_pct * 100).toFixed(1)}%
+Opp Rate: ${d.opp_rate.toFixed(3)}
+Off Rating: ${d.off_rating}
+eFG%: ${(d.efg_pct * 100).toFixed(1)}%
+TOV%: ${(d.tov_pct * 100).toFixed(1)}%
+ORB%: ${(d.oreb_pct * 100).toFixed(1)}%`,
+    }),
+    Plot.tip(
+      fourFactorsData,
+      Plot.pointer({
+        x: x3,
+        y: y3,
+        title: d =>
+          `${d.name}
+TS%: ${(d.ts_pct * 100).toFixed(1)}%
+Opp Rate: ${d.opp_rate.toFixed(3)}
+Off Rating: ${d.off_rating}
+eFG%: ${(d.efg_pct * 100).toFixed(1)}%
+TOV%: ${(d.tov_pct * 100).toFixed(1)}%
+ORB%: ${(d.oreb_pct * 100).toFixed(1)}%`,
+      }),
+    ),
+  ],
+})
+
+display(graph3)
+```
+
+<div class="note">
+
+**How to read this chart:**
+
+- **X-axis (True Shooting %):** Points per shooting opportunity, accounting for field goals, three-pointers, and free throws. Higher = more efficient scoring.
+- **Y-axis (Opportunity Rate):** Shooting opportunities generated per possession: `1 − TOV% + ORB%`. Higher = fewer turnovers and more offensive rebounds.
+- **Dashed lines:** League averages.
+
+Teams in the upper-right are elite at both converting and creating opportunities. Teams along the same diagonal from upper-left to lower-right have similar offensive ratings but get there differently — e.g. one team via elite shooting, another via ball security and offensive rebounding.
+
+</div>
