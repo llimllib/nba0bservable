@@ -57,15 +57,64 @@ Each `.md` file in `docs/` is a page. Observable Framework uses file-based routi
 
 Data loaders live in `docs/data/`. Observable Framework runs these on demand and caches results in `docs/.observablehq/cache/data/`. The file extension convention determines the output format (e.g., `foo.parquet.sh` produces a parquet file).
 
+### Querying data locally
+
+**Always use the cached parquet files** for ad-hoc queries and analysis. They live in `docs/.observablehq/cache/data/` and can be queried directly with DuckDB:
+
+```sh
+duckdb -c "SELECT * FROM 'docs/.observablehq/cache/data/espn.players.parquet' LIMIT 5"
+```
+
+If the cache is empty, run the data loaders first: `npm run dev` (which triggers loaders on demand) or run the loader script directly (e.g. `bash docs/data/espn.players.parquet.sh > docs/.observablehq/cache/data/espn.players.parquet`). **Do not curl data sources directly** — always use the cached files or the loader scripts.
+
 ### Data sources
 
 | Source | Loader files | What it provides |
 |---|---|---|
-| **[llimllib/nba_data](https://github.com/llimllib/nba_data)** (sister repo, served via GitHub Pages) | `playerstats.parquet.sh`, `playerstats_playoffs.parquet.sh`, `playerlogs.parquet.sh`, `gamelogs.parquet.sh`, `espn.players.parquet.sh`, `espn.player_details.parquet.sh`, `team_summary.json.sh` | Player stats, game logs, ESPN box scores, team summaries |
+| **[llimllib/nba_data](https://github.com/llimllib/nba_data)** (sister repo, served via GitHub Pages) | `playerstats.parquet.sh`, `playerstats_playoffs.parquet.sh`, `playerlogs.parquet.sh`, `gamelogs.parquet.sh`, `espn.players.parquet.sh`, `espn.player_details.parquet.sh`, `team_summary.json.sh` | Player stats, game logs, ESPN box scores (including **net points** and WPA), team summaries |
 | **[dunksandthrees.com](https://dunksandthrees.com)** | `epm.json.sh`, `epm.json.js`, `epm_season.json.js`, `epm_playoffs.json.sh` | EPM (Estimated Plus-Minus) data — scraped from HTML |
 | **[cleaningtheglass.com](https://cleaningtheglass.com)** | `cleantheglass_teams.json.js` | Team summary stats — scraped from HTML |
 | **[basketball-reference.com](https://www.basketball-reference.com)** | `bbref_2025.json.mjs`, `bbref_2026.json.mjs`, `bbref_salaries.json.mjs` | Team stats by season, player salary data — scraped from HTML |
-| **espnanalytics.com** (via S3) | `netpoints.json.sh` | Net points per 100 possessions data |
+
+### Key parquet datasets
+
+#### `espn.players.parquet` — Per-game player box scores with net points (from ESPN)
+- **One row per player per game.** Contains ESPN's net points metrics and play-type event counts.
+- **Key columns:** `season`, `game_id`, `player_id`, `team`, `name`, `played`, `minutes_played` (string, format `"MM:SS"`), `starter`, `pts`, `plusMinusPoints`
+- **Net points columns:** `oNetPts` (offensive), `dNetPts` (defensive), `tNetPts` (total) — per-game values, positive = good
+- **WPA columns:** `oWPA`, `dWPA`, `tWPA` — win probability added
+- **Play-type event counts:** `assister`, `rebounder`, `stlr`, `blkr`, `tov1`, `fgmplyr`, `fgaplyr`, `fg3mplyr`, `ftmplyr`, `ftaplyr`, `orebounder`, etc.
+- **Season convention:** `season` is the ending year of the NBA season (e.g. `2026` = the 2025-26 season)
+- **Team abbreviations:** ESPN-style — notably `BRK` (not BKN), `NOR` (not NOP), `PHO` (not PHX), `SAN` (not SAS)
+
+#### `espn.player_details.parquet` — Per-game net points broken down by play type
+- **One row per player per game.** Same grain as `espn.players.parquet`.
+- **Key columns:** `playerId`, `gameId`, `name`, `team`, `season`
+- **Play-type net points:** columns follow the pattern `{playtype}_{side}NetPts` where play types include `2pt`, `2ptShooting`, `3pt`, `3ptShooting`, `assist`, `block`, `foul`, `freeThrow`, `rebound`, `rim`, `turnover`, `fastbreak`, `putback`, `stoppage`, `timeout`; and side is `o` (offensive), `d` (defensive), `t` (total)
+- **Totals:** `total_oNetPts`, `total_dNetPts`, `total_tNetPts`
+- ⚠️ Note: join key columns are named differently from `espn.players.parquet` — `playerId` (not `player_id`), `gameId` (not `game_id`)
+
+#### `gamelogs.parquet` — Team-level game logs (from NBA.com)
+- **One row per team per game.** Standard box score stats plus advanced stats.
+- **Key columns:** `season_year` (string like `"2025-26"`), `game_id`, `game_date` (ISO datetime string), `team_id`, `team_abbreviation`, `team_name`, `matchup`, `wl`, `min`
+- **Important:** This is the only dataset with `game_date`. To get dates for ESPN player games, join on `game_id`.
+- **Team abbreviations:** NBA.com-style — `BKN`, `NOP`, `PHX`, `SAS` (different from ESPN data)
+- ⚠️ **`game_id` is NOT chronological.** Games on the same night can have non-sequential IDs. Always join to `gamelogs.parquet` for `game_date` when you need chronological ordering.
+
+#### `playerstats.parquet` — Season-aggregated player stats (from NBA.com)
+- **One row per player per team per season** (players traded mid-season have one row per team plus a `TOT` total row). 235 columns.
+- **Key columns:** `player_id`, `player_name`, `team_abbreviation`, `team_count` (>1 if traded), `player_last_team_abbreviation`, `gp`, `min`, `pts`, `ast`, `reb`, etc.
+- **Includes:** standard stats, advanced stats (off/def rating, usage, etc.), shooting splits, and demographic info (height, weight, college, draft info)
+- **Team abbreviations:** NBA.com-style
+
+### Team abbreviation mapping (ESPN ↔ NBA.com)
+
+| ESPN | NBA.com |
+|------|---------|
+| BRK  | BKN     |
+| NOR  | NOP     |
+| PHO  | PHX     |
+| SAN  | SAS     |
 
 ### Refreshing data
 
