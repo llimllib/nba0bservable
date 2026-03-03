@@ -101,6 +101,7 @@ import { sliceQuantile } from "./lib/util.js"
 - Arrow function parens avoided for single params (`"arrowParens": "avoid"`)
 - Data loaders write to stdout — shell scripts use `curl`, JS scripts use `console.log(JSON.stringify(...))`
 - Pages use Observable's reactive `js` fenced code blocks
+- **Prefer DuckDB over Python** for querying and transforming parquet data. Use DuckDB CLI in shell data loaders or DuckDB WASM in the browser via `sql` front-matter. Avoid writing Python scripts for data processing when DuckDB can accomplish the same task.
 
 ## CI/CD
 
