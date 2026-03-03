@@ -75,6 +75,7 @@ If the cache is empty, run the data loaders first: `npm run dev` (which triggers
 | **[dunksandthrees.com](https://dunksandthrees.com)** | `epm.json.sh`, `epm.json.js`, `epm_season.json.js`, `epm_playoffs.json.sh` | EPM (Estimated Plus-Minus) data — scraped from HTML |
 | **[cleaningtheglass.com](https://cleaningtheglass.com)** | `cleantheglass_teams.json.js` | Team summary stats — scraped from HTML |
 | **[basketball-reference.com](https://www.basketball-reference.com)** | `bbref_2025.json.mjs`, `bbref_2026.json.mjs`, `bbref_salaries.json.mjs` | Team stats by season, player salary data — scraped from HTML |
+| **ESPN Analytics** (S3 bucket) | `netpoints.json.sh` | Pre-aggregated net points per 100 possessions by player/season (same ESPN net points data as `espn.players.parquet`, but pre-aggregated) |
 
 ### Key parquet datasets
 
