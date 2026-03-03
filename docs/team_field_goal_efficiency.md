@@ -403,14 +403,14 @@ const graph3 = Plot.plot({
   title: "Shot Quality vs Opportunity Rate",
   subtitle: "Different paths to offensive efficiency",
   x: {
-    label: "True Shooting % →",
+    label: "True Shooting %",
     labelAnchor: "center",
     nice: true,
     ticks: 5,
     tickFormat: d => `${(d * 100).toFixed(0)}%`,
   },
   y: {
-    label: "↑ Opportunity Rate (1 − TOV% + ORB%)",
+    label: "Opportunity Rate (1 − TOV% + ORB%)",
     labelAnchor: "center",
     nice: true,
     ticks: 5,
