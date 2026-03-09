@@ -216,8 +216,8 @@ where season=${selectedSeason}
 and (gameId LIKE '002%' or gameId LIKE '003%')
 `
 
-// ESPN season 2025 = 2025-26 season, gamelogs uses "2025-26" format
-const seasonYearStr = `${selectedSeason}-${String(selectedSeason + 1).slice(2)}`
+// ESPN season 2026 = 2025-26 season, gamelogs uses "2025-26" format
+const seasonYearStr = `${selectedSeason - 1}-${String(selectedSeason).slice(2)}`
 const gamelogs = await sql`
 select game_id, game_date from gamelogs_raw where season_year=${seasonYearStr}
 `
@@ -632,6 +632,11 @@ const sortedForCumulative = dataSource
   .sort((a, b) => {
     if (a.displayName !== b.displayName)
       return a.displayName.localeCompare(b.displayName)
+    // Sort by game_date (not game_id, which is NOT chronological)
+    const dateA = dates.get(a[gameIdField])
+    const dateB = dates.get(b[gameIdField])
+    if (dateA && dateB) return dateA - dateB
+    // Fall back to game_id if dates are missing
     return a[gameIdField].localeCompare(b[gameIdField])
   })
 

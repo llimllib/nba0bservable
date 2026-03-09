@@ -181,9 +181,13 @@ for (const row of alldata) {
   }
   playerGamesMap.get(name).push(row)
 }
-// Sort each player's games by season then game_id
+// Sort each player's games by game_date (not game_id, which is NOT chronological)
 for (const [name, games] of playerGamesMap) {
   games.sort((a, b) => {
+    const dateA = dates.get(a.game_id)
+    const dateB = dates.get(b.game_id)
+    if (dateA && dateB) return dateA - dateB
+    // Fall back to season + game_id if dates are missing
     if (a.season !== b.season) return a.season - b.season
     return a.game_id.localeCompare(b.game_id)
   })
