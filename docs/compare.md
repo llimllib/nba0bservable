@@ -411,7 +411,7 @@ const chartHeight = categories.length * 56 + 80
 const chart = Plot.plot({
   width: 800,
   height: chartHeight,
-  marginLeft: 110,
+  marginLeft: 140,
   marginRight: 20,
   x: {
     label: `Net Points (${unit})`,
