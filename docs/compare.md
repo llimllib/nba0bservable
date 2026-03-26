@@ -94,7 +94,7 @@ const player2 = view(playerSearch("Player 2", initPlayer2))
 ```js
 const per36 = view(Inputs.toggle({ label: "Per 36 minutes", value: initPer36 }))
 const showAll = view(
-  Inputs.toggle({ label: "Show all 25 categories", value: initShowAll }),
+  Inputs.toggle({ label: "Show shot-type breakdowns", value: initShowAll }),
 )
 ```
 
@@ -111,87 +111,93 @@ const showAll = view(
 ```
 
 ```js
-// core categories to show by default
+// Core: matches ESPN Analytics top-level categories
 const coreCategories = [
-  "3pt",
-  "rim",
-  "mid",
+  "offense",
+  "defense",
+  "2ptShooting",
+  "3ptShooting",
   "assist",
   "rebound",
   "turnover",
   "foul",
   "freethrow",
   "fastbreak",
-  "2ptShooting",
-  "3ptShooting",
+  "putback",
 ]
 
+// All: adds shot-type sub-breakdowns
 const allCategories = [
-  "3pt",
-  "rim",
-  "mid",
-  "2pt",
+  "offense",
+  "defense",
+  "2ptShooting",
+  "3ptShooting",
   "assist",
   "rebound",
   "turnover",
   "foul",
   "freethrow",
   "fastbreak",
-  "2ptShooting",
-  "3ptShooting",
-  "corner",
-  "cutting",
-  "driving",
+  "putback",
+  "rim",
+  "mid",
+  "layup",
   "dunk",
-  "fade",
+  "corner",
+  "atb",
+  "driving",
+  "cutting",
   "floating",
+  "fade",
   "hook",
   "bank",
-  "layup",
-  "putback",
   "badpass",
   "grenade",
-  "atb",
 ]
 
 const categoryLabels = {
-  "3pt": "3-Point",
-  rim: "Rim",
+  offense: "Offense",
+  defense: "Defense",
+  "2ptShooting": "2pt Shooting",
+  "3ptShooting": "3pt Shooting",
+  assist: "Passing",
+  rebound: "Rebounding",
+  turnover: "Turnovers Committed",
+  foul: "Committing Fouls",
+  freethrow: "Drawing Fouls",
+  fastbreak: "Fast-Break",
+  putback: "Put-Backs",
+  rim: "Rim Shooting",
   mid: "Mid-Range",
-  "2pt": "2-Point",
-  assist: "Assists",
-  rebound: "Rebounds",
-  turnover: "Turnovers",
-  foul: "Fouls",
-  freethrow: "Free Throws",
-  fastbreak: "Fastbreak",
-  "2ptShooting": "2-Point Defense",
-  "3ptShooting": "3-Point Defense",
-  corner: "Corner 3",
-  cutting: "Cutting",
-  driving: "Driving",
+  layup: "Layups",
   dunk: "Dunks",
-  fade: "Fadeaway",
+  corner: "Corner 3s",
+  atb: "Above the Break 3s",
+  driving: "Driving",
+  cutting: "Cutting",
   floating: "Floater",
+  fade: "Fadeaway",
   hook: "Hook Shot",
   bank: "Bank Shot",
-  layup: "Layup",
-  putback: "Putback",
   badpass: "Bad Pass",
   grenade: "Grenade",
-  atb: "At the Basket",
 }
 ```
 
 ```js
 // Build the SQL to aggregate both players
 const ids = [player1.playerId, player2.playerId]
-const catCols = (showAll ? allCategories : coreCategories)
-  .map(
+const activeCats = showAll ? allCategories : coreCategories
+const regularCats = activeCats.filter(c => c !== "offense" && c !== "defense")
+const catCols = [
+  // offense/defense are derived from total_oNetPts/total_dNetPts
+  `sum(total_oNetPts) as offense_total`,
+  `sum(total_dNetPts) as defense_total`,
+  ...regularCats.map(
     c =>
       `sum("${c}_tNetPts") as "${c}_total", sum("${c}_oNetPts") as "${c}_o", sum("${c}_dNetPts") as "${c}_d"`,
-  )
-  .join(",\n  ")
+  ),
+].join(",\n  ")
 
 const detailQuery = `
 SELECT
@@ -237,6 +243,11 @@ function getVal(row, cat) {
   if (!per36) return raw
   const mins = minutesMap.get(row.playerId) ?? 1
   return (raw / mins) * 36
+}
+
+// For the summary, total is offense + defense
+function getTotal(row) {
+  return (row?.offense_total ?? 0) + (row?.defense_total ?? 0)
 }
 
 const p1row = detailRows.toArray().find(r => r.playerId === player1.playerId)
@@ -437,15 +448,17 @@ const chart = Plot.plot({
 d3.select(container).append(() => chart)
 
 // --- Summary ---
+const p1raw = getTotal(p1row)
+const p2raw = getTotal(p2row)
 const p1total = p1row
   ? per36
-    ? ((p1row.total_tNetPts / p1mins) * 36).toFixed(1)
-    : p1row.total_tNetPts.toFixed(1)
+    ? ((p1raw / p1mins) * 36).toFixed(1)
+    : p1raw.toFixed(1)
   : "0"
 const p2total = p2row
   ? per36
-    ? ((p2row.total_tNetPts / p2mins) * 36).toFixed(1)
-    : p2row.total_tNetPts.toFixed(1)
+    ? ((p2raw / p2mins) * 36).toFixed(1)
+    : p2raw.toFixed(1)
   : "0"
 
 const summary = d3
