@@ -326,7 +326,22 @@ const p2mins = minutesMap.get(player2.playerId) ?? 0
 const unit = per36 ? "per 36 min" : "season total"
 ```
 
-<div id="comparison-container"></div>
+<div id="comparison-container"><div id="loading-indicator" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:3rem;color:#999;font-size:1.1rem"><span class="loading-spinner"></span> Loading player data…</div></div>
+
+<style>
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #ddd;
+  border-top-color: #999;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
 
 ```js
 const container = document.getElementById("comparison-container")
