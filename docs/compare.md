@@ -119,9 +119,9 @@ const coreCategories = [
   "3ptShooting",
   "assist",
   "rebound",
-  "turnover",
-  "foul",
-  "freethrow",
+  "turnoverCommitted",
+  "drawingFouls",
+  "committingFouls",
   "fastbreak",
   "putback",
 ]
@@ -134,9 +134,9 @@ const allCategories = [
   "3ptShooting",
   "assist",
   "rebound",
-  "turnover",
-  "foul",
-  "freethrow",
+  "turnoverCommitted",
+  "drawingFouls",
+  "committingFouls",
   "fastbreak",
   "putback",
   "rim",
@@ -155,6 +155,15 @@ const allCategories = [
   "grenade",
 ]
 
+// Categories that are computed from combining columns, not direct {cat}_tNetPts lookups
+const compositeCategories = {
+  offense: row => row["offense_total"] ?? 0,
+  defense: row => row["defense_total"] ?? 0,
+  drawingFouls: row => (row["foul_o"] ?? 0) + (row["freethrow_o"] ?? 0),
+  committingFouls: row => (row["foul_d"] ?? 0) + (row["freethrow_d"] ?? 0),
+  turnoverCommitted: row => row["turnover_o"] ?? 0,
+}
+
 const categoryLabels = {
   offense: "Offense",
   defense: "Defense",
@@ -162,9 +171,9 @@ const categoryLabels = {
   "3ptShooting": "3pt Shooting",
   assist: "Passing",
   rebound: "Rebounding",
-  turnover: "Turnovers Committed",
-  foul: "Fouls",
-  freethrow: "Free Throws",
+  turnoverCommitted: "Turnovers Committed",
+  drawingFouls: "Drawing Fouls",
+  committingFouls: "Committing Fouls",
   fastbreak: "Fast-Break",
   putback: "Put-Backs",
   rim: "Rim Shooting",
@@ -188,11 +197,16 @@ const categoryLabels = {
 // Build the SQL to aggregate both players
 const ids = [player1.playerId, player2.playerId]
 const activeCats = showAll ? allCategories : coreCategories
-const regularCats = activeCats.filter(c => c !== "offense" && c !== "defense")
+const regularCats = activeCats.filter(c => !compositeCategories[c])
 const catCols = [
-  // offense/defense are derived from total_oNetPts/total_dNetPts
+  // Always fetch the columns needed for composite categories
   `sum(total_oNetPts) as offense_total`,
   `sum(total_dNetPts) as defense_total`,
+  `sum(foul_oNetPts) as foul_o`,
+  `sum(foul_dNetPts) as foul_d`,
+  `sum(freethrow_oNetPts) as freethrow_o`,
+  `sum(freethrow_dNetPts) as freethrow_d`,
+  `sum(turnover_oNetPts) as turnover_o`,
   ...regularCats.map(
     c =>
       `sum("${c}_tNetPts") as "${c}_total", sum("${c}_oNetPts") as "${c}_o", sum("${c}_dNetPts") as "${c}_d"`,
@@ -239,7 +253,9 @@ const minutesMap = new Map(
 const categories = showAll ? allCategories : coreCategories
 
 function getVal(row, cat) {
-  const raw = row[`${cat}_total`] ?? 0
+  const raw = compositeCategories[cat]
+    ? compositeCategories[cat](row)
+    : (row[`${cat}_total`] ?? 0)
   if (!per36) return raw
   const mins = minutesMap.get(row.playerId) ?? 1
   return (raw / mins) * 36
