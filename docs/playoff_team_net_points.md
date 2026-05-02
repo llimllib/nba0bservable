@@ -13,7 +13,21 @@ import { teams, normalizeESPN } from "./lib/teams.js"
 import { label } from "./lib/labels.js"
 ```
 
-```sql id=playoffPlayers
+```js
+const CURRENT_SEASON = 2026
+const availableSeasons = [2026, 2025, 2024, 2023, 2022, 2021, 2019]
+
+const seasonSelect = Inputs.select(availableSeasons, {
+  value: CURRENT_SEASON,
+  format: d => `${String(d - 1)}–${String(d).slice(2)}`,
+  label: "Season:",
+})
+const selectedSeason = Generators.input(seasonSelect)
+display(seasonSelect)
+```
+
+```js
+const playoffPlayers = await sql`
 SELECT
   player_id,
   name,
@@ -30,11 +44,12 @@ SELECT
     CAST(SPLIT_PART(minutes_played, ':', 2) AS FLOAT) / 60
   ) AS minutes
 FROM players
-WHERE season = 2026
+WHERE season = ${selectedSeason}
   AND game_id LIKE '004%'
   AND played
 GROUP BY player_id, name, team
 HAVING games > 0
+`
 ```
 
 ```js
@@ -93,7 +108,7 @@ display(
   Plot.plot({
     width: 500,
     height: 500,
-    title: `${selectedTeam.name} — 2025–26 playoffs`,
+    title: `${selectedTeam.name} — ${selectedSeason - 1}–${String(selectedSeason).slice(2)} playoffs`,
     subtitle: `net points per game, min ${minMinutes} minutes`,
     grid: true,
     marginLeft: 60,
@@ -143,9 +158,10 @@ display(
 )
 ```
 
-Each dot is a player on the selected team across the 2025–26 playoffs so far. Dot size is total minutes played; up-and-right is good. Source: ESPN per-game net points (`oNetPts`, `dNetPts`).
+Each dot is a player on the selected team across the selected playoffs so far. Dot size is total minutes played; up-and-right is good. Source: ESPN per-game net points (`oNetPts`, `dNetPts`).
 
-```sql id=playoffGames
+```js
+const playoffGames = await sql`
 SELECT
   player_id,
   name,
@@ -157,9 +173,10 @@ SELECT
   CAST(SPLIT_PART(minutes_played, ':', 1) AS FLOAT) +
     CAST(SPLIT_PART(minutes_played, ':', 2) AS FLOAT) / 60 AS minutesPlayed
 FROM players
-WHERE season = 2026
+WHERE season = ${selectedSeason}
   AND game_id LIKE '004%'
   AND played
+`
 ```
 
 ```js
@@ -193,33 +210,42 @@ display(
     marginRight: 30,
     height: Math.max(180, orderedPlayers.length * 44),
     title: `${selectedTeam.name}`,
-    subtitle: `net points per playoff game`,
-    y: {
+    subtitle: `net points per playoff game, ${selectedSeason - 1}–${String(selectedSeason).slice(2)} playoffs`,
+    fy: {
       domain: playerOrder,
-      padding: 0.5,
-      label: null,
       axis: null,
     },
-    x: { label: "Total net points (per game)", grid: true, nice: true },
+    y: { axis: null },
+    x: {
+      label: `Net points per game`,
+      grid: true,
+      nice: true,
+    },
     marks: [
       Plot.ruleX([0], { stroke: "#bbb" }),
-      Plot.dot(games, {
-        y: "name",
-        x: "tNetPts",
-        fill,
-        stroke,
-        strokeWidth: 1,
-        r: 5,
-        fillOpacity: 0.75,
-      }),
+      Plot.dot(
+        games,
+        Plot.dodgeY("middle", {
+          fy: "name",
+          x: "tNetPts",
+          fill,
+          padding: 0,
+          stroke,
+          strokeWidth: 1,
+          r: 4,
+          fillOpacity: 0.75,
+        }),
+      ),
       Plot.tickX(orderedPlayers, {
-        y: "name",
+        fy: "name",
         x: "tNetPtsPerG",
+        insetTop: 12,
+        insetBottom: 12,
         stroke: "red",
         strokeWidth: 2,
       }),
       Plot.image(orderedPlayers, {
-        y: "name",
+        fy: "name",
         frameAnchor: "left",
         dx: -150,
         src: d =>
@@ -229,7 +255,7 @@ display(
         clip: false,
       }),
       Plot.text(orderedPlayers, {
-        y: "name",
+        fy: "name",
         frameAnchor: "left",
         dx: -120,
         textAnchor: "start",
@@ -240,7 +266,7 @@ display(
       Plot.tip(
         games,
         Plot.pointer({
-          y: "name",
+          fy: "name",
           x: "tNetPts",
           title: d =>
             `${d.name}\nNet pts: ${fmt(d.tNetPts)} (O ${fmt(d.oNetPts)} / D ${fmt(d.dNetPts)})\nMinutes: ${fmt(d.minutesPlayed)}`,
