@@ -249,5 +249,12 @@ display(
     ],
   }),
 )
-display(html`<div style="margin-top:0.5rem;font-size:0.75rem;color:#999">Data: <a href="https://espnanalytics.com" style="color:#999">espnanalytics.com</a> · Chart: <a href="https://billmill.org/nba" style="color:#999">billmill.org/nba</a></div>`)
+display(
+  html`<div style="margin-top:-1.5rem;font-size:0.75rem;color:#999">
+    Data:
+    <a href="https://espnanalytics.com" style="color:#999">espnanalytics.com</a>
+    · Chart:
+    <a href="https://billmill.org/nba" style="color:#999">billmill.org/nba</a>
+  </div>`,
+)
 ```
