@@ -5,7 +5,7 @@
 # cuts the file from 47MB to 33MB.
 # Columns are described in
 # https://github.com/llimllib/nba_data/blob/main/docs/DATA_DICTIONARY.md
-set -euo pipefail
+set -eu
 TMP=$(mktemp)
 trap 'rm -f "$TMP"' EXIT
 

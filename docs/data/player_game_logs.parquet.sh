@@ -3,7 +3,7 @@
 # catalog with names, abbreviations and the game type joined in.
 # Columns are described in
 # https://github.com/llimllib/nba_data/blob/main/docs/DATA_DICTIONARY.md
-set -euo pipefail
+set -eu
 TMP=$(mktemp)
 trap 'rm -f "$TMP"' EXIT
 

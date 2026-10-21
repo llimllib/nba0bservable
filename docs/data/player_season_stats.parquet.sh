@@ -4,7 +4,7 @@
 # abbreviation joined in. Per-game and per-36 stats are computed by the pages.
 # Columns are described in
 # https://github.com/llimllib/nba_data/blob/main/docs/DATA_DICTIONARY.md
-set -euo pipefail
+set -eu
 TMP=$(mktemp)
 trap 'rm -f "$TMP"' EXIT
 
