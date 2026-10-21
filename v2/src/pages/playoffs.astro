@@ -1,0 +1,18 @@
+---
+import Base from "../layouts/Base.astro"
+---
+
+<Base title="Playoff net points" description="Every player's net points in every playoff game, by team">
+  <h1>Playoff net points</h1>
+  <p class="lede">
+    Each dot is one player's net points in one playoff game; the tick is
+    their average. Sorted by average.
+  </p>
+  <div id="tool"></div>
+</Base>
+
+<script>
+  import { mount } from "../kit/mount"
+  import { playoffs } from "../tools/playoffs"
+  mount(document.getElementById("tool")!, playoffs)
+</script>

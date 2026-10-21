@@ -1,0 +1,21 @@
+[tools]
+node = "24"
+duckdb = "latest"
+oxlint = "latest"
+oxfmt = "latest"
+
+[tasks.dev]
+description = "Dev server, reading parquet from a local nba_data checkout"
+run = "npm run dev:local"
+
+[tasks.build]
+description = "Build the static site into dist/"
+run = "npm run build"
+
+[tasks.fmt]
+description = "Format everything in place"
+run = "oxfmt"
+
+[tasks.lint]
+description = "Check formatting, lints and types"
+run = ["oxfmt --check", "oxlint --deny-warnings", "npx astro check"]
