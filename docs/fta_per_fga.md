@@ -3,7 +3,7 @@ theme: cotton
 title: FTA per FGA
 toc: false
 sql:
-  players: ./data/playerstats.parquet
+  players: ./data/player_season_stats.parquet
 ---
 
 # FTA per FGA
@@ -58,16 +58,16 @@ const selectedTeams = view(
 
 ```js
 const allPlayers = await sql([
-  `SELECT player_name, team_abbreviation, fga, fta
+  `SELECT player_name, team_abbrev, fga, fta
        FROM players
-      WHERE year=${year}`,
+      WHERE season=${year} AND season_type='regular_season'`,
 ])
 const selectedAbbrev = selectedTeams.map(t => t.abbreviation)
 const active = allPlayers
   .toArray()
   .filter(d =>
     selectedAbbrev.length > 0
-      ? selectedAbbrev.includes(d.team_abbreviation)
+      ? selectedAbbrev.includes(d.team_abbrev)
       : true,
   )
 
@@ -152,8 +152,8 @@ display(
       Plot.dot(data, {
         x,
         y,
-        fill: d => teams.get(d.team_abbreviation).colors[0],
-        stroke: d => teams.get(d.team_abbreviation).colors[1],
+        fill: d => teams.get(d.team_abbrev).colors[0],
+        stroke: d => teams.get(d.team_abbrev).colors[1],
         r: 8,
       }),
       Plot.tip(
@@ -162,7 +162,7 @@ display(
           x,
           y,
           title: d =>
-            `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+            `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
         }),
       ),
     ],

@@ -2,8 +2,7 @@
 theme: cotton
 title: Turnover % games
 sql:
-  gamelogs: ./data/gamelogs.parquet
-  playerlogs: ./data/playerlogs.parquet
+  gamelogs: ./data/team_game_logs.parquet
 ---
 
 # Turnover percentages
@@ -17,19 +16,16 @@ SELECT * from gamelogs
 ```
 
 ```sql id=games
--- SELECT team_abbreviation, matchup, tm_tov_pct
--- FROM gamelogs
--- WHERE season_year='2024'
 SELECT a.game_id,
-    strftime(strptime(a.game_date, '%Y-%m-%dT%H:%M:%S'), '%B %d, %Y') as game_date,
+    strftime(a.game_date, '%B %d, %Y') as game_date,
     a.team_id team_id_a,
-    a.team_abbreviation team_abb,
+    a.team_abbrev team_abb,
     a.team_name team,
     b.tm_tov_pct opp_tov_pct
 FROM gamelogs a
 INNER JOIN gamelogs b
   ON a.game_id = b.game_id and a.team_id!=b.team_id
-WHERE a.season_year='2024-25'
+WHERE a.season=2025 AND a.game_type='regular_season'
 ORDER BY opp_tov_pct desc
 ```
 
@@ -77,18 +73,15 @@ Plot.plot({
 ```
 
 ```sql id=thunder
--- SELECT team_abbreviation, matchup, tm_tov_pct
--- FROM gamelogs
--- WHERE season_year='2024'
 SELECT
-    strftime(strptime(a.game_date, '%Y-%m-%dT%H:%M:%S'), '%B %d, %Y') as game_date,
-    a.team_abbreviation team_abb,
-    b.team_abbreviation opp_abb,
+    strftime(a.game_date, '%B %d, %Y') as game_date,
+    a.team_abbrev team_abb,
+    b.team_abbrev opp_abb,
     b.tm_tov_pct*100 opp_tov_pct,
 FROM gamelogs a
 INNER JOIN gamelogs b
   ON a.game_id = b.game_id and a.team_id!=b.team_id
-WHERE a.season_year='2024-25' AND team_abb='OKC'
+WHERE a.season=2025 AND a.game_type='regular_season' AND team_abb='OKC'
 ORDER BY opp_tov_pct desc
 ```
 

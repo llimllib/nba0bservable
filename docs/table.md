@@ -3,7 +3,7 @@ theme: cotton
 title: table-graph
 toc: false
 sql:
-  players: ./data/playerstats.parquet
+  players: ./data/player_season_stats.parquet
 ---
 
 ```js
@@ -51,20 +51,20 @@ const filter = view(Inputs.text({ label: "filter" }))
 const activeTeams = selectedTeams.map(t => `'${t.abbreviation}'`).join(",")
 const baseQuery =
   `SELECT player_name,
-          team_abbreviation,
+          team_abbrev,
           gp,
           fgm,
           fga,
           fg_pct * 100 as fg_pct,
           fg3m AS "3pm",
           fg3a AS "3pa",
-          fg3a_per36,
+          fg3a / min * 36 AS fg3a_per36,
           fg3_pct * 100 AS "3p%",
           blk,
           ast
        FROM players
-      WHERE year=${year}` +
-  (activeTeams ? ` AND team_abbreviation in (${activeTeams})` : ``)
+      WHERE season=${year} AND season_type='regular_season'` +
+  (activeTeams ? ` AND team_abbrev in (${activeTeams})` : ``)
 
 const query = `SELECT * FROM (\n  ${baseQuery}) as subquery`
 
@@ -85,7 +85,7 @@ if (filter) {
 // Define the columns you want to display
 const columns = [
   { key: "player_name", label: "Player", type: "string" },
-  { key: "team_abbreviation", label: "Team", type: "string" },
+  { key: "team_abbrev", label: "Team", type: "string" },
   { key: "gp", label: "GP", type: "ordinal" },
   { key: "fgm", label: "FGM", type: "ordinal" },
   { key: "fga", label: "FGA", type: "ordinal" },
@@ -233,8 +233,8 @@ function createSortableTable(data, columns, sortState) {
 
                 // Add team logo for player name column
                 if (col.key === "player_name") {
-                  const logoUrl = `https://a.espncdn.com/i/teamlogos/nba/500/${espnAbbrev(row.team_abbreviation)}.png`
-                  return `<td><div class="player-cell"><img src="${logoUrl}" class="team-logo" alt="${row.team_abbreviation}" /><span>${displayValue ?? "-"}</span></div></td>`
+                  const logoUrl = `https://a.espncdn.com/i/teamlogos/nba/500/${espnAbbrev(row.team_abbrev)}.png`
+                  return `<td><div class="player-cell"><img src="${logoUrl}" class="team-logo" alt="${row.team_abbrev}" /><span>${displayValue ?? "-"}</span></div></td>`
                 }
 
                 return `<td class="${col.type === "number" ? "number" : ""}">${displayValue ?? "-"}</td>`

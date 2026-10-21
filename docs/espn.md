@@ -3,8 +3,8 @@ theme: cotton
 title: Net Points
 toc: false
 sql:
-  players: ./data/espn.players.parquet
-  gamelogs: ./data/gamelogs.parquet
+  players: ./data/player_box.parquet
+  gamelogs: ./data/team_game_logs.parquet
 ---
 
 # Net Points
@@ -17,10 +17,9 @@ import { teams } from "./lib/teams.js"
 ```sql id=alldata
 SELECT * from players
 where season=2026
--- regular season and cup
-and game_id LIKE '002%' or game_id LIKE '003%'
+and game_type = 'regular_season'
 -- limit to playoffs:
--- and game_id LIKE '004%'
+-- and game_type = 'playoffs'
 ;
 ```
 
@@ -30,35 +29,27 @@ and game_id LIKE '002%' or game_id LIKE '003%'
 
 ```sql id=agg
 SELECT
-  name,
-  team,
+  player_name,
+  team_abbrev,
   count(*) n,
-  sum(oNetPts) oNetPts,
-  sum(dNetPts) dNetPts,
-  sum(tNetPts) tNetPts,
-  sum(oNetPts) / count(*) oNetPtsPerG,
-  sum(dNetPts) / count(*) dNetPtsPerG,
-  sum(tNetPts) / count(*) tNetPtsPerG,
-  sum(
-    CAST(SPLIT_PART(minutes_played, ':', 1) AS FLOAT) +
-    CAST(SPLIT_PART(minutes_played, ':', 2) AS FLOAT) / 60
-  ) AS minutes,
-  sum(
-    CAST(SPLIT_PART(minutes_played, ':', 1) AS FLOAT) +
-    CAST(SPLIT_PART(minutes_played, ':', 2) AS FLOAT) / 60
-  ) / count(*) AS minutesPerG,
+  sum(o_net_pts) o_net_pts,
+  sum(d_net_pts) d_net_pts,
+  sum(t_net_pts) t_net_pts,
+  sum(o_net_pts) / count(*) o_net_pts_per_g,
+  sum(d_net_pts) / count(*) d_net_pts_per_g,
+  sum(t_net_pts) / count(*) t_net_pts_per_g,
+  sum(seconds_played) / 60 AS minutes,
+  sum(seconds_played) / 60 / count(*) AS minutes_per_g,
 from players
 where season=2026
--- preseason: 001
--- regular season and cup (I think it's 003?)
-and game_id LIKE '002%' or game_id LIKE '003%'
+and game_type = 'regular_season'
 -- playoffs
--- and game_id LIKE '004%'
-group by player_id, name, team
+-- and game_type = 'playoffs'
+group by player_id, player_name, team_abbrev
 -- eventually, require a higher n. Maybe set this to something like 10% of the
 -- max games value or something?
 having n > 0
-order by tNetPts desc
+order by t_net_pts desc
 ```
 
 ```js
@@ -108,7 +99,7 @@ const selectedTeams = view(
 ```
 
 ```js
-const ts = selectedTeams.map(d => d.espnName || d.abbreviation)
+const ts = selectedTeams.map(d => d.abbreviation)
 ```
 
 ```js
@@ -127,14 +118,14 @@ display(
 ```js
 display(
   espnDiamond(agg.toArray(), {
-    by: "minutesPerG",
+    by: "minutes_per_g",
     selectedTeams: ts,
     percentile,
     showBackground,
     size: 600,
     title: "Net Points per game",
-    x: "oNetPtsPerG",
-    y: "dNetPtsPerG",
+    x: "o_net_pts_per_g",
+    y: "d_net_pts_per_g",
     extraSubtitle: " per game",
   }),
 )
@@ -147,7 +138,7 @@ const selectedPlayer = view(
   Inputs.select(
     agg
       .toArray()
-      .map(p => p.name)
+      .map(p => p.player_name)
       .sort(),
     {
       value: "Derrick White",
@@ -161,7 +152,7 @@ const selectedPlayer = view(
 const data = alldata
   .toArray()
   .map(p => ({ ...p }))
-  .filter(x => x.name == selectedPlayer)
+  .filter(x => x.player_name == selectedPlayer)
   .sort((a, b) => a.game_id > b.game_id)
 let i = 1
 data.forEach(pt => {
@@ -172,17 +163,17 @@ const exploded = data
   .map(pg => {
     return [
       {
-        name: pg.name,
+        name: pg.player_name,
         gameN: pg.gameN,
-        val: pg.dNetPts,
-        tot: pg.tNetPts,
+        val: pg.d_net_pts,
+        tot: pg.t_net_pts,
         type: "defensive net points",
       },
       {
-        name: pg.name,
+        name: pg.player_name,
         gameN: pg.gameN,
-        val: pg.oNetPts,
-        tot: pg.tNetPts,
+        val: pg.o_net_pts,
+        tot: pg.t_net_pts,
         type: "offensive net points",
       },
     ]
@@ -201,7 +192,7 @@ view(
         fy: "gameN",
         fill: "type", // d => (d.type === "off" ? "#1f78b4" : "#33a02c"),
       }),
-      Plot.ruleX(data, { x: "tNetPts", fy: "gameN" }),
+      Plot.ruleX(data, { x: "t_net_pts", fy: "gameN" }),
     ],
   }),
 )
@@ -242,32 +233,32 @@ view(
       // total points
       Plot.ruleX(data, {
         x: "gameN",
-        y: "tNetPts",
+        y: "t_net_pts",
         stroke: tNetColor,
         strokeOpacity: 1,
         strokeWidth: 10,
       }),
-      // oNetPts
+      // o_net_pts
       Plot.ruleY(data, {
         x1: "gameN",
         x2: "gameN",
         // dx: -2,
-        y: "oNetPts",
+        y: "o_net_pts",
         stroke: oNetColor,
         strokeOpacity: componentOpacity,
         strokeWidth: 5,
         insetRight: 4,
         insetLeft: 4,
       }),
-      // dNetPts
+      // d_net_pts
       Plot.dot(data, {
         x: "gameN",
-        y: "dNetPts",
+        y: "d_net_pts",
         dx: 2,
         // manual stacking implementation, if we represent them as bars
         // y2: d =>
-        //   d.oNetPts > 0 && d.dNetPts > 0 ? d.dNetPts + d.oNetPts : d.dNetPts,
-        // y1: d => (d.oNetPts > 0 && d.dNetPts > 0 ? d.oNetPts : 0),
+        //   d.o_net_pts > 0 && d.d_net_pts > 0 ? d.d_net_pts + d.o_net_pts : d.d_net_pts,
+        // y1: d => (d.o_net_pts > 0 && d.d_net_pts > 0 ? d.o_net_pts : 0),
         fill: dNetColor,
         fillOpacity: componentOpacity,
         insetRight: 10,
@@ -278,7 +269,7 @@ view(
         data,
         Plot.windowY(5, {
           x: "gameN",
-          y: "tNetPts",
+          y: "t_net_pts",
           stroke: movingColor,
         }),
       ),
@@ -288,28 +279,21 @@ view(
 ```
 
 ```sql id=delta
-SELECT DISTINCT
+SELECT
   p.game_id,
   p.player_id,
-  p.name,
-  p.team,
-  p.oNetPts,
-  p.dNetPts,
-  p.tNetPts,
-  g.matchup,
-  -- g.game_date,
-  strftime(g.game_date::TIMESTAMP, '%b %d') as game_date,
-  abs(oNetPts-dNetPts) delta,
+  p.player_name,
+  p.team_abbrev,
+  p.o_net_pts,
+  p.d_net_pts,
+  p.t_net_pts,
+  g.team_abbrev || CASE WHEN g.home THEN ' vs. ' ELSE ' @ ' END || g.opp_team_abbrev AS matchup,
+  strftime(p.game_date, '%b %d') as game_date,
+  abs(o_net_pts-d_net_pts) delta,
 from players p
-left join (
-  SELECT DISTINCT ON (game_id)
-    game_id, matchup, game_date
-  FROM gamelogs
-) g ON p.game_id = g.game_id
+left join gamelogs g ON g.game_id = p.game_id AND g.team_id = p.team_id
 where p.season=2026
--- preseason: 001
--- regular season and cup (I think it's 003?)
-and p.game_id LIKE '002%' or p.game_id LIKE '003%'
+and p.game_type = 'regular_season'
 order by delta desc
 ```
 
@@ -321,8 +305,8 @@ Inputs.table(delta)
 const top10 = delta.toArray().slice(0, 10)
 
 // Color scales for offensive and defensive net points
-// const oExtent = d3.extent(top10, d => d.oNetPts)
-// const dExtent = d3.extent(top10, d => d.dNetPts)
+// const oExtent = d3.extent(top10, d => d.o_net_pts)
+// const dExtent = d3.extent(top10, d => d.d_net_pts)
 const oExtent = [-5, 20]
 const dExtent = [-10, 1]
 
@@ -417,7 +401,7 @@ rows
            style="border-radius: 4px; object-fit: cover;"
            onerror="this.style.display='none'">
       <div>
-        <div style="font-weight: 600; font-size: 14px;">${d.name}</div>
+        <div style="font-weight: 600; font-size: 14px;">${d.player_name}</div>
         <div style="font-size: 12px; color: #666;">${d.game_date} • ${d.matchup}</div>
       </div>
     `
@@ -430,10 +414,10 @@ rows
   .style("text-align", "center")
   .style("font-weight", "600")
   .style("font-size", "16px")
-  .style("background-color", d => oColorScale(d.oNetPts))
+  .style("background-color", d => oColorScale(d.o_net_pts))
   .style("vertical-align", "middle")
   .style("color", d => "#333")
-  .text(d => d.oNetPts.toFixed(1))
+  .text(d => d.o_net_pts.toFixed(1))
 
 // Column 3: Defensive Net Points
 rows
@@ -442,10 +426,10 @@ rows
   .style("text-align", "center")
   .style("font-weight", "600")
   .style("font-size", "16px")
-  .style("background-color", d => dColorScale(d.dNetPts))
+  .style("background-color", d => dColorScale(d.d_net_pts))
   .style("vertical-align", "middle")
   .style("color", d => "#333")
-  .text(d => d.dNetPts.toFixed(1))
+  .text(d => d.d_net_pts.toFixed(1))
 
 // Column 4: Delta
 rows
@@ -461,29 +445,22 @@ display(container.node())
 ```
 
 ```sql id=delta2
-SELECT DISTINCT
+SELECT
   p.game_id,
   p.player_id,
-  p.name,
-  p.team,
-  p.oNetPts,
-  p.dNetPts,
-  p.tNetPts,
-  g.matchup,
-  -- g.game_date,
-  strftime(g.game_date::TIMESTAMP, '%b %d') as game_date,
-  abs(oNetPts-dNetPts) delta,
+  p.player_name,
+  p.team_abbrev,
+  p.o_net_pts,
+  p.d_net_pts,
+  p.t_net_pts,
+  g.team_abbrev || CASE WHEN g.home THEN ' vs. ' ELSE ' @ ' END || g.opp_team_abbrev AS matchup,
+  strftime(p.game_date, '%b %d') as game_date,
+  abs(o_net_pts-d_net_pts) delta,
 from players p
-left join (
-  SELECT DISTINCT ON (game_id)
-    game_id, matchup, game_date
-  FROM gamelogs
-) g ON p.game_id = g.game_id
+left join gamelogs g ON g.game_id = p.game_id AND g.team_id = p.team_id
 where p.season=2026
-and dNetPts > oNetPts
--- preseason: 001
--- regular season and cup (I think it's 003?)
-and (p.game_id LIKE '002%' or p.game_id LIKE '003%')
+and d_net_pts > o_net_pts
+and p.game_type = 'regular_season'
 order by delta desc
 ```
 
@@ -495,8 +472,8 @@ Inputs.table(delta2)
 const top10 = delta2.toArray().slice(0, 10)
 
 // Color scales for offensive and defensive net points
-// const oExtent = d3.extent(top10, d => d.oNetPts)
-// const dExtent = d3.extent(top10, d => d.dNetPts)
+// const oExtent = d3.extent(top10, d => d.o_net_pts)
+// const dExtent = d3.extent(top10, d => d.d_net_pts)
 const oExtent = [-15, 5]
 const dExtent = [1, 10]
 
@@ -591,7 +568,7 @@ rows
            style="border-radius: 4px; object-fit: cover;"
            onerror="this.style.display='none'">
       <div>
-        <div style="font-weight: 600; font-size: 14px;">${d.name}</div>
+        <div style="font-weight: 600; font-size: 14px;">${d.player_name}</div>
         <div style="font-size: 12px; color: #666;">${d.game_date} • ${d.matchup}</div>
       </div>
     `
@@ -604,10 +581,10 @@ rows
   .style("text-align", "center")
   .style("font-weight", "600")
   .style("font-size", "16px")
-  .style("background-color", d => oColorScale(d.oNetPts))
+  .style("background-color", d => oColorScale(d.o_net_pts))
   .style("vertical-align", "middle")
   .style("color", d => "#333")
-  .text(d => d.oNetPts.toFixed(1))
+  .text(d => d.o_net_pts.toFixed(1))
 
 // Column 3: Defensive Net Points
 rows
@@ -616,10 +593,10 @@ rows
   .style("text-align", "center")
   .style("font-weight", "600")
   .style("font-size", "16px")
-  .style("background-color", d => dColorScale(d.dNetPts))
+  .style("background-color", d => dColorScale(d.d_net_pts))
   .style("vertical-align", "middle")
   .style("color", d => "#333")
-  .text(d => d.dNetPts.toFixed(1))
+  .text(d => d.d_net_pts.toFixed(1))
 
 // Column 4: Delta
 rows
@@ -635,30 +612,23 @@ display(container.node())
 ```
 
 ```sql id=delta3
-SELECT DISTINCT
-  p.name,
+SELECT
   p.game_id,
   p.player_id,
-  p.team,
-  p.oNetPts,
-  p.dNetPts,
-  p.tNetPts,
-  g.matchup,
-  -- g.game_date,
-  strftime(g.game_date::TIMESTAMP, '%b %d') as game_date,
-  abs(oNetPts-dNetPts) delta,
+  p.player_name,
+  p.team_abbrev,
+  p.o_net_pts,
+  p.d_net_pts,
+  p.t_net_pts,
+  g.team_abbrev || CASE WHEN g.home THEN ' vs. ' ELSE ' @ ' END || g.opp_team_abbrev AS matchup,
+  strftime(p.game_date, '%b %d') as game_date,
+  abs(o_net_pts-d_net_pts) delta,
 from players p
-left join (
-  SELECT DISTINCT ON (game_id)
-    game_id, matchup, game_date
-  FROM gamelogs
-) g ON p.game_id = g.game_id
+left join gamelogs g ON g.game_id = p.game_id AND g.team_id = p.team_id
 where p.season=2026
-and abs(oNetPts) > 4 and abs(dNetPts) > 4
-and (dNetPts <0 or oNetPts < 0)
--- preseason: 001
--- regular season and cup (I think it's 003?)
-and (p.game_id LIKE '002%' or p.game_id LIKE '003%')
+and abs(o_net_pts) > 4 and abs(d_net_pts) > 4
+and (d_net_pts <0 or o_net_pts < 0)
+and p.game_type = 'regular_season'
 order by delta desc
 ```
 
@@ -670,8 +640,8 @@ Inputs.table(delta3)
 const top10 = delta3.toArray().slice(0, 10)
 
 // Color scales for offensive and defensive net points
-// const oExtent = d3.extent(top10, d => d.oNetPts)
-// const dExtent = d3.extent(top10, d => d.dNetPts)
+// const oExtent = d3.extent(top10, d => d.o_net_pts)
+// const dExtent = d3.extent(top10, d => d.d_net_pts)
 const oExtent = [-11, 11]
 const dExtent = [-11, 11]
 
@@ -766,7 +736,7 @@ rows
            style="border-radius: 4px; object-fit: cover;"
            onerror="this.style.display='none'">
       <div>
-        <div style="font-weight: 600; font-size: 14px;">${d.name}</div>
+        <div style="font-weight: 600; font-size: 14px;">${d.player_name}</div>
         <div style="font-size: 12px; color: #666;">${d.game_date} • ${d.matchup}</div>
       </div>
     `
@@ -779,10 +749,10 @@ rows
   .style("text-align", "center")
   .style("font-weight", "600")
   .style("font-size", "16px")
-  .style("background-color", d => oColorScale(d.oNetPts))
+  .style("background-color", d => oColorScale(d.o_net_pts))
   .style("vertical-align", "middle")
   .style("color", d => "#333")
-  .text(d => d.oNetPts.toFixed(1))
+  .text(d => d.o_net_pts.toFixed(1))
 
 // Column 3: Defensive Net Points
 rows
@@ -791,10 +761,10 @@ rows
   .style("text-align", "center")
   .style("font-weight", "600")
   .style("font-size", "16px")
-  .style("background-color", d => dColorScale(d.dNetPts))
+  .style("background-color", d => dColorScale(d.d_net_pts))
   .style("vertical-align", "middle")
   .style("color", d => "#333")
-  .text(d => d.dNetPts.toFixed(1))
+  .text(d => d.d_net_pts.toFixed(1))
 
 // Column 4: Delta
 rows

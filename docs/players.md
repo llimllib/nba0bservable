@@ -3,8 +3,7 @@ theme: cotton
 title: Player trailing efficiency
 toc: false
 sql:
-  gamelogs: ./data/gamelogs.parquet
-  playerlogs: ./data/playerlogs.parquet
+  playerlogs: ./data/player_game_logs.parquet
 ---
 
 ```js
@@ -14,21 +13,20 @@ import { sliceQuantile } from "./lib/util.js"
 ```
 
 ```js
-const seasons = [...Array(12).keys()].map(
-  x => String(x + 2014) + "-" + String(x + 15),
-)
-const season_year = view(
-  Inputs.select(seasons, { value: "2025-26", label: "year" }),
+const seasons = [...Array(12).keys()].map(x => x + 2015)
+const season = view(
+  Inputs.select(seasons, {
+    value: 2026,
+    label: "year",
+    format: y => `${y - 1}-${String(y).slice(2)}`,
+  }),
 )
 ```
 
 <!-- uncomment to show a table of all available stats
 ```sql id=all
-SELECT * FROM playerlogs pl, gamelogs gl
-WHERE pl.gameid=gl.game_id
-  AND pl.teamTricode=gl.team_abbreviation
-  AND gl.season_year=${season_year}
-  AND pl.minutes != ''
+SELECT * FROM playerlogs
+WHERE season=${season}
 ORDER BY game_date
 ```
 
@@ -38,19 +36,12 @@ Inputs.table(all)
 -->
 
 ```sql id=players
--- TODO: right now we only have 24-25 game logs; it would be cool to show a
--- player's career progress through their whole career
--- TODO: apparently Jakob Pöltl is in here with both Pöltl and Poetl, sigh
-SELECT gl.game_date, pl.firstName ||' '|| pl.familyName as name, pl.points,
-  pl.fieldGoalsMade fg, pl.fieldGoalsAttempted fga, pl.freeThrowsAttempted fta,
-  pl.freeThrowsMade ft, pl.reboundsOffensive orb, pl.reboundsDefensive drb, pl.
-  steals, pl.assists, pl.blocks, pl.foulsPersonal pf, pl.turnovers tov,
-  pl.usagePercentage usage, pl.trueShootingPercentage ts_pct
-FROM playerlogs pl, gamelogs gl
-WHERE pl.gameid=gl.game_id
-  AND pl.teamTricode=gl.team_abbreviation
-  AND gl.season_year=${season_year}
-  AND pl.minutes != ''
+-- TODO: it would be cool to show a player's career progress through their
+-- whole career
+SELECT game_date, player_name, pts, fgm, fga, fta, ftm, oreb, dreb, stl, ast,
+  blk, pf, tov, usg_pct, ts_pct
+FROM playerlogs
+WHERE season=${season}
 ORDER BY game_date
 ```
 
@@ -60,7 +51,7 @@ const player = view(
     new Set(
       players
         .toArray()
-        .map(p => p.name)
+        .map(p => p.player_name)
         .sort(),
     ),
     { value: "Jayson Tatum", label: "player" },
@@ -68,28 +59,22 @@ const player = view(
 )
 ```
 
+<!-- uncomment to show the raw player logs for the season
 ```sql id=playerraw
 SELECT *
 FROM playerlogs
+WHERE season=${season}
 ```
 
 ```js
-// Inputs.table(playerraw)
+Inputs.table(playerraw)
 ```
-
-```sql id=gamesraw
-SELECT *
-FROM gamelogs
-```
-
-```js
-// Inputs.table(gamesraw)
-```
+-->
 
 ```js
 const plogs = players
   .toArray()
-  .filter(p => p.name == player)
+  .filter(p => p.player_name == player)
   .map(p => {
     // the sql query results in proxy objects we can't add an attribute to
     p = { ...p }
@@ -98,15 +83,15 @@ const plogs = players
     // PTS + 0.4 * FG - 0.7 * FGA - 0.4*(FTA - FT) + 0.7 * ORB + 0.3 * DRB +
     // STL + 0.7 * AST + 0.7 * BLK - 0.4 * PF - TOV
     p.gamescore =
-      p.points +
-      0.4 * p.fg -
+      p.pts +
+      0.4 * p.fgm -
       0.7 * p.fga -
-      0.4 * (p.fta - p.ft) +
-      0.7 * p.orb +
-      0.3 * p.drb +
-      p.steals +
-      0.7 * p.assists +
-      0.7 * p.blocks -
+      0.4 * (p.fta - p.ftm) +
+      0.7 * p.oreb +
+      0.3 * p.dreb +
+      p.stl +
+      0.7 * p.ast +
+      0.7 * p.blk -
       0.4 * p.pf -
       p.tov
     return p
@@ -205,7 +190,7 @@ display(
 
 ```js
 const x = "game_date"
-const y = "usage"
+const y = "usg_pct"
 display(
   Plot.plot({
     title: `Usage for ${player}`,

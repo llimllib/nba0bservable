@@ -2,20 +2,33 @@
 theme: cotton
 title: Team efficiency vs pace
 toc: false
+sql:
+  team_game_logs: ./data/team_game_logs.parquet
 ---
 
 ```js
 import { teams } from "./lib/teams.js"
-const rawdata = await FileAttachment("data/team_summary.json").json()
+```
+
+```sql id=seasons
+-- Each team's regular season, from its game logs: ratings are points per 100
+-- possessions, and pace is possessions per 48 minutes
+SELECT g.season,
+  g.team_abbrev,
+  any_value(g.team_name) AS team_name,
+  ROUND(48 * SUM(g.poss) / SUM(g.min), 1) AS pace,
+  ROUND(100 * SUM(g.pts) / SUM(g.poss), 1) AS off_rating,
+  ROUND(100 * SUM(o.pts) / SUM(o.poss), 1) AS def_rating,
+  ROUND(100 * SUM(g.pts) / SUM(g.poss) - 100 * SUM(o.pts) / SUM(o.poss), 1) AS net_rating
+FROM team_game_logs g
+JOIN team_game_logs o ON o.game_id = g.game_id AND o.team_id = g.opp_team_id
+WHERE g.game_type = 'regular_season'
+GROUP BY g.season, g.team_abbrev
+ORDER BY g.season, g.team_abbrev
 ```
 
 ```js
-// append season to each team's data
-const years = Object.keys(rawdata.data)
-years.forEach(year =>
-  Object.values(rawdata.data[year]).forEach(team => (team.year = year)),
-)
-const data = years.flatMap(year => Object.values(rawdata.data[year]))
+const data = seasons.toArray().map(d => ({ ...d }))
 display(data)
 ```
 
@@ -25,9 +38,9 @@ Pace has no discernable effect on net rating
 Plot.plot({
   marks: [
     Plot.dot(data, {
-      x: "PACE",
-      y: "NET_RATING",
-      title: d => `${d.year} ${d.TEAM}`,
+      x: "pace",
+      y: "net_rating",
+      title: d => `${d.season} ${d.team_name}`,
     }),
   ],
 })
@@ -36,21 +49,21 @@ Plot.plot({
 But a clear positive effect on offensive efficiency
 
 ```js
-const x = "PACE"
-const y = "OFF_RATING"
+const x = "pace"
+const y = "off_rating"
 const graph = Plot.plot({
   marks: [
     Plot.dot(data, {
       x,
       y,
-      title: d => `${d.year} ${d.TEAM_NAME}`,
+      title: d => `${d.season} ${d.team_name}`,
     }),
     Plot.tip(
       data,
       Plot.pointer({
         x,
         y,
-        title: d => `${d.year} ${d.TEAM_NAME}`,
+        title: d => `${d.season} ${d.team_name}`,
       }),
     ),
     Plot.linearRegressionY(data, { x, y, stroke: "blue" }),
@@ -60,8 +73,8 @@ display(graph)
 ```
 
 ```js
-const x = "PACE"
-const y = "OFF_RATING"
+const x = "pace"
+const y = "off_rating"
 const graph = Plot.plot({
   grid: true,
   title: "Pace vs offensive efficiency",
@@ -82,25 +95,25 @@ const graph = Plot.plot({
   marks: [
     Plot.linearRegressionY(data, { x, y, stroke: "blue" }),
     Plot.dot(
-      data.filter(d => d.year != "2025"),
+      data.filter(d => d.season != 2025),
       {
         x,
         y,
         fill: "grey",
         fillOpacity: 0.3,
         title: d =>
-          `${d.year} ${d.TEAM_NAME}\npace: ${d.PACE}\noff. eff: ${d.OFF_RATING}`,
+          `${d.season} ${d.team_name}\npace: ${d.pace}\noff. eff: ${d.off_rating}`,
       },
     ),
     Plot.image(
-      data.filter(d => d.year == "2025"),
+      data.filter(d => d.season == 2025),
       {
         x,
         y,
         width: 24,
         height: 24,
         src: d =>
-          `https://llimllib.github.io/nbastats/logos/${d.TEAM_NAME}.svg`,
+          `https://llimllib.github.io/nbastats/logos/${d.team_name}.svg`,
       },
     ),
     Plot.tip(
@@ -108,7 +121,7 @@ const graph = Plot.plot({
       Plot.pointer({
         x,
         y,
-        title: d => `${d.year} ${d.TEAM_NAME}`,
+        title: d => `${d.season} ${d.team_name}`,
       }),
     ),
   ],
@@ -117,8 +130,8 @@ display(graph)
 ```
 
 ```js
-const x = "PACE"
-const y = "OFF_RATING"
+const x = "pace"
+const y = "off_rating"
 const graph = Plot.plot({
   grid: true,
   title: "Pace vs offensive efficiency",
@@ -137,22 +150,22 @@ const graph = Plot.plot({
   },
   marks: [
     Plot.image(
-      data.filter(d => d.year == "2025"),
+      data.filter(d => d.season == 2025),
       {
         x,
         y,
         width: 24,
         height: 24,
         src: d =>
-          `https://llimllib.github.io/nbastats/logos/${d.TEAM_NAME}.svg`,
+          `https://llimllib.github.io/nbastats/logos/${d.team_name}.svg`,
       },
     ),
     Plot.tip(
-      data.filter(d => d.year == "2025"),
+      data.filter(d => d.season == 2025),
       Plot.pointer({
         x,
         y,
-        title: d => `${d.year} ${d.TEAM_NAME}`,
+        title: d => `${d.season} ${d.team_name}`,
       }),
     ),
   ],
@@ -161,8 +174,8 @@ display(graph)
 ```
 
 ```js
-const x = "PACE"
-const y = "OFF_RATING"
+const x = "pace"
+const y = "off_rating"
 const facet = {
   2010: [0, 0],
   2011: [0, 1],
@@ -181,8 +194,8 @@ const facet = {
   2024: [4, 2],
   2025: [5, 1],
 }
-const fx = d => facet[d.year][1]
-const fy = d => facet[d.year][0]
+const fx = d => facet[d.season][1]
+const fy = d => facet[d.season][0]
 const graph = Plot.plot({
   grid: true,
   title: "Pace vs offensive efficiency",
@@ -224,10 +237,10 @@ const graph = Plot.plot({
       fx,
       fy,
       title: d =>
-        `${d.year} ${d.TEAM_NAME}\npace: ${d.PACE}\noff. eff: ${d.OFF_RATING}`,
+        `${d.season} ${d.team_name}\npace: ${d.pace}\noff. eff: ${d.off_rating}`,
     }),
     Plot.text(data, {
-      text: d => d.year,
+      text: d => d.season,
       fx,
       fy,
       frameAnchor: "top-left",
@@ -241,7 +254,7 @@ const graph = Plot.plot({
         y,
         fx,
         fy,
-        title: d => `${d.year} ${d.TEAM_NAME}`,
+        title: d => `${d.season} ${d.team_name}`,
       }),
     ),
     Plot.frame(),
@@ -251,8 +264,8 @@ display(graph)
 ```
 
 ```js
-const y = "year"
-const x = "OFF_RATING"
+const y = "season"
+const x = "off_rating"
 const graph = Plot.plot({
   title: "Best and worst offenses",
   subtitle: "Offensive Efficiency 2009-10 through 2024-25",
@@ -279,9 +292,9 @@ const graph = Plot.plot({
     Plot.dot(data, { x, y, fill: "grey", fillOpacity: 0.4 }),
     // make the best team each year have an image
     Plot.image(
-      new Set(data.map(d => d.year)).values().map(year =>
+      new Set(data.map(d => d.season)).values().map(year =>
         d3.least(
-          data.filter(d => d.year === year),
+          data.filter(d => d.season === year),
           d => d[x],
         ),
       ),
@@ -291,14 +304,14 @@ const graph = Plot.plot({
         width: 35,
         height: 35,
         src: d =>
-          `https://llimllib.github.io/nbastats/logos/${d.TEAM_NAME}.svg`,
+          `https://llimllib.github.io/nbastats/logos/${d.team_name}.svg`,
       },
     ),
     // and the worst
     Plot.image(
-      new Set(data.map(d => d.year)).values().map(year =>
+      new Set(data.map(d => d.season)).values().map(year =>
         d3.greatest(
-          data.filter(d => d.year === year),
+          data.filter(d => d.season === year),
           d => d[x],
         ),
       ),
@@ -308,7 +321,7 @@ const graph = Plot.plot({
         width: 35,
         height: 35,
         src: d =>
-          `https://llimllib.github.io/nbastats/logos/${d.TEAM_NAME}.svg`,
+          `https://llimllib.github.io/nbastats/logos/${d.team_name}.svg`,
       },
     ),
     Plot.tip(
@@ -316,7 +329,7 @@ const graph = Plot.plot({
       Plot.pointer({
         x,
         y,
-        title: d => `${d.year} ${d.TEAM_NAME}`,
+        title: d => `${d.season} ${d.team_name}`,
       }),
     ),
   ],
@@ -325,8 +338,8 @@ display(graph)
 ```
 
 ```js
-const y = "year"
-const x = "DEF_RATING"
+const y = "season"
+const x = "def_rating"
 const graph = Plot.plot({
   title: "Best and worst defenses",
   subtitle: "2009-10 through 2024-25; lower defensive rating is better",
@@ -354,9 +367,9 @@ const graph = Plot.plot({
     Plot.dot(data, { x, y, fill: "grey", fillOpacity: 0.4 }),
     // make the best team each year have an image
     Plot.image(
-      new Set(data.map(d => d.year)).values().map(year =>
+      new Set(data.map(d => d.season)).values().map(year =>
         d3.least(
-          data.filter(d => d.year === year),
+          data.filter(d => d.season === year),
           d => d[x],
         ),
       ),
@@ -366,14 +379,14 @@ const graph = Plot.plot({
         width: 35,
         height: 35,
         src: d =>
-          `https://llimllib.github.io/nbastats/logos/${d.TEAM_NAME}.svg`,
+          `https://llimllib.github.io/nbastats/logos/${d.team_name}.svg`,
       },
     ),
     // and the worst
     Plot.image(
-      new Set(data.map(d => d.year)).values().map(year =>
+      new Set(data.map(d => d.season)).values().map(year =>
         d3.greatest(
-          data.filter(d => d.year === year),
+          data.filter(d => d.season === year),
           d => d[x],
         ),
       ),
@@ -383,7 +396,7 @@ const graph = Plot.plot({
         width: 35,
         height: 35,
         src: d =>
-          `https://llimllib.github.io/nbastats/logos/${d.TEAM_NAME}.svg`,
+          `https://llimllib.github.io/nbastats/logos/${d.team_name}.svg`,
       },
     ),
     Plot.tip(
@@ -391,7 +404,7 @@ const graph = Plot.plot({
       Plot.pointer({
         x,
         y,
-        title: d => `${d.year} ${d.TEAM_NAME}`,
+        title: d => `${d.season} ${d.team_name}`,
       }),
     ),
   ],

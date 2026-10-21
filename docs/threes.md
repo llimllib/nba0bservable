@@ -3,7 +3,7 @@ theme: cotton
 title: Three-point shooting
 toc: false
 sql:
-  players: ./data/playerstats.parquet
+  players: ./data/player_season_stats.parquet
 ---
 
 # Three Point Shooting
@@ -60,14 +60,14 @@ const selectedTeams = view(
 const activeTeams = selectedTeams.map(t => t.abbreviation)
 const allPlayers = (
   await sql([
-    `SELECT player_name, team_abbreviation, fg3m, fg3a, fg3a_per36, fg3_pct
+    `SELECT player_name, team_abbrev, fg3m, fg3a, fg3a / min * 36 AS fg3a_per36, fg3_pct
        FROM players
-      WHERE year=${year}`,
+      WHERE season=${year} AND season_type='regular_season'`,
   ])
 ).toArray()
 console.log(activeTeams, "act")
 const threepoints = allPlayers.filter(p =>
-  activeTeams.length > 0 ? activeTeams.includes(p.team_abbreviation) : true,
+  activeTeams.length > 0 ? activeTeams.includes(p.team_abbrev) : true,
 )
 
 const x = "fg3a_per36"
@@ -109,8 +109,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: d => teams.get(d.team_abbreviation).colors[0],
-      stroke: d => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbrev).colors[0],
+      stroke: d => teams.get(d.team_abbrev).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -119,7 +119,7 @@ const graph = Plot.plot({
         x,
         y,
         title: d =>
-          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+          `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],
@@ -161,8 +161,8 @@ display(
       Plot.dot(data, {
         x,
         y,
-        fill: d => teams.get(d.team_abbreviation).colors[0],
-        stroke: d => teams.get(d.team_abbreviation).colors[1],
+        fill: d => teams.get(d.team_abbrev).colors[0],
+        stroke: d => teams.get(d.team_abbrev).colors[1],
         r: 8,
       }),
       Plot.tip(
@@ -179,9 +179,14 @@ display(
 ```
 
 ```sql id=higher_volume
+WITH per36 AS (
+  SELECT *, fg3a / min * 36 AS fg3a_per36
+  FROM players
+  WHERE season_type='regular_season'
+)
 SELECT p1.player_id,
   p1.player_name,
-  p2.team_abbreviation,
+  p2.team_abbrev,
   p1.fg3a_per36 as fg3a_per36_prev,
   p2.fg3a_per36 as fg3a_per36_curr,
   p1.fg3a as fg3a_prev,
@@ -191,10 +196,10 @@ SELECT p1.player_id,
   p2.fg3a_per36 - p1.fg3a_per36 as fg3a_change,
   ((p2.fg3a_per36 - p1.fg3a_per36) / p1.fg3a_per36) * 100 as fg3a_percent_change,
   p2.fg3_pct - p1.fg3_pct as fg3_pct_change
-FROM players p1, players p2
+FROM per36 p1, per36 p2
 WHERE p1.player_id=p2.player_id
-  AND p1.year=${year - 1}
-  AND p2.year=${year}
+  AND p1.season=${year - 1}
+  AND p2.season=${year}
   AND p2.fg3a_per36 > p1.fg3a_per36 * 1.1
   AND p1.fg3a > 250
   AND p2.fg3a > 50
@@ -207,7 +212,7 @@ display(Inputs.table(higher_volume))
 
 ```js
 const volumeData = [...higher_volume].filter(p =>
-  activeTeams.length > 0 ? activeTeams.includes(p.team_abbreviation) : true,
+  activeTeams.length > 0 ? activeTeams.includes(p.team_abbrev) : true,
 )
 
 const volumeGraph = Plot.plot({
@@ -246,8 +251,8 @@ const volumeGraph = Plot.plot({
     Plot.dot(volumeData, {
       x: "fg3a_change",
       y: "fg3_pct_change",
-      fill: d => teams.get(d.team_abbreviation).colors[0],
-      stroke: d => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbrev).colors[0],
+      stroke: d => teams.get(d.team_abbrev).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -256,7 +261,7 @@ const volumeGraph = Plot.plot({
         x: "fg3a_change",
         y: "fg3_pct_change",
         title: d =>
-          `${d.player_name} (${d.team_abbreviation})
+          `${d.player_name} (${d.team_abbrev})
 ${year - 1}: ${d.fg3a_per36_prev.toFixed(1)} 3PA/36, ${(d.fg3_pct_prev * 100).toFixed(1)}%
 ${year}: ${d.fg3a_per36_curr.toFixed(1)} 3PA/36, ${(d.fg3_pct_curr * 100).toFixed(1)}%
 Change: +${d.fg3a_change.toFixed(1)} 3PA/36 (+${d.fg3a_percent_change.toFixed(1)}%)

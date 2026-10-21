@@ -3,13 +3,13 @@ theme: cotton
 title: ESPN Player Details
 toc: false
 sql:
-  player_details: ./data/espn.player_details.parquet
-  players: ./data/playerstats.parquet
+  player_details: ./data/player_details.parquet
+  player_box: ./data/player_box.parquet
 ---
 
 ```js
 import { label } from "./lib/labels.js"
-import { normalizeESPN, teams } from "./lib/teams.js"
+import { teams } from "./lib/teams.js"
 import { sliceQuantile } from "./lib/util.js"
 ```
 
@@ -26,16 +26,25 @@ const year = 2026
 ```
 
 ```sql id=twos_vs_threes
-select pd.name,
-  pd.team,
-  sum(pd."2pt_oNetPts") / count(pd."2pt_oNetPts") as twos,
-  sum(pd."3pt_oNetPts") / count(pd."3pt_oNetPts") as threes,
-  p.fga / count(pd."2pt_oNetPts") fga
-from player_details pd, players p
-where (pd.gameId LIKE '00225%' or pd.gameId LIKE '00325%')
-  and p.year = '2026'
-  and pd.playerId = p.player_id
-group by playerId, name, team, fga
+WITH shooting AS (
+  SELECT game_id,
+    player_id,
+    any_value(o_net_pts) FILTER (WHERE action_type = '2pt') AS twos,
+    any_value(o_net_pts) FILTER (WHERE action_type = '3pt') AS threes
+  FROM player_details
+  WHERE season = 2026
+  GROUP BY game_id, player_id
+)
+SELECT b.player_name,
+  b.team_abbrev,
+  avg(s.twos) AS twos,
+  avg(s.threes) AS threes,
+  avg(b.fga) AS fga
+FROM player_box b
+JOIN shooting s USING (game_id, player_id)
+WHERE b.season = 2026
+  AND b.game_type = 'regular_season'
+GROUP BY b.player_id, b.player_name, b.team_abbrev
 ```
 
 ```js
@@ -67,15 +76,15 @@ display(
       label(data, {
         x,
         y,
-        label: "name",
+        label: "player_name",
         padding: 10,
         minCellSize: 2000,
       }),
       Plot.dot(data, {
         x,
         y,
-        fill: d => teams.get(normalizeESPN(d.team)).colors[0],
-        stroke: d => teams.get(normalizeESPN(d.team)).colors[1],
+        fill: d => teams.get(d.team_abbrev).colors[0],
+        stroke: d => teams.get(d.team_abbrev).colors[1],
         r: 8,
       }),
       Plot.tip(
@@ -84,7 +93,7 @@ display(
           x,
           y,
           title: d =>
-            `${d.name}\n${d.team}\n${x}: ${d[x].toFixed(1)}\n${y}: ${d[y].toFixed(1)}`,
+            `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x].toFixed(1)}\n${y}: ${d[y].toFixed(1)}`,
         }),
       ),
     ],

@@ -3,7 +3,7 @@ theme: cotton
 title: Most Improved Player
 toc: false
 sql:
-  players: ./data/playerstats.parquet
+  players: ./data/player_season_stats.parquet
 ---
 
 # Most Improved Player
@@ -32,15 +32,23 @@ const percentile = view(
 ```js
 const allPlayers = (
   await sql([
-    `SELECT p.player_id, p.player_name, p.team_abbreviation,
+    `WITH per36 AS (
+       SELECT *,
+              pts / min * 36 AS pts_per36,
+              ast / min * 36 AS ast_per36,
+              reb / min * 36 AS reb_per36
+         FROM players
+        WHERE season_type='regular_season'
+     )
+     SELECT p.player_id, p.player_name, p.team_abbrev,
             -- the season we're looking at
             p.fga fga_a, p.ts_pct ts_pct_a, p.usg_pct usg_pct_a,
             p.pts_per36 pts_per36_a, p.ast_per36 ast_per36_a,
-            p.min min_a, p.year year_a,
+            p.min min_a, p.season season_a,
             -- the previous season
             q.fga fga_b, q.ts_pct ts_pct_b, q.usg_pct usg_pct_b,
             q.pts_per36 pts_per36_b, q.ast_per36 ast_per36_b,
-            q.min min_b, q.year year_b,
+            q.min min_b, q.season season_b,
             -- differences
             (p.pts_per36 - q.pts_per36) pt_diff,
             (p.ast_per36 - q.ast_per36) ast_diff,
@@ -50,11 +58,11 @@ const allPlayers = (
             -- attempt at a summary stat: ts + reb% + ast%
             ((p.ts_pct + p.reb_pct + p.ast_pct) - (q.ts_pct + q.reb_pct + q.ast_pct)) sum_diff,
             ((p.reb_pct + p.ast_pct) - (q.reb_pct + q.ast_pct)) reb_ast_diff,
-       FROM players p
-       JOIN players q
+       FROM per36 p
+       JOIN per36 q
          ON p.player_id = q.player_id
-        AND p.year=${year}
-        AND q.year=${year - 1};`,
+        AND p.season=${year}
+        AND q.season=${year - 1};`,
   ])
 ).toArray()
 // display(allPlayers);
@@ -98,8 +106,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: d => teams.get(d.team_abbreviation).colors[0],
-      stroke: d => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbrev).colors[0],
+      stroke: d => teams.get(d.team_abbrev).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -108,7 +116,7 @@ const graph = Plot.plot({
         x,
         y,
         title: d =>
-          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+          `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],
@@ -154,8 +162,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: d => teams.get(d.team_abbreviation).colors[0],
-      stroke: d => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbrev).colors[0],
+      stroke: d => teams.get(d.team_abbrev).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -164,7 +172,7 @@ const graph = Plot.plot({
         x,
         y,
         title: d =>
-          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+          `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],
@@ -211,8 +219,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: d => teams.get(d.team_abbreviation).colors[0],
-      stroke: d => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbrev).colors[0],
+      stroke: d => teams.get(d.team_abbrev).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -221,7 +229,7 @@ const graph = Plot.plot({
         x,
         y,
         title: d =>
-          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+          `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],
@@ -263,8 +271,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: d => teams.get(d.team_abbreviation).colors[0],
-      stroke: d => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbrev).colors[0],
+      stroke: d => teams.get(d.team_abbrev).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -273,7 +281,7 @@ const graph = Plot.plot({
         x,
         y,
         title: d =>
-          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+          `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],
@@ -320,8 +328,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: d => teams.get(d.team_abbreviation).colors[0],
-      stroke: d => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbrev).colors[0],
+      stroke: d => teams.get(d.team_abbrev).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -330,7 +338,7 @@ const graph = Plot.plot({
         x,
         y,
         title: d =>
-          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+          `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],
@@ -378,8 +386,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: d => teams.get(d.team_abbreviation).colors[0],
-      stroke: d => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbrev).colors[0],
+      stroke: d => teams.get(d.team_abbrev).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -388,7 +396,7 @@ const graph = Plot.plot({
         x,
         y,
         title: d =>
-          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+          `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],
@@ -408,7 +416,7 @@ display(graph)
 ```js
 const salaries = await FileAttachment("data/bbref_salaries.json").json()
 const salPlayers = []
-for (const player of allPlayers.filter(p => p.year_a == Number(year))) {
+for (const player of allPlayers.filter(p => p.season_a == Number(year))) {
   const match = salaries.find(s => s.player === player.player_name)
   const p = { ...player }
   if (match) {
@@ -456,8 +464,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: d => teams.get(d.team_abbreviation).colors[0],
-      stroke: d => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbrev).colors[0],
+      stroke: d => teams.get(d.team_abbrev).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -466,7 +474,7 @@ const graph = Plot.plot({
         x,
         y,
         title: d =>
-          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+          `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],

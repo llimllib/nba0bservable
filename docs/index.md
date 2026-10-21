@@ -3,7 +3,7 @@ theme: cotton
 title: NBA Graphics
 toc: false
 sql:
-  players: ./data/playerstats.parquet
+  players: ./data/player_season_stats.parquet
 ---
 
 # NBA graphics
@@ -20,7 +20,7 @@ import { label } from "./lib/labels.js"
 const percentile = 25
 const x = "usg_pct"
 const y = "ts_pct"
-const players = await sql(["SELECT * FROM players WHERE year=2026"])
+const players = await sql(["SELECT * FROM players WHERE season=2026 AND season_type='regular_season'"])
 const data = sliceQuantile(players.toArray(), "fga", (100 - percentile) / 100)
 const [xMin, xMax] = d3.extent(data, d => d[x])
 const [yMin, yMax] = d3.extent(data, d => d[y])
@@ -92,8 +92,8 @@ display(
       Plot.dot(data, {
         x,
         y,
-        fill: d => teams.get(d.team_abbreviation).colors[0],
-        stroke: d => teams.get(d.team_abbreviation).colors[1],
+        fill: d => teams.get(d.team_abbrev).colors[0],
+        stroke: d => teams.get(d.team_abbrev).colors[1],
         r: 8,
       }),
       Plot.tip(
@@ -102,7 +102,7 @@ display(
           x,
           y,
           title: d =>
-            `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+            `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
         }),
       ),
     ],

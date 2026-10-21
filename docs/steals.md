@@ -3,7 +3,7 @@ theme: cotton
 title: Steals and blocks
 toc: false
 sql:
-  players: ./data/playerstats.parquet
+  players: ./data/player_season_stats.parquet
 ---
 
 # Steals and blocks
@@ -21,17 +21,17 @@ const year = view(
 ```
 
 ```sql id=steals
-SELECT player_name, team_abbreviation, stl, blk
+SELECT player_name, team_abbrev, stl, blk
 FROM players
-WHERE year=${year}
+WHERE season=${year} AND season_type='regular_season'
   AND (stl >= (
     SELECT PERCENTILE_CONT(0.85) WITHIN GROUP (order by stl)
     FROM players
-    WHERE year=${year})
+    WHERE season=${year} AND season_type='regular_season')
   OR blk >= (
     SELECT PERCENTILE_CONT(0.85) WITHIN GROUP (order by blk)
     FROM players
-    WHERE year=${year}))
+    WHERE season=${year} AND season_type='regular_season'))
 ```
 
 ```js
@@ -66,8 +66,8 @@ display(
       Plot.dot(data, {
         x,
         y,
-        fill: d => teams.get(d.team_abbreviation).colors[0],
-        stroke: d => teams.get(d.team_abbreviation).colors[1],
+        fill: d => teams.get(d.team_abbrev).colors[0],
+        stroke: d => teams.get(d.team_abbrev).colors[1],
         r: 8,
       }),
       Plot.tip(

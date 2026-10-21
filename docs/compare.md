@@ -3,8 +3,8 @@ theme: cotton
 title: Player Comparison
 toc: false
 sql:
-  player_details: ./data/espn.player_details.parquet
-  espn_players: ./data/espn.players.parquet
+  player_details: ./data/player_details.parquet
+  espn_players: ./data/player_box.parquet
 ---
 
 # Player Comparison
@@ -12,31 +12,29 @@ sql:
 Compare two players' net points impact by play type.
 
 ```js
-import { normalizeESPN, teams } from "./lib/teams.js"
+import { teams } from "./lib/teams.js"
 ```
 
 ```sql id=playerList
-SELECT DISTINCT
-  pd.playerId,
-  pd.name,
-  pd.team,
+SELECT
+  player_id,
+  player_name,
+  team_abbrev,
   count(*) as games
-FROM player_details pd
-WHERE pd.season = 2026
-  AND (pd.gameId LIKE '002%' OR pd.gameId LIKE '006%')
-GROUP BY pd.playerId, pd.name, pd.team
+FROM espn_players
+WHERE season = 2026
+  AND game_type IN ('regular_season', 'cup_final')
+GROUP BY player_id, player_name, team_abbrev
 HAVING games >= 10
-ORDER BY pd.name
+ORDER BY player_name
 ```
 
 ```js
 const playerOptions = playerList.toArray()
 const playerMap = new Map(
-  playerOptions.map(d => [`${d.name} (${d.team})`, d]),
+  playerOptions.map(d => [`${d.player_name} (${d.team_abbrev})`, d]),
 )
-const playerIdMap = new Map(
-  playerOptions.map(d => [String(d.playerId), d]),
-)
+const playerIdMap = new Map(playerOptions.map(d => [d.player_id, d]))
 
 // Read initial state from URL hash
 function getHashParams() {
@@ -50,16 +48,15 @@ function getHashParams() {
 }
 
 const initParams = getHashParams()
-const initPlayer1 = playerIdMap.get(initParams.p1)
-  ?? playerOptions.find(d => d.name === "Shai Gilgeous-Alexander")
-const initPlayer2 = playerIdMap.get(initParams.p2)
-  ?? playerOptions.find(d => d.name === "Nikola Jokic")
+// default to Shai Gilgeous-Alexander and Nikola Jokić
+const initPlayer1 = playerIdMap.get(initParams.p1) ?? playerIdMap.get("1628983")
+const initPlayer2 = playerIdMap.get(initParams.p2) ?? playerIdMap.get("203999")
 const initPer36 = initParams.per36 === "1"
 const initShowAll = initParams.allCats === "1"
 
 function playerSearch(label, defaultPlayer) {
   const defaultLabel = defaultPlayer
-    ? `${defaultPlayer.name} (${defaultPlayer.team})`
+    ? `${defaultPlayer.player_name} (${defaultPlayer.team_abbrev})`
     : ""
 
   const id = `datalist-${label.replace(/\s/g, "-")}`
@@ -69,7 +66,7 @@ function playerSearch(label, defaultPlayer) {
       placeholder="Type a player name…"
       style="width:300px;padding:4px 8px;font-size:inherit;border:1px solid #ccc;border-radius:4px">
     <datalist id="${id}">
-      ${playerOptions.map(d => htl.html`<option value="${d.name} (${d.team})">`)}
+      ${playerOptions.map(d => htl.html`<option value="${d.player_name} (${d.team_abbrev})">`)}
     </datalist>
   </div>`
 
@@ -102,8 +99,8 @@ const showAll = view(
 // Update URL hash when inputs change
 {
   const params = new URLSearchParams()
-  params.set("p1", player1.playerId)
-  params.set("p2", player2.playerId)
+  params.set("p1", player1.player_id)
+  params.set("p2", player2.player_id)
   if (per36) params.set("per36", "1")
   if (showAll) params.set("allCats", "1")
   history.replaceState(null, "", `#${params.toString()}`)
@@ -155,7 +152,8 @@ const allCategories = [
   "grenade",
 ]
 
-// Categories that are computed from combining columns, not direct {cat}_tNetPts lookups
+// Categories that are computed from combining columns, not direct
+// action_type lookups
 const compositeCategories = {
   offense: row => row["offense_total"] ?? 0,
   defense: row => row["defense_total"] ?? 0,
@@ -195,37 +193,41 @@ const categoryLabels = {
 
 ```js
 // Build the SQL to aggregate both players
-const ids = [player1.playerId, player2.playerId]
+const ids = [player1.player_id, player2.player_id]
+const idList = ids.map(id => `'${id}'`).join(",")
 const activeCats = showAll ? allCategories : coreCategories
 const regularCats = activeCats.filter(c => !compositeCategories[c])
+// player_details has one row per action_type; sum one action's net points
+const netPts = (action, side) =>
+  `sum(pd.${side}_net_pts) FILTER (WHERE pd.action_type = '${action}')`
 const catCols = [
   // Always fetch the columns needed for composite categories
-  `sum(total_oNetPts) as offense_total`,
-  `sum(total_dNetPts) as defense_total`,
-  `sum(foul_oNetPts) as foul_o`,
-  `sum(foul_dNetPts) as foul_d`,
-  `sum(freethrow_oNetPts) as freethrow_o`,
-  `sum(freethrow_dNetPts) as freethrow_d`,
-  `sum(turnover_oNetPts) as turnover_o`,
+  `${netPts("total", "o")} as offense_total`,
+  `${netPts("total", "d")} as defense_total`,
+  `${netPts("foul", "o")} as foul_o`,
+  `${netPts("foul", "d")} as foul_d`,
+  `${netPts("freethrow", "o")} as freethrow_o`,
+  `${netPts("freethrow", "d")} as freethrow_d`,
+  `${netPts("turnover", "o")} as turnover_o`,
   ...regularCats.map(
     c =>
-      `sum("${c}_tNetPts") as "${c}_total", sum("${c}_oNetPts") as "${c}_o", sum("${c}_dNetPts") as "${c}_d"`,
+      `${netPts(c, "t")} as "${c}_total", ${netPts(c, "o")} as "${c}_o", ${netPts(c, "d")} as "${c}_d"`,
   ),
 ].join(",\n  ")
 
 const detailQuery = `
 SELECT
-  pd.playerId,
-  pd.name,
-  pd.team,
-  count(*) as games,
+  pd.player_id,
+  b.player_name,
+  count(DISTINCT pd.game_id) as games,
   ${catCols},
-  sum(total_tNetPts) as total_tNetPts
+  ${netPts("total", "t")} as total_t_net_pts
 FROM player_details pd
+JOIN espn_players b USING (game_id, player_id)
 WHERE pd.season = 2026
-  AND (pd.gameId LIKE '002%' OR pd.gameId LIKE '006%')
-  AND pd.playerId IN (${ids.join(",")})
-GROUP BY pd.playerId, pd.name, pd.team
+  AND b.game_type IN ('regular_season', 'cup_final')
+  AND pd.player_id IN (${idList})
+GROUP BY pd.player_id, b.player_name
 `
 const detailRows = await sql([detailQuery])
 
@@ -233,14 +235,11 @@ const detailRows = await sql([detailQuery])
 const minutesQuery = `
 SELECT
   player_id,
-  sum(
-    CAST(SPLIT_PART(minutes_played, ':', 1) AS FLOAT) +
-    CAST(SPLIT_PART(minutes_played, ':', 2) AS FLOAT) / 60
-  ) AS total_minutes
+  sum(seconds_played) / 60 AS total_minutes
 FROM espn_players
 WHERE season = 2026
-  AND (game_id LIKE '002%' OR game_id LIKE '006%')
-  AND player_id IN (${ids.join(",")})
+  AND game_type IN ('regular_season', 'cup_final')
+  AND player_id IN (${idList})
 GROUP BY player_id
 `
 const minutesRows = await sql([minutesQuery])
@@ -257,7 +256,7 @@ function getVal(row, cat) {
     ? compositeCategories[cat](row)
     : (row[`${cat}_total`] ?? 0)
   if (!per36) return raw
-  const mins = minutesMap.get(row.playerId) ?? 1
+  const mins = minutesMap.get(row.player_id) ?? 1
   return (raw / mins) * 36
 }
 
@@ -266,8 +265,8 @@ function getTotal(row) {
   return (row?.offense_total ?? 0) + (row?.defense_total ?? 0)
 }
 
-const p1row = detailRows.toArray().find(r => r.playerId === player1.playerId)
-const p2row = detailRows.toArray().find(r => r.playerId === player2.playerId)
+const p1row = detailRows.toArray().find(r => r.player_id === player1.player_id)
+const p2row = detailRows.toArray().find(r => r.player_id === player2.player_id)
 
 // Build comparison data
 const comparisonData = categories.flatMap(cat => {
@@ -276,12 +275,12 @@ const comparisonData = categories.flatMap(cat => {
   return [
     {
       category: categoryLabels[cat] || cat,
-      player: p1row?.name ?? player1.name,
+      player: p1row?.player_name ?? player1.player_name,
       value: v1,
     },
     {
       category: categoryLabels[cat] || cat,
-      player: p2row?.name ?? player2.name,
+      player: p2row?.player_name ?? player2.player_name,
       value: v2,
     },
   ]
@@ -339,16 +338,16 @@ function pickColors(t1, t2) {
   return [p1, s2]
 }
 
-const p1team = teams.get(normalizeESPN(player1.team))
-const p2team = teams.get(normalizeESPN(player2.team))
+const p1team = teams.get(player1.team_abbrev)
+const p2team = teams.get(player2.team_abbrev)
 const [p1color, p2color] = pickColors(p1team, p2team)
 
-const p1name = p1row?.name ?? player1.name
-const p2name = p2row?.name ?? player2.name
+const p1name = p1row?.player_name ?? player1.player_name
+const p2name = p2row?.player_name ?? player2.player_name
 const p1games = p1row?.games ?? 0
 const p2games = p2row?.games ?? 0
-const p1mins = minutesMap.get(player1.playerId) ?? 0
-const p2mins = minutesMap.get(player2.playerId) ?? 0
+const p1mins = minutesMap.get(player1.player_id) ?? 0
+const p2mins = minutesMap.get(player2.player_id) ?? 0
 
 const unit = per36 ? "per 36 min" : "season total"
 ```
@@ -418,8 +417,8 @@ function playerCard(parent, name, color, id, games, mins, align) {
     .text(`${games} games · ${Math.round(mins)} min`)
 }
 
-playerCard(header, p1name, p1color, player1.playerId, p1games, p1mins, "left")
-playerCard(header, p2name, p2color, player2.playerId, p2games, p2mins, "right")
+playerCard(header, p1name, p1color, player1.player_id, p1games, p1mins, "left")
+playerCard(header, p2name, p2color, player2.player_id, p2games, p2mins, "right")
 
 // --- Grouped bar chart ---
 const chartHeight = categories.length * 56 + 80

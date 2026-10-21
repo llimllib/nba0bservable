@@ -3,8 +3,8 @@ theme: cotton
 title: Game logs
 toc: false
 sql:
-  gamelogs: ./data/gamelogs.parquet
-  playerlogs: ./data/playerlogs.parquet
+  gamelogs: ./data/team_game_logs.parquet
+  playerlogs: ./data/player_game_logs.parquet
 ---
 
 # Game logs
@@ -16,17 +16,19 @@ import { sliceQuantile } from "./lib/util.js"
 ```
 
 ```js
-const seasons = [...Array(12).keys()].map(
-  x => String(x + 2014) + "-" + String(x + 15),
-)
-const season_year = view(
-  Inputs.select(seasons, { value: "2025-26", label: "year" }),
+const seasons = [...Array(12).keys()].map(x => x + 2015)
+const season = view(
+  Inputs.select(seasons, {
+    value: 2026,
+    label: "year",
+    format: y => `${y - 1}-${String(y).slice(2)}`,
+  }),
 )
 ```
 
 ```sql id=gamelist
 SELECT a.game_id,
-    strftime(strptime(a.game_date, '%Y-%m-%dT%H:%M:%S'), '%B %d, %Y') as game_date,
+    strftime(a.game_date, '%B %d, %Y') as game_date,
     a.team_id team_id_a,
     a.team_name team_a,
     a.pts pts_a,
@@ -38,7 +40,7 @@ SELECT a.game_id,
 FROM gamelogs a
 INNER JOIN gamelogs b
   ON a.game_id = b.game_id and a.pts > b.pts
-WHERE a.season_year=${season_year}
+WHERE a.season=${season}
 ORDER BY a.game_date desc;
 ```
 
@@ -50,12 +52,10 @@ const gameIDs = gamelist
 const plogs = (
   await sql([
     `
-SELECT gameId, teamId, firstName, familyName, nameI, fieldGoalsMade fg,
-    fieldGoalsAttempted fga, freeThrowsMade ft, freeThrowsAttempted fta,
-    reboundsOffensive orb, reboundsDefensive drb, assists, steals, blocks,
-    turnovers tov, foulsPersonal pf, points
+SELECT game_id, team_id, player_name, fgm, fga, ftm, fta, oreb, dreb, ast,
+    stl, blk, tov, pf, pts
   FROM playerlogs
- WHERE gameId IN (${gameIDs})`,
+ WHERE game_id IN (${gameIDs})`,
   ])
 )
   .toArray()
@@ -66,15 +66,15 @@ SELECT gameId, teamId, firstName, familyName, nameI, fieldGoalsMade fg,
     // PTS + 0.4 * FG - 0.7 * FGA - 0.4*(FTA - FT) + 0.7 * ORB + 0.3 * DRB +
     // STL + 0.7 * AST + 0.7 * BLK - 0.4 * PF - TOV
     p.gamescore =
-      p.points +
-      0.4 * p.fg -
+      p.pts +
+      0.4 * p.fgm -
       0.7 * p.fga -
-      0.4 * (p.fta - p.ft) +
-      0.7 * p.orb +
-      0.3 * p.drb +
-      p.steals +
-      0.7 * p.assists +
-      0.7 * p.blocks -
+      0.4 * (p.fta - p.ftm) +
+      0.7 * p.oreb +
+      0.3 * p.dreb +
+      p.stl +
+      0.7 * p.ast +
+      0.7 * p.blk -
       0.4 * p.pf -
       p.tov
     return p

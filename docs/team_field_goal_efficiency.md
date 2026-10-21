@@ -3,7 +3,7 @@ theme: cotton
 title: Team Shooting Efficiency
 toc: false
 sql:
-  players: ./data/playerstats.parquet
+  team_game_logs: ./data/team_game_logs.parquet
 ---
 
 # Team Shooting Efficiency
@@ -16,9 +16,11 @@ import { teams } from "./lib/teams.js"
 ```js
 // Get all available years
 const yearsResult = await sql([
-  `SELECT DISTINCT year FROM players ORDER BY year DESC`,
+  `SELECT DISTINCT season FROM team_game_logs
+    WHERE game_type = 'regular_season'
+    ORDER BY season DESC`,
 ])
-const years = yearsResult.toArray().map(d => d.year)
+const years = yearsResult.toArray().map(d => d.season)
 ```
 
 ```js
@@ -32,10 +34,10 @@ const year = view(
 ```
 
 ```js
-// Aggregate player stats to team level
+// Aggregate game logs to season totals
 const teamStats = await sql([
   `SELECT 
-    team_abbreviation as team,
+    team_abbrev as team,
     SUM(pts) as pts,
     SUM(fga) as fga,
     SUM(fgm) as fgm,
@@ -56,10 +58,10 @@ const teamStats = await sql([
     SUM(oreb) * 1.0 / (SUM(fga) - SUM(fgm)) as oreb_pct,
     -- Free throw rate (FTA per FGA)
     SUM(fta) * 1.0 / SUM(fga) as ftr
-  FROM players
-  WHERE year = ${year}
-    AND team_abbreviation != 'TOT'
-  GROUP BY team_abbreviation`,
+  FROM team_game_logs
+  WHERE season = ${year}
+    AND game_type = 'regular_season'
+  GROUP BY team_abbrev`,
 ])
 
 const data = teamStats.toArray()
@@ -371,23 +373,27 @@ The [four factors](https://www.basketball-reference.com/about/factors.html) of b
 The product of these two axes approximates offensive rating, so teams along the same diagonal have similar offenses — but arrive there by very different paths.
 
 ```js
-const rawdata = await FileAttachment("data/team_summary.json").json()
-```
-
-```js
-const summaryTeams = rawdata.data[String(year)]
-const fourFactorsData = summaryTeams
-  ? Object.entries(summaryTeams).map(([abbr, t]) => ({
-      team: abbr,
-      name: t.TEAM_NAME,
-      ts_pct: t.TS_PCT,
-      tov_pct: t.TM_TOV_PCT,
-      oreb_pct: t.OREB_PCT,
-      efg_pct: t.EFG_PCT,
-      opp_rate: 1 - t.TM_TOV_PCT + t.OREB_PCT,
-      off_rating: t.OFF_RATING,
-    }))
-  : []
+// The NBA's season four factors, computed from the game logs. The NBA counts
+// team rebounds in its rebounding chances, so offensive rebounding chances are
+// backed out of each game's oreb / oreb_pct
+const fourFactors = await sql([
+  `SELECT
+    team_abbrev as team,
+    any_value(team_name) as name,
+    SUM(pts) / (2 * (SUM(fga) + 0.44 * SUM(fta))) as ts_pct,
+    SUM(tov) / SUM(poss) as tov_pct,
+    SUM(oreb) / SUM(oreb / oreb_pct) as oreb_pct,
+    (SUM(fgm) + 0.5 * SUM(fg3m)) / SUM(fga) as efg_pct,
+    ROUND(100 * SUM(pts) / SUM(poss), 1) as off_rating
+  FROM team_game_logs
+  WHERE season = ${year}
+    AND game_type = 'regular_season'
+  GROUP BY team_abbrev`,
+])
+const fourFactorsData = fourFactors.toArray().map(t => ({
+  ...t,
+  opp_rate: 1 - t.tov_pct + t.oreb_pct,
+}))
 ```
 
 ```js

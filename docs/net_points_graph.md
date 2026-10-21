@@ -3,8 +3,7 @@ theme: cotton
 title: Net Points Graph
 toc: false
 sql:
-  players: ./data/espn.players.parquet
-  gamelogs_raw: ./data/gamelogs.parquet
+  players: ./data/player_box.parquet
 ---
 
 # Net Points
@@ -17,56 +16,35 @@ import { teams } from "./lib/teams.js"
 SELECT *
 from players
 where season=2026
--- regular season and cup
-and game_id LIKE '002%' or game_id LIKE '003%'
+and game_type = 'regular_season'
 -- limit to playoffs:
--- and game_id LIKE '004%'
+-- and game_type = 'playoffs'
 ;
-```
-
-```sql id=gamelogs
-select game_id, game_date from gamelogs_raw where season_year='2025-26'
-```
-
-```js
-const dates = new Map(
-  gamelogs.toArray().map(row => [row.game_id, new Date(row.game_date)]),
-)
-display(dates)
-display(gamelogs.toArray())
 ```
 
 ```sql id=agg
 SELECT
-  name,
-  team,
+  player_name,
+  team_abbrev,
   count(*) n,
-  sum(oNetPts) oNetPts,
-  sum(dNetPts) dNetPts,
-  sum(tNetPts) tNetPts,
-  sum(oNetPts) / count(*) oNetPtsPerG,
-  sum(dNetPts) / count(*) dNetPtsPerG,
-  sum(tNetPts) / count(*) tNetPtsPerG,
-  sum(
-    CAST(SPLIT_PART(minutes_played, ':', 1) AS FLOAT) +
-    CAST(SPLIT_PART(minutes_played, ':', 2) AS FLOAT) / 60
-  ) AS minutes,
-  sum(
-    CAST(SPLIT_PART(minutes_played, ':', 1) AS FLOAT) +
-    CAST(SPLIT_PART(minutes_played, ':', 2) AS FLOAT) / 60
-  ) / count(*) AS minutesPerG,
+  sum(o_net_pts) o_net_pts,
+  sum(d_net_pts) d_net_pts,
+  sum(t_net_pts) t_net_pts,
+  sum(o_net_pts) / count(*) o_net_pts_per_g,
+  sum(d_net_pts) / count(*) d_net_pts_per_g,
+  sum(t_net_pts) / count(*) t_net_pts_per_g,
+  sum(seconds_played) / 60 AS minutes,
+  sum(seconds_played) / 60 / count(*) AS minutes_per_g,
 from players
 where season=2026
--- preseason: 001
--- regular season and cup (I think it's 003?)
-and game_id LIKE '002%' or game_id LIKE '003%'
+and game_type = 'regular_season'
 -- playoffs
--- and game_id LIKE '004%'
-group by player_id, name, team
+-- and game_type = 'playoffs'
+group by player_id, player_name, team_abbrev
 -- eventually, require a higher n. Maybe set this to something like 10% of the
 -- max games value or something?
 having n > 0
-order by tNetPts desc
+order by t_net_pts desc
 ```
 
 ```js
@@ -74,7 +52,7 @@ const selectedPlayer = view(
   Inputs.select(
     agg
       .toArray()
-      .map(p => p.name)
+      .map(p => p.player_name)
       .sort(),
     {
       value: "Derrick White",
@@ -90,30 +68,30 @@ I started with a stacked bar chart, aligned vertically with time along the y axi
 const data = alldata
   .toArray()
   .map(p => ({ ...p }))
-  .filter(x => x.name == selectedPlayer)
+  .filter(x => x.player_name == selectedPlayer)
   .sort((a, b) => a.game_id > b.game_id)
 console.log("data", Array.from(data))
 let i = 1
 data.forEach(pt => {
   pt.gameN = i++
-  pt.gameDate = dates.get(pt.game_id)
+  pt.gameDate = new Date(pt.game_date)
 })
 display(data)
 const exploded = data
   .map(pg => {
     return [
       {
-        name: pg.name,
+        name: pg.player_name,
         gameN: pg.gameN,
-        val: pg.dNetPts,
-        tot: pg.tNetPts,
+        val: pg.d_net_pts,
+        tot: pg.t_net_pts,
         type: "defensive net points",
       },
       {
-        name: pg.name,
+        name: pg.player_name,
         gameN: pg.gameN,
-        val: pg.oNetPts,
-        tot: pg.tNetPts,
+        val: pg.o_net_pts,
+        tot: pg.t_net_pts,
         type: "offensive net points",
       },
     ]
@@ -135,7 +113,7 @@ view(
         insetTop: 5,
         insetBottom: 5,
       }),
-      Plot.ruleX(data, { x: "tNetPts", fy: "gameN", strokeWidth: 4 }),
+      Plot.ruleX(data, { x: "t_net_pts", fy: "gameN", strokeWidth: 4 }),
       Plot.ruleX([0], { inset: 0 }),
     ],
   }),
@@ -190,31 +168,31 @@ view(
       // total points
       Plot.ruleX(data, {
         x: "gameN",
-        y: "tNetPts",
+        y: "t_net_pts",
         stroke: tNetColor,
         strokeOpacity: 1,
         strokeWidth: 10,
       }),
-      // oNetPts
+      // o_net_pts
       Plot.dot(data, {
         x: "gameN",
         dx: -2,
-        y: "oNetPts",
+        y: "o_net_pts",
         fill: oNetColor,
         r: 4,
         insetRight: 10,
         insetLeft: 10,
       }),
-      // dNetPts
+      // d_net_pts
       Plot.dot(data, {
         x: "gameN",
-        y: "dNetPts",
+        y: "d_net_pts",
         dx: 2,
         r: 4,
         // manual stacking implementation, if we represent them as bars
         // y2: d =>
-        //   d.oNetPts > 0 && d.dNetPts > 0 ? d.dNetPts + d.oNetPts : d.dNetPts,
-        // y1: d => (d.oNetPts > 0 && d.dNetPts > 0 ? d.oNetPts : 0),
+        //   d.o_net_pts > 0 && d.d_net_pts > 0 ? d.d_net_pts + d.o_net_pts : d.d_net_pts,
+        // y1: d => (d.o_net_pts > 0 && d.d_net_pts > 0 ? d.o_net_pts : 0),
         fill: dNetColor,
         fillOpacity: componentOpacity,
         insetRight: 10,
@@ -226,7 +204,7 @@ view(
         Plot.windowY(5, {
           anchor: "end",
           x: "gameN",
-          y: "tNetPts",
+          y: "t_net_pts",
           stroke: movingColor,
         }),
       ),
@@ -274,14 +252,14 @@ view(
     marks: [
       Plot.barY(data, {
         x: "gameN",
-        y: "oNetPts",
+        y: "o_net_pts",
         fill: oColor,
         insetLeft: 5,
         insetRight: 5,
       }),
       Plot.barY(data, {
         x: "gameN",
-        y: "dNetPts",
+        y: "d_net_pts",
         fill: dColor,
         insetLeft: 5,
         insetRight: 5,
@@ -289,13 +267,13 @@ view(
       // Plot.ruleY(data, {
       //   x1: "gameN",
       //   x2: "gameN",
-      //   y: "tNetPts",
+      //   y: "t_net_pts",
       //   fill: "black",
       //   strokeWidth: 10,
       // }),
       Plot.dot(data, {
         x: "gameN",
-        y: "tNetPts",
+        y: "t_net_pts",
         fill: "black",
         r: 4,
       }),
@@ -305,7 +283,7 @@ view(
           anchor: "end",
           curve: "basis",
           x: "gameN",
-          y: "tNetPts",
+          y: "t_net_pts",
           stroke: movingColor2,
         }),
       ),
@@ -320,8 +298,8 @@ view(
 // https://observablehq.com/@d3/color-schemes
 // ["#1f77b4","#ff7f0e","#2ca02c","#d62728","#9467bd","#8c564b","#e377c2","#7f7f7f","#bcbd22","#17becf"]
 const faceted = data.flatMap(d => [
-  { ...d, type: "Offensive", netPts: d.oNetPts },
-  { ...d, type: "Defensive", netPts: d.dNetPts },
+  { ...d, type: "Offensive", netPts: d.o_net_pts },
+  { ...d, type: "Defensive", netPts: d.d_net_pts },
 ])
 const opacity = "66"
 const oColor = "#d62728" + opacity
@@ -359,7 +337,7 @@ view(
     marks: [
       Plot.barY(data, {
         fx: "gameN",
-        y: "tNetPts",
+        y: "t_net_pts",
         fill: "#00000022",
       }),
       Plot.barY(faceted, {
@@ -370,7 +348,7 @@ view(
       }),
       Plot.ruleY(data, {
         fx: "gameN",
-        y: "tNetPts",
+        y: "t_net_pts",
         stroke: "black",
         strokeWidth: 5,
       }),
@@ -384,7 +362,7 @@ view(
       //     anchor: "end",
       //     fx: "gameN",
       //     x: "gameN",
-      //     y: "tNetPts",
+      //     y: "t_net_pts",
       //     stroke: movingColor,
       //   }),
       // ),
@@ -476,14 +454,14 @@ const plot = Plot.plot({
   marks: [
     Plot.rectY(data, {
       x: "gameN",
-      y: "dNetPts",
+      y: "d_net_pts",
       fill: "url(#hach2)",
       stroke: "currentColor",
       strokeWidth: 0,
     }),
     Plot.rectY(data, {
       x: "gameN",
-      y: "oNetPts",
+      y: "o_net_pts",
       fill: "url(#hach5)",
       stroke: "currentColor",
       strokeWidth: 0,
@@ -491,7 +469,7 @@ const plot = Plot.plot({
     Plot.ruleY(data, {
       x1: "gameN",
       x2: "gameN",
-      y: "tNetPts",
+      y: "t_net_pts",
       stroke: "black",
       strokeWidth: 5,
     }),
@@ -501,7 +479,7 @@ const plot = Plot.plot({
         anchor: "end",
         curve: "basis",
         x: "gameN",
-        y: "tNetPts",
+        y: "t_net_pts",
         stroke: movingColor2,
       }),
     ),
@@ -557,21 +535,21 @@ display(
           anchor: "end",
           curve: "basis",
           x: "gameN",
-          y: "tNetPts",
+          y: "t_net_pts",
           stroke: movingColor2,
           strokeWidth: 3,
         }),
       ),
       Plot.dot(data, {
         x: "gameN",
-        y: "dNetPts",
+        y: "d_net_pts",
         fill: () => "defense",
         symbol: () => "defense",
         r: 4,
       }),
       Plot.dot(data, {
         x: "gameN",
-        y: "oNetPts",
+        y: "o_net_pts",
         fill: () => "offense",
         symbol: () => "offense",
         r: 4,
@@ -612,7 +590,7 @@ display(
           anchor: "end",
           curve: "basis",
           x: "gameN",
-          y: "tNetPts",
+          y: "t_net_pts",
           stroke: () => "total",
           strokeWidth: 3,
         }),
@@ -623,7 +601,7 @@ display(
           anchor: "end",
           curve: "basis",
           x: "gameN",
-          y: "dNetPts",
+          y: "d_net_pts",
           stroke: () => "offense",
           strokeWidth: 3,
         }),
@@ -634,7 +612,7 @@ display(
           anchor: "end",
           curve: "basis",
           x: "gameN",
-          y: "oNetPts",
+          y: "o_net_pts",
           stroke: () => "defense",
           strokeWidth: 3,
         }),
@@ -650,7 +628,7 @@ const players = view(
   Inputs.select(
     agg
       .toArray()
-      .map(p => p.name)
+      .map(p => p.player_name)
       .sort(),
     {
       multiple: true,
@@ -664,24 +642,24 @@ const players = view(
 const datas = alldata
   .toArray()
   .map(p => ({ ...p }))
-  .filter(x => players.includes(x.name))
+  .filter(x => players.includes(x.player_name))
 
 // Add gameN for each player separately
 const playerGameCounts = new Map()
 datas.forEach(pt => {
-  if (!playerGameCounts.has(pt.name)) {
-    playerGameCounts.set(pt.name, 1)
+  if (!playerGameCounts.has(pt.player_name)) {
+    playerGameCounts.set(pt.player_name, 1)
   }
-  pt.gameN = playerGameCounts.get(pt.name)
-  playerGameCounts.set(pt.name, pt.gameN + 1)
-  pt.gameDate = dates.get(pt.game_id)
+  pt.gameN = playerGameCounts.get(pt.player_name)
+  playerGameCounts.set(pt.player_name, pt.gameN + 1)
+  pt.gameDate = new Date(pt.game_date)
 })
 datas.sort((a, b) => a.gameDate > b.gameDate)
 
 const title = d => `${d3.utcFormat("%b %e")(d.gameDate)}\n,
-Total net: ${d.tNetPts}
-O net: ${d.oNetPts}
-D net: ${d.dNetPts}`
+Total net: ${d.t_net_pts}
+O net: ${d.o_net_pts}
+D net: ${d.d_net_pts}`
 
 // TODO: align the games by date instead of arbitrary game #
 display(
@@ -705,9 +683,9 @@ display(
         Plot.windowY(k, {
           anchor: "end",
           curve: "basis",
-          fy: "name",
+          fy: "player_name",
           x: "gameDate",
-          y: "tNetPts",
+          y: "t_net_pts",
           stroke: () => "total",
           strokeWidth: 3,
         }),
@@ -717,9 +695,9 @@ display(
         Plot.windowY(k, {
           anchor: "end",
           curve: "basis",
-          fy: "name",
+          fy: "player_name",
           x: "gameDate",
-          y: "dNetPts",
+          y: "d_net_pts",
           stroke: () => "defense",
           strokeWidth: 3,
         }),
@@ -729,15 +707,15 @@ display(
         Plot.windowY(k, {
           anchor: "end",
           curve: "basis",
-          fy: "name",
+          fy: "player_name",
           x: "gameDate",
-          y: "oNetPts",
+          y: "o_net_pts",
           stroke: () => "offense",
           strokeWidth: 3,
         }),
       ),
       Plot.dot(datas, {
-        fy: "name",
+        fy: "player_name",
         r: 2,
         fill: "#00000055",
         stroke: null,
@@ -745,24 +723,24 @@ display(
         tip: true,
         title,
         x: "gameDate",
-        y: "tNetPts",
+        y: "t_net_pts",
       }),
       // This doesn't work great, because you have to pick only one chart to bind it to
       //       Plot.tip(
       //         datas,
       //         Plot.pointer({
       //           x: "gameDate",
-      //           fy: "name",
-      //           y: "oNetPts",
+      //           fy: "player_name",
+      //           y: "o_net_pts",
       //           title: d =>
-      //             `${d.name} ${d3.utcFormat("%b %e")(d.gameDate)}\n,
-      // Total net: ${d.tNetPts}
-      // O net: ${d.oNetPts}
-      // D net: ${d.dNetPts}`,
+      //             `${d.player_name} ${d3.utcFormat("%b %e")(d.gameDate)}\n,
+      // Total net: ${d.t_net_pts}
+      // O net: ${d.o_net_pts}
+      // D net: ${d.d_net_pts}`,
       //         }),
       //       ),
       // Add player names at the bottom of each facet
-      Plot.text(Array.from(new Set(datas.map(d => d.name))), {
+      Plot.text(Array.from(new Set(datas.map(d => d.player_name))), {
         fy: d => d,
         frameAnchor: "bottom",
         text: d => d,

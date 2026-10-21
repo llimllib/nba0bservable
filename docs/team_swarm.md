@@ -3,7 +3,7 @@ theme: cotton
 title: Team Net Points Distribution
 toc: false
 sql:
-  players: ./data/espn.players.parquet
+  players: ./data/player_box.parquet
 ---
 
 # Team Net Points Distribution
@@ -64,23 +64,20 @@ const nPlayers = Generators.input(nPlayersInput)
 ```
 
 ```js
-// Aggregate to one row per player per team: total tNetPts, total minutes
+// Aggregate to one row per player per team: total t_net_pts, total minutes
 const playerAgg = await sql`
   SELECT
-    name,
-    team,
+    player_name,
+    team_abbrev,
     player_id,
     count(*) as games,
-    sum(tNetPts) as tNetPts,
-    sum(
-      CAST(SPLIT_PART(minutes_played, ':', 1) AS FLOAT) +
-      CAST(SPLIT_PART(minutes_played, ':', 2) AS FLOAT) / 60
-    ) as totalMinutes
+    sum(t_net_pts) as t_net_pts,
+    sum(seconds_played) / 60 as totalMinutes
   FROM players
   WHERE season = ${selectedSeason}
-    AND played = 1
-    AND (game_id LIKE '002%' OR game_id LIKE '003%')
-  GROUP BY name, team, player_id
+    AND played
+    AND game_type = 'regular_season'
+  GROUP BY player_name, team_abbrev, player_id
 `
 ```
 
@@ -88,8 +85,8 @@ const playerAgg = await sql`
 // For each team, take the top N players by total minutes
 const byTeam = new Map()
 for (const row of playerAgg) {
-  if (!byTeam.has(row.team)) byTeam.set(row.team, [])
-  byTeam.get(row.team).push(row)
+  if (!byTeam.has(row.team_abbrev)) byTeam.set(row.team_abbrev, [])
+  byTeam.get(row.team_abbrev).push(row)
 }
 
 const topPlayers = []
@@ -102,12 +99,12 @@ for (const [team, players] of byTeam) {
   })
 }
 
-// Sort teams by median tNetPts of their top N
+// Sort teams by median t_net_pts of their top N
 const teamMedians = new Map()
 for (const [team] of byTeam) {
   const vals = topPlayers
-    .filter(p => p.team === team)
-    .map(p => p.tNetPts)
+    .filter(p => p.team_abbrev === team)
+    .map(p => p.t_net_pts)
     .sort((a, b) => a - b)
   if (vals.length > 0) {
     teamMedians.set(team, vals[Math.floor(vals.length / 2)])
@@ -119,7 +116,7 @@ const teamOrder = [...teamMedians.entries()]
   .map(([team]) => team)
 
 // ESPN CDN logo URL mapping
-const logoAbbrev = { BRK: "bkn", SAN: "sas", UTA: "utah" }
+const logoAbbrev = { NOP: "no", UTA: "utah" }
 function logoUrl(team) {
   const slug = logoAbbrev[team] || team.toLowerCase()
   return `https://a.espncdn.com/i/teamlogos/nba/500/${slug}.png`
@@ -168,8 +165,8 @@ display(
       Plot.ruleY(
         teamOrder.map(team => {
           const vals = topPlayers
-            .filter(p => p.team === team)
-            .map(p => p.tNetPts)
+            .filter(p => p.team_abbrev === team)
+            .map(p => p.t_net_pts)
           return { team, min: Math.min(...vals), max: Math.max(...vals) }
         }),
         {
@@ -184,8 +181,8 @@ display(
       Plot.tickX(
         teamOrder.map(team => {
           const vals = topPlayers
-            .filter(p => p.team === team)
-            .map(p => p.tNetPts)
+            .filter(p => p.team_abbrev === team)
+            .map(p => p.t_net_pts)
           return { team, value: Math.min(...vals) }
         }),
         {
@@ -215,8 +212,8 @@ display(
       Plot.tickX(
         teamOrder.map(team => {
           const vals = topPlayers
-            .filter(p => p.team === team)
-            .map(p => p.tNetPts)
+            .filter(p => p.team_abbrev === team)
+            .map(p => p.t_net_pts)
           return { team, value: Math.max(...vals) }
         }),
         {
@@ -228,14 +225,14 @@ display(
       ),
       // Player dots
       Plot.dot(topPlayers, {
-        x: "tNetPts",
-        y: "team",
-        fill: d => (d.tNetPts >= 0 ? "#008348" : "#A73832"),
+        x: "t_net_pts",
+        y: "team_abbrev",
+        fill: d => (d.t_net_pts >= 0 ? "#008348" : "#A73832"),
         fillOpacity: 0.5,
         r: 4,
         tip: true,
         title: d =>
-          `${d.name} (${d.team})\nTotal Net Points: ${d.tNetPts.toFixed(1)}\nMinutes: ${Math.round(d.totalMinutes)}\nGames: ${d.games}\nMinutes rank: #${d.minutesRank}`,
+          `${d.player_name} (${d.team_abbrev})\nTotal Net Points: ${d.t_net_pts.toFixed(1)}\nMinutes: ${Math.round(d.totalMinutes)}\nGames: ${d.games}\nMinutes rank: #${d.minutesRank}`,
       }),
     ],
   }),

@@ -3,7 +3,7 @@ theme: cotton
 title: Shooting Efficiency
 toc: false
 sql:
-  players: ./data/playerstats.parquet
+  players: ./data/player_season_stats.parquet
 ---
 
 # Shooting Efficiency
@@ -58,16 +58,16 @@ const selectedTeams = view(
 
 ```js
 const allPlayers = await sql([
-  `SELECT player_name, team_abbreviation, fga, ts_pct, usg_pct
+  `SELECT player_name, team_abbrev, fga, ts_pct, usg_pct
        FROM players
-      WHERE year=${year}`,
+      WHERE season=${year} AND season_type='regular_season'`,
 ])
 const selectedAbbrev = selectedTeams.map(t => t.abbreviation)
 const active = allPlayers
   .toArray()
   .filter(d =>
     selectedAbbrev.length > 0
-      ? selectedAbbrev.includes(d.team_abbreviation)
+      ? selectedAbbrev.includes(d.team_abbrev)
       : true,
   )
 
@@ -152,8 +152,8 @@ display(
       Plot.dot(data, {
         x,
         y,
-        fill: d => teams.get(d.team_abbreviation).colors[0],
-        stroke: d => teams.get(d.team_abbreviation).colors[1],
+        fill: d => teams.get(d.team_abbrev).colors[0],
+        stroke: d => teams.get(d.team_abbrev).colors[1],
         r: 8,
       }),
       Plot.tip(
@@ -162,7 +162,7 @@ display(
           x,
           y,
           title: d =>
-            `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+            `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
         }),
       ),
     ],
@@ -172,16 +172,16 @@ display(
 
 ```js
 const allPlayers = await sql([
-  `SELECT player_name, team_abbreviation, fga, ts_pct, usg_pct, pts_per36, ast_per36, min
+  `SELECT player_name, team_abbrev, fga, ts_pct, usg_pct, pts / min * 36 AS pts_per36, ast / min * 36 AS ast_per36, min
        FROM players
-      WHERE year=${year}`,
+      WHERE season=${year} AND season_type='regular_season'`,
 ])
 const selectedAbbrev = selectedTeams.map(t => t.abbreviation)
 const active = allPlayers
   .toArray()
   .filter(d =>
     selectedAbbrev.length > 0
-      ? selectedAbbrev.includes(d.team_abbreviation)
+      ? selectedAbbrev.includes(d.team_abbrev)
       : true,
   )
 
@@ -249,8 +249,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: d => teams.get(d.team_abbreviation).colors[0],
-      stroke: d => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbrev).colors[0],
+      stroke: d => teams.get(d.team_abbrev).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -259,7 +259,7 @@ const graph = Plot.plot({
         x,
         y,
         title: d =>
-          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+          `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],
@@ -278,16 +278,16 @@ display(graph)
 
 ```js
 const allPlayers = await sql([
-  `SELECT player_name, team_abbreviation, fga, ts_pct, usg_pct, pts_per36, ast_per36 + reb_per36 ar_per36, min
+  `SELECT player_name, team_abbrev, fga, ts_pct, usg_pct, pts / min * 36 AS pts_per36, (ast + reb) / min * 36 AS ar_per36, min
        FROM players
-      WHERE year=${year}`,
+      WHERE season=${year} AND season_type='regular_season'`,
 ])
 const selectedAbbrev = selectedTeams.map(t => t.abbreviation)
 const active = allPlayers
   .toArray()
   .filter(d =>
     selectedAbbrev.length > 0
-      ? selectedAbbrev.includes(d.team_abbreviation)
+      ? selectedAbbrev.includes(d.team_abbrev)
       : true,
   )
 
@@ -347,8 +347,8 @@ const graph = Plot.plot({
     Plot.dot(data, {
       x,
       y,
-      fill: d => teams.get(d.team_abbreviation).colors[0],
-      stroke: d => teams.get(d.team_abbreviation).colors[1],
+      fill: d => teams.get(d.team_abbrev).colors[0],
+      stroke: d => teams.get(d.team_abbrev).colors[1],
       r: 8,
     }),
     Plot.tip(
@@ -357,7 +357,7 @@ const graph = Plot.plot({
         x,
         y,
         title: d =>
-          `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+          `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
       }),
     ),
   ],

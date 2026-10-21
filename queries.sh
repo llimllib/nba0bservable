@@ -1,19 +1,19 @@
 #!/bin/bash
 
-DATA="docs/.observablehq/cache/data/espn.players.parquet"
-GAME_FILTER="game_id LIKE '002%' OR game_id LIKE '003%' OR game_id LIKE '004%'"
+DATA="docs/.observablehq/cache/data/player_box.parquet"
+GAME_FILTER="game_type IN ('regular_season', 'playoffs')"
 
 # Top 100 players by total net points
 career_total() {
   duckdb -table -c "
     SELECT 
-      ROW_NUMBER() OVER (ORDER BY SUM(tNetPts) DESC) as rank,
-      name,
+      ROW_NUMBER() OVER (ORDER BY SUM(t_net_pts) DESC) as rank,
+      player_name,
       COUNT(*) as games,
-      ROUND(SUM(tNetPts), 1) as total_net_pts
+      ROUND(SUM(t_net_pts), 1) as total_net_pts
     FROM '$DATA'
     WHERE $GAME_FILTER
-    GROUP BY name
+    GROUP BY player_name
     ORDER BY total_net_pts DESC
     LIMIT 100
   "
@@ -23,14 +23,14 @@ career_total() {
 career_ppg() {
   duckdb -table -c "
     SELECT
-      ROW_NUMBER() OVER (ORDER BY SUM(tNetPts) / COUNT(*) DESC) as rank,
-      name,
+      ROW_NUMBER() OVER (ORDER BY SUM(t_net_pts) / COUNT(*) DESC) as rank,
+      player_name,
       COUNT(*) as games,
-      ROUND(SUM(tNetPts), 1) as total_net_pts,
-      ROUND(SUM(tNetPts) / COUNT(*), 2) as net_ppg
+      ROUND(SUM(t_net_pts), 1) as total_net_pts,
+      ROUND(SUM(t_net_pts) / COUNT(*), 2) as net_ppg
     FROM '$DATA'
     WHERE $GAME_FILTER
-    GROUP BY name
+    GROUP BY player_name
     HAVING COUNT(*) > 100
     ORDER BY net_ppg DESC
     LIMIT 100
@@ -41,19 +41,19 @@ career_ppg() {
 career_ppg_bar() {
   duckdb -list -noheader -c "
     SELECT
-      ROW_NUMBER() OVER (ORDER BY SUM(tNetPts) / COUNT(*) DESC) as rank,
-      name,
+      ROW_NUMBER() OVER (ORDER BY SUM(t_net_pts) / COUNT(*) DESC) as rank,
+      player_name,
       COUNT(*) as games,
-      ROUND(SUM(tNetPts) / COUNT(*), 2) as net_ppg,
-      BAR(SUM(tNetPts) / COUNT(*), 0, 7, 20) as bar
+      ROUND(SUM(t_net_pts) / COUNT(*), 2) as net_ppg,
+      BAR(SUM(t_net_pts) / COUNT(*), 0, 7, 20) as bar
     FROM '$DATA'
     WHERE $GAME_FILTER
-    GROUP BY name
+    GROUP BY player_name
     HAVING COUNT(*) > 100
     ORDER BY net_ppg DESC
     LIMIT 50
-  " | while IFS='|' read -r rank name games ppg bar; do
-    printf "%2s  %-25s %4s  %5s  \e[36m%s\e[0m\n" "$rank" "$name" "$games" "$ppg" "$bar"
+  " | while IFS='|' read -r rank player_name games ppg bar; do
+    printf "%2s  %-25s %4s  %5s  \e[36m%s\e[0m\n" "$rank" "$player_name" "$games" "$ppg" "$bar"
   done
 }
 
@@ -62,27 +62,27 @@ career_spark() {
   duckdb -list -noheader -c "
     WITH player_seasons AS (
       SELECT 
-        name,
+        player_name,
         season,
-        ROUND(AVG(tNetPts), 2) as season_avg
+        ROUND(AVG(t_net_pts), 2) as season_avg
       FROM '$DATA'
       WHERE $GAME_FILTER
-      GROUP BY name, season
+      GROUP BY player_name, season
     ),
     player_totals AS (
       SELECT
-        name,
+        player_name,
         COUNT(*) as games,
-        ROUND(SUM(tNetPts), 1) as total_net_pts,
-        ROUND(SUM(tNetPts) / COUNT(*), 2) as net_ppg
+        ROUND(SUM(t_net_pts), 1) as total_net_pts,
+        ROUND(SUM(t_net_pts) / COUNT(*), 2) as net_ppg
       FROM '$DATA'
       WHERE $GAME_FILTER
-      GROUP BY name
+      GROUP BY player_name
       HAVING games > 100
     ),
     player_sparks AS (
       SELECT 
-        name,
+        player_name,
         STRING_AGG(
           REPEAT(
             CASE 
@@ -99,20 +99,20 @@ career_spark() {
           ), '' ORDER BY season
         ) as spark
       FROM player_seasons
-      GROUP BY name
+      GROUP BY player_name
     )
     SELECT
       ROW_NUMBER() OVER (ORDER BY net_ppg DESC) as rank,
-      t.name,
+      t.player_name,
       t.games,
       t.net_ppg,
       s.spark
     FROM player_totals t
-    JOIN player_sparks s ON t.name = s.name
+    JOIN player_sparks s ON t.player_name = s.player_name
     ORDER BY net_ppg DESC
     LIMIT 50
-  " | while IFS='|' read -r rank name games ppg spark; do
-    printf "%2s  %-25s %4s  %5s  \e[33m%s\e[0m\n" "$rank" "$name" "$games" "$ppg" "$spark"
+  " | while IFS='|' read -r rank player_name games ppg spark; do
+    printf "%2s  %-25s %4s  %5s  \e[33m%s\e[0m\n" "$rank" "$player_name" "$games" "$ppg" "$spark"
   done
 }
 
@@ -121,51 +121,51 @@ career_spark_braille() {
   duckdb -list -noheader -c "
     WITH numbered_games AS (
       SELECT 
-        name,
+        player_name,
         season,
-        tNetPts,
-        ROW_NUMBER() OVER (PARTITION BY name, season ORDER BY game_id) as game_num,
-        COUNT(*) OVER (PARTITION BY name, season) as season_games
+        t_net_pts,
+        ROW_NUMBER() OVER (PARTITION BY player_name, season ORDER BY game_date) as game_num,
+        COUNT(*) OVER (PARTITION BY player_name, season) as season_games
       FROM '$DATA'
       WHERE $GAME_FILTER
     ),
     player_quarters AS (
       SELECT 
-        name,
+        player_name,
         season,
         FLOOR((game_num - 1) * 4.0 / season_games) as quarter,
-        ROUND(AVG(tNetPts), 2) as quarter_avg
+        ROUND(AVG(t_net_pts), 2) as quarter_avg
       FROM numbered_games
-      GROUP BY name, season, quarter
+      GROUP BY player_name, season, quarter
     ),
     player_totals AS (
       SELECT
-        name,
+        player_name,
         COUNT(*) as games,
-        ROUND(SUM(tNetPts) / COUNT(*), 2) as net_ppg
+        ROUND(SUM(t_net_pts) / COUNT(*), 2) as net_ppg
       FROM '$DATA'
       WHERE $GAME_FILTER
-      GROUP BY name
+      GROUP BY player_name
       HAVING games > 100
     ),
     player_sparks AS (
       SELECT 
-        name,
+        player_name,
         LIST(quarter_avg ORDER BY season, quarter) as avgs
       FROM player_quarters
-      GROUP BY name
+      GROUP BY player_name
     )
     SELECT
       ROW_NUMBER() OVER (ORDER BY net_ppg DESC) as rank,
-      t.name,
+      t.player_name,
       t.games,
       t.net_ppg,
       s.avgs
     FROM player_totals t
-    JOIN player_sparks s ON t.name = s.name
+    JOIN player_sparks s ON t.player_name = s.player_name
     ORDER BY net_ppg DESC
     LIMIT 50
-  " | while IFS='|' read -r rank name games ppg avgs; do
+  " | while IFS='|' read -r rank player_name games ppg avgs; do
     # Parse the array and convert to braille using python for unicode handling
     spark=$(echo "$avgs" | python3 -c '
 import sys
@@ -193,7 +193,7 @@ for i in range(0, len(vals), 2):
     result += chr(code)
 print(result)
 ')
-    printf "%2s  %-25s %4s  %5s  \e[33m%s\e[0m\n" "$rank" "$name" "$games" "$ppg" "$spark"
+    printf "%2s  %-25s %4s  %5s  \e[33m%s\e[0m\n" "$rank" "$player_name" "$games" "$ppg" "$spark"
   done
 }
 

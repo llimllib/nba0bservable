@@ -3,7 +3,7 @@ theme: cotton
 title: two-point shooting
 toc: false
 sql:
-  players: ./data/playerstats.parquet
+  players: ./data/player_season_stats.parquet
 ---
 
 # two Point Shooting
@@ -59,22 +59,22 @@ const selectedTeams = view(
 console.log(selectedTeams)
 const teamFilter =
   selectedTeams.length > 0
-    ? `AND team_abbreviation in (${selectedTeams.map(t => `'${t.abbreviation}'`).join(",")});`
+    ? `AND team_abbrev in (${selectedTeams.map(t => `'${t.abbreviation}'`).join(",")});`
     : ""
 console.log("teamFilter", teamFilter)
 ```
 
 ```js
 console.log(
-  `SELECT player_name, team_abbreviation, fg2m, fg2a, fg2a_frequency, fg2_pct, (fg2a/min)*36 as fg2a_per36
+  `SELECT player_name, team_abbrev, fg2m, fg2a, fg2a_frequency, fg2_pct, (fg2a/min)*36 as fg2a_per36
        FROM players
-      WHERE year=${year}
+      WHERE season=${year} AND season_type='regular_season'
         ${teamFilter}`,
 )
 const twopoints = await sql([
-  `SELECT player_name, team_abbreviation, fg2m, fg2a, fg2a_frequency, fg2_pct, (fg2a/min)*36 as fg2a_per36
+  `SELECT player_name, team_abbrev, fg2m, fg2a, fg2a_frequency, fg2_pct, (fg2a/min)*36 as fg2a_per36
        FROM players
-      WHERE year=${year}
+      WHERE season=${year} AND season_type='regular_season'
         ${teamFilter}`,
 ])
 
@@ -116,8 +116,8 @@ display(
       Plot.dot(data, {
         x,
         y,
-        fill: d => teams.get(d.team_abbreviation).colors[0],
-        stroke: d => teams.get(d.team_abbreviation).colors[1],
+        fill: d => teams.get(d.team_abbrev).colors[0],
+        stroke: d => teams.get(d.team_abbrev).colors[1],
         r: 8,
       }),
       Plot.tip(
@@ -126,7 +126,7 @@ display(
           x,
           y,
           title: d =>
-            `${d.player_name}\n${d.team_abbreviation}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+            `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
         }),
       ),
     ],
@@ -158,8 +158,8 @@ display(
       Plot.dot(data, {
         x,
         y,
-        fill: d => teams.get(d.team_abbreviation).colors[0],
-        stroke: d => teams.get(d.team_abbreviation).colors[1],
+        fill: d => teams.get(d.team_abbrev).colors[0],
+        stroke: d => teams.get(d.team_abbrev).colors[1],
         r: 8,
       }),
       Plot.tip(

@@ -3,8 +3,7 @@ theme: cotton
 title: Career Cumulative Stats
 toc: false
 sql:
-  players: ./data/espn.players.parquet
-  gamelogs_raw: ./data/gamelogs.parquet
+  players: ./data/player_box.parquet
 ---
 
 # Career Cumulative Stats
@@ -17,31 +16,31 @@ import { lineEndLabels } from "./lib/lineEndLabels.js"
 // Define available metrics for the select box
 const metricLabels = {
   // Overall Net Points
-  tNetPts: "Total Net Points",
-  oNetPts: "Offensive Net Points",
-  dNetPts: "Defensive Net Points",
+  t_net_pts: "Total Net Points",
+  o_net_pts: "Offensive Net Points",
+  d_net_pts: "Defensive Net Points",
 
   // Win Probability Added
-  tWPA: "Total Win Probability Added",
-  oWPA: "Offensive Win Probability Added",
-  dWPA: "Defensive Win Probability Added",
+  t_wpa: "Total Win Probability Added",
+  o_wpa: "Offensive Win Probability Added",
+  d_wpa: "Defensive Win Probability Added",
 
   // Traditional Box Score Stats
   pts: "Points Scored",
-  plusMinusPoints: "Plus/Minus",
-  fgmplyr: "Field Goals Made",
-  fgaplyr: "Field Goals Attempted",
-  fg3mplyr: "3-Pointers Made",
-  fg3aplyr: "3-Pointers Attempted",
-  ftmplyr: "Free Throws Made",
-  ftaplyr: "Free Throws Attempted",
-  rebounder: "Total Rebounds",
-  orebounder: "Offensive Rebounds",
-  drebounder: "Defensive Rebounds",
-  assister: "Assists",
-  stlr: "Steals",
-  blockplyr: "Blocks",
-  tov1: "Turnovers",
+  plus_minus: "Plus/Minus",
+  fgm: "Field Goals Made",
+  fga: "Field Goals Attempted",
+  fg3m: "3-Pointers Made",
+  fg3a: "3-Pointers Attempted",
+  ftm: "Free Throws Made",
+  fta: "Free Throws Attempted",
+  reb: "Total Rebounds",
+  oreb: "Offensive Rebounds",
+  dreb: "Defensive Rebounds",
+  ast: "Assists",
+  stl: "Steals",
+  blk: "Blocks",
+  tov: "Turnovers",
 }
 
 const metricKeys = Object.keys(metricLabels)
@@ -49,13 +48,13 @@ const metricKeys = Object.keys(metricLabels)
 // Get metric from URL hash
 function getMetricFromHash() {
   const hash = window.location.hash.slice(1)
-  if (!hash) return "tNetPts"
+  if (!hash) return "t_net_pts"
   try {
     const params = new URLSearchParams(hash)
     const metric = params.get("metric")
-    return metricKeys.includes(metric) ? metric : "tNetPts"
+    return metricKeys.includes(metric) ? metric : "t_net_pts"
   } catch (e) {
-    return "tNetPts"
+    return "t_net_pts"
   }
 }
 
@@ -73,7 +72,7 @@ const selectedMetric = Generators.input(metricSelect)
 const selectedMetricLabel = metricLabels[selectedMetric]
 {
   const params = new URLSearchParams(window.location.hash.slice(1))
-  if (selectedMetric && selectedMetric !== "tNetPts") {
+  if (selectedMetric && selectedMetric !== "t_net_pts") {
     params.set("metric", selectedMetric)
   } else {
     params.delete("metric")
@@ -155,58 +154,39 @@ const endSeason = Generators.input(endSeasonSelect)
 ```sql id=alldata
 SELECT *
 FROM players
-WHERE game_id LIKE '002%' OR game_id LIKE '003%' OR game_id LIKE '004%'
-ORDER BY season, game_id
+WHERE game_type IN ('regular_season', 'playoffs')
+-- game_id is NOT chronological, so sort by date
+ORDER BY game_date
 ;
-```
-
-```sql id=gamelogs
-SELECT game_id, game_date FROM gamelogs_raw
-```
-
-```js
-const dates = new Map(
-  gamelogs.toArray().map(row => [row.game_id, new Date(row.game_date)]),
-)
 ```
 
 ```js
 // Pre-process: build a Map from player name -> sorted array of their games
 // This is done once and reused for any player selection
 const playerGamesMap = new Map()
+// The query sorts by game_date, so each player's games are in order
 for (const row of alldata) {
-  const name = row.name
+  const name = row.player_name
   if (!playerGamesMap.has(name)) {
     playerGamesMap.set(name, [])
   }
   playerGamesMap.get(name).push(row)
 }
-// Sort each player's games by game_date (not game_id, which is NOT chronological)
-for (const [name, games] of playerGamesMap) {
-  games.sort((a, b) => {
-    const dateA = dates.get(a.game_id)
-    const dateB = dates.get(b.game_id)
-    if (dateA && dateB) return dateA - dateB
-    // Fall back to season + game_id if dates are missing
-    if (a.season !== b.season) return a.season - b.season
-    return a.game_id.localeCompare(b.game_id)
-  })
-}
 ```
 
 ```sql id=agg
 SELECT
-  name,
+  player_name,
   player_id,
   count(*) n,
-  sum(tNetPts) tNetPts,
+  sum(t_net_pts) t_net_pts,
   min(season) first_season,
   max(season) last_season,
 FROM players
-WHERE game_id LIKE '002%' OR game_id LIKE '003%' OR game_id LIKE '004%'
-GROUP BY player_id, name
+WHERE game_type IN ('regular_season', 'playoffs')
+GROUP BY player_id, player_name
 HAVING n > 0
-ORDER BY tNetPts DESC
+ORDER BY t_net_pts DESC
 ```
 
 ```js
@@ -219,7 +199,7 @@ function getMetricValue(row, metric) {
 ```js
 const allPlayerNames = agg
   .toArray()
-  .map(p => p.name)
+  .map(p => p.player_name)
   .sort()
 ```
 
@@ -278,11 +258,18 @@ function clearAll() {
 ```
 
 ```js
-// Fuzzy search: matches if all search terms appear in the player name
-// e.g., "ron holland" matches "Ronald Holland II"
+// Fuzzy search: matches if all search terms appear in the player name,
+// ignoring case and accents
+// e.g., "ron holland" matches "Ronald Holland II", "jokic" matches "Nikola Jokić"
+const fold = s =>
+  s
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+
 function fuzzyMatch(search, name) {
-  const searchLower = search.toLowerCase()
-  const nameLower = name.toLowerCase()
+  const searchLower = fold(search)
+  const nameLower = fold(name)
 
   // Split search into terms
   const terms = searchLower.split(/\s+/).filter(t => t.length > 0)
@@ -556,7 +543,7 @@ for (const name of selectedPlayers) {
       name,
       gameN,
       cumValue,
-      gameDate: dates.get(pt.game_id),
+      gameDate: new Date(pt.game_date),
       gameValue: metricValue,
       season: pt.season,
     })
@@ -581,9 +568,9 @@ display(
       </div>`
     : (() => {
         // Format values - use decimals for floating point metrics, integers for counts
-        // All NetPts and WPA metrics are floats
+        // All net points and WPA metrics are floats
         const isFloatMetric =
-          selectedMetric.includes("NetPts") || selectedMetric.includes("WPA")
+          selectedMetric.includes("net_pts") || selectedMetric.includes("wpa")
         const formatValue = v => (isFloatMetric ? v.toFixed(1) : Math.round(v))
 
         const plot = Plot.plot({
@@ -622,7 +609,7 @@ display(
               curve: "catmull-rom",
               tip: true,
               title: d =>
-                `${d.name}\nGame ${d.gameN} (${d.season}-${(d.season % 100) + 1})\nCumulative: ${formatValue(d.cumValue)}\nThis game: ${formatValue(d.gameValue)}`,
+                `${d.name}\nGame ${d.gameN} (${d.season - 1}-${String(d.season).slice(2)})\nCumulative: ${formatValue(d.cumValue)}\nThis game: ${formatValue(d.gameValue)}`,
             }),
             showDots
               ? Plot.dot(

@@ -3,19 +3,19 @@ theme: cotton
 title: Playoff Net Points by Player
 toc: false
 sql:
-  players: ./data/espn.players.parquet
+  players: ./data/player_box.parquet
 ---
 
 # Playoff Net Points by Player
 
 ```js
-import { teams, normalizeESPN } from "./lib/teams.js"
+import { teams } from "./lib/teams.js"
 import { label } from "./lib/labels.js"
 ```
 
 ```js
 const CURRENT_SEASON = 2026
-const availableSeasons = [2026, 2025, 2024, 2023, 2022, 2021, 2019]
+const availableSeasons = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019]
 
 const seasonSelect = Inputs.select(availableSeasons, {
   value: CURRENT_SEASON,
@@ -30,24 +30,21 @@ display(seasonSelect)
 const playoffPlayers = await sql`
 SELECT
   player_id,
-  name,
-  team,
+  player_name,
+  team_abbrev,
   COUNT(DISTINCT game_id) AS games,
-  SUM(oNetPts) AS oNetPts,
-  SUM(dNetPts) AS dNetPts,
-  SUM(tNetPts) AS tNetPts,
-  SUM(oNetPts) / COUNT(DISTINCT game_id) AS oNetPtsPerG,
-  SUM(dNetPts) / COUNT(DISTINCT game_id) AS dNetPtsPerG,
-  SUM(tNetPts) / COUNT(DISTINCT game_id) AS tNetPtsPerG,
-  SUM(
-    CAST(SPLIT_PART(minutes_played, ':', 1) AS FLOAT) +
-    CAST(SPLIT_PART(minutes_played, ':', 2) AS FLOAT) / 60
-  ) AS minutes
+  SUM(o_net_pts) AS o_net_pts,
+  SUM(d_net_pts) AS d_net_pts,
+  SUM(t_net_pts) AS t_net_pts,
+  SUM(o_net_pts) / COUNT(DISTINCT game_id) AS o_net_pts_per_g,
+  SUM(d_net_pts) / COUNT(DISTINCT game_id) AS d_net_pts_per_g,
+  SUM(t_net_pts) / COUNT(DISTINCT game_id) AS t_net_pts_per_g,
+  SUM(seconds_played) / 60 AS minutes
 FROM players
 WHERE season = ${selectedSeason}
-  AND game_id LIKE '004%'
+  AND game_type = 'playoffs'
   AND played
-GROUP BY player_id, name, team
+GROUP BY player_id, player_name, team_abbrev
 HAVING games > 0
 `
 ```
@@ -55,24 +52,23 @@ HAVING games > 0
 ```js
 const allPlayers = playoffPlayers.toArray().map(d => ({
   player_id: d.player_id,
-  name: d.name,
-  team: d.team,
+  name: d.player_name,
+  team: d.team_abbrev,
   games: Number(d.games),
-  oNetPts: Number(d.oNetPts),
-  dNetPts: Number(d.dNetPts),
-  tNetPts: Number(d.tNetPts),
-  oNetPtsPerG: Number(d.oNetPtsPerG),
-  dNetPtsPerG: Number(d.dNetPtsPerG),
-  tNetPtsPerG: Number(d.tNetPtsPerG),
+  oNetPts: Number(d.o_net_pts),
+  dNetPts: Number(d.d_net_pts),
+  tNetPts: Number(d.t_net_pts),
+  oNetPtsPerG: Number(d.o_net_pts_per_g),
+  dNetPtsPerG: Number(d.d_net_pts_per_g),
+  tNetPtsPerG: Number(d.t_net_pts_per_g),
   minutes: Number(d.minutes),
   minutesPerG: Number(d.minutes) / Number(d.games),
 }))
 
 const teamOptions = [...new Set(allPlayers.map(p => p.team))]
-  .map(espnAbbrev => {
-    const nba = normalizeESPN(espnAbbrev)
-    const t = teams.get(nba)
-    return { espnAbbrev, abbrev: nba, name: t.name, colors: t.colors }
+  .map(abbrev => {
+    const t = teams.get(abbrev)
+    return { abbrev, name: t.name, colors: t.colors }
   })
   .sort((a, b) => a.name.localeCompare(b.name))
 ```
@@ -96,7 +92,7 @@ const minMinutes = view(
 
 ```js
 const data = allPlayers.filter(
-  p => p.team === selectedTeam.espnAbbrev && p.minutesPerG >= minMinutes,
+  p => p.team === selectedTeam.abbrev && p.minutesPerG >= minMinutes,
 )
 const x = perGame ? "dNetPtsPerG" : "dNetPts"
 const y = perGame ? "oNetPtsPerG" : "oNetPts"
@@ -158,23 +154,22 @@ display(
 )
 ```
 
-Each dot is a player on the selected team across the selected playoffs so far. Dot size is total minutes played; up-and-right is good. Source: ESPN per-game net points (`oNetPts`, `dNetPts`).
+Each dot is a player on the selected team across the selected playoffs so far. Dot size is total minutes played; up-and-right is good. Source: ESPN per-game net points (`o_net_pts`, `d_net_pts`).
 
 ```js
 const playoffGames = await sql`
 SELECT
   player_id,
-  name,
-  team,
+  player_name,
+  team_abbrev,
   game_id,
-  oNetPts,
-  dNetPts,
-  tNetPts,
-  CAST(SPLIT_PART(minutes_played, ':', 1) AS FLOAT) +
-    CAST(SPLIT_PART(minutes_played, ':', 2) AS FLOAT) / 60 AS minutesPlayed
+  o_net_pts,
+  d_net_pts,
+  t_net_pts,
+  seconds_played / 60 AS minutes_played
 FROM players
 WHERE season = ${selectedSeason}
-  AND game_id LIKE '004%'
+  AND game_type = 'playoffs'
   AND played
 `
 ```
@@ -182,13 +177,13 @@ WHERE season = ${selectedSeason}
 ```js
 const allGames = playoffGames.toArray().map(d => ({
   player_id: d.player_id,
-  name: d.name,
-  team: d.team,
+  name: d.player_name,
+  team: d.team_abbrev,
   game_id: d.game_id,
-  tNetPts: Number(d.tNetPts),
-  oNetPts: Number(d.oNetPts),
-  dNetPts: Number(d.dNetPts),
-  minutesPlayed: Number(d.minutesPlayed),
+  tNetPts: Number(d.t_net_pts),
+  oNetPts: Number(d.o_net_pts),
+  dNetPts: Number(d.d_net_pts),
+  minutesPlayed: Number(d.minutes_played),
 }))
 ```
 
@@ -196,7 +191,7 @@ const allGames = playoffGames.toArray().map(d => ({
 const filteredIds = new Set(data.map(d => String(d.player_id)))
 const games = allGames.filter(
   g =>
-    g.team === selectedTeam.espnAbbrev && filteredIds.has(String(g.player_id)),
+    g.team === selectedTeam.abbrev && filteredIds.has(String(g.player_id)),
 )
 const orderedPlayers = data
   .slice()

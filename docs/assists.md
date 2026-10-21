@@ -3,7 +3,7 @@ theme: cotton
 title: Assists to turnovers
 toc: false
 sql:
-  players: ./data/playerstats.parquet
+  players: ./data/player_season_stats.parquet
 ---
 
 # Assists to turnovers
@@ -54,9 +54,9 @@ const selectedTeams = view(
 ```
 
 ```sql id=assists
-SELECT player_name, team_abbreviation, ast, tov, tov_per100possessions tov_per100, min, usg_pct
+SELECT player_name, team_abbrev, ast, tov, tov / poss * 100 AS tov_per100, min, usg_pct
 FROM players
-WHERE year=${year};
+WHERE season=${year} AND season_type='regular_season';
 ```
 
 ```js
@@ -66,7 +66,7 @@ const selectedAbbrev = selectedTeams.map(t => t.abbreviation)
 const active = sliceQuantile(assists.toArray(), "min", (100 - percentile) / 100)
 const data = active.filter(d =>
   selectedAbbrev.length > 0
-    ? selectedAbbrev.includes(d.team_abbreviation)
+    ? selectedAbbrev.includes(d.team_abbrev)
     : true,
 )
 const title = "Assists to Turnovers"
@@ -145,8 +145,8 @@ display(
       Plot.dot(data, {
         x,
         y,
-        fill: d => teams.get(d.team_abbreviation).colors[0],
-        stroke: d => teams.get(d.team_abbreviation).colors[1],
+        fill: d => teams.get(d.team_abbrev).colors[0],
+        stroke: d => teams.get(d.team_abbrev).colors[1],
         r: 8,
       }),
       Plot.tip(
@@ -169,7 +169,7 @@ const selectedAbbrev = selectedTeams.map(t => t.abbreviation)
 const active = sliceQuantile(assists.toArray(), "min", (100 - percentile) / 100)
 const data = active.filter(d =>
   selectedAbbrev.length > 0
-    ? selectedAbbrev.includes(d.team_abbreviation)
+    ? selectedAbbrev.includes(d.team_abbrev)
     : true,
 )
 const maxX = d3.max(active, d => d[x])
@@ -211,8 +211,8 @@ display(
       Plot.dot(data, {
         x,
         y,
-        fill: d => teams.get(d.team_abbreviation).colors[0],
-        stroke: d => teams.get(d.team_abbreviation).colors[1],
+        fill: d => teams.get(d.team_abbrev).colors[0],
+        stroke: d => teams.get(d.team_abbrev).colors[1],
         r: 8,
       }),
       Plot.tip(

@@ -3,9 +3,8 @@ theme: cotton
 title: Cumulative Stats
 toc: false
 sql:
-  players: ./data/espn.players.parquet
-  gamelogs_raw: ./data/gamelogs.parquet
-  player_details: ./data/espn.player_details.parquet
+  players: ./data/player_box.parquet
+  player_details: ./data/player_details.parquet
 ---
 
 # Cumulative Stats
@@ -63,98 +62,99 @@ const selectedSeason = Generators.input(seasonSelect)
 // Define available metrics for the select box
 const metricLabels = {
   // Overall Net Points
-  tNetPts: "Total Net Points",
-  oNetPts: "Offensive Net Points",
-  dNetPts: "Defensive Net Points",
+  t_net_pts: "Total Net Points",
+  o_net_pts: "Offensive Net Points",
+  d_net_pts: "Defensive Net Points",
 
   // Win Probability Added
-  tWPA: "Total Win Probability Added",
-  oWPA: "Offensive Win Probability Added",
-  dWPA: "Defensive Win Probability Added",
+  t_wpa: "Total Win Probability Added",
+  o_wpa: "Offensive Win Probability Added",
+  d_wpa: "Defensive Win Probability Added",
 
-  // Detailed Net Points Breakdowns (from player_details)
-  "3pt_tNetPts": "3PT Total Net Points",
-  "3pt_oNetPts": "3PT Offensive Net Points",
-  "3pt_dNetPts": "3PT Defensive Net Points",
-  "2pt_tNetPts": "2PT Total Net Points",
-  "2pt_oNetPts": "2PT Offensive Net Points",
-  "2pt_dNetPts": "2PT Defensive Net Points",
-  rim_tNetPts: "Rim Total Net Points",
-  rim_oNetPts: "Rim Offensive Net Points",
-  rim_dNetPts: "Rim Defensive Net Points",
-  mid_tNetPts: "Mid-Range Total Net Points",
-  mid_oNetPts: "Mid-Range Offensive Net Points",
-  mid_dNetPts: "Mid-Range Defensive Net Points",
-  corner_tNetPts: "Corner Total Net Points",
-  corner_oNetPts: "Corner Offensive Net Points",
-  corner_dNetPts: "Corner Defensive Net Points",
-  freethrow_tNetPts: "Free Throw Total Net Points",
-  freethrow_oNetPts: "Free Throw Offensive Net Points",
-  freethrow_dNetPts: "Free Throw Defensive Net Points",
-  layup_tNetPts: "Layup Total Net Points",
-  layup_oNetPts: "Layup Offensive Net Points",
-  layup_dNetPts: "Layup Defensive Net Points",
-  dunk_tNetPts: "Dunk Total Net Points",
-  dunk_oNetPts: "Dunk Offensive Net Points",
-  dunk_dNetPts: "Dunk Defensive Net Points",
-  driving_tNetPts: "Driving Total Net Points",
-  driving_oNetPts: "Driving Offensive Net Points",
-  driving_dNetPts: "Driving Defensive Net Points",
-  cutting_tNetPts: "Cutting Total Net Points",
-  cutting_oNetPts: "Cutting Offensive Net Points",
-  cutting_dNetPts: "Cutting Defensive Net Points",
-  floating_tNetPts: "Floater Total Net Points",
-  floating_oNetPts: "Floater Offensive Net Points",
-  floating_dNetPts: "Floater Defensive Net Points",
-  hook_tNetPts: "Hook Shot Total Net Points",
-  hook_oNetPts: "Hook Shot Offensive Net Points",
-  hook_dNetPts: "Hook Shot Defensive Net Points",
-  fade_tNetPts: "Fadeaway Total Net Points",
-  fade_oNetPts: "Fadeaway Offensive Net Points",
-  fade_dNetPts: "Fadeaway Defensive Net Points",
-  bank_tNetPts: "Bank Shot Total Net Points",
-  bank_oNetPts: "Bank Shot Offensive Net Points",
-  bank_dNetPts: "Bank Shot Defensive Net Points",
-  assist_tNetPts: "Assist Total Net Points",
-  assist_oNetPts: "Assist Offensive Net Points",
-  assist_dNetPts: "Assist Defensive Net Points",
-  rebound_tNetPts: "Rebound Total Net Points",
-  rebound_oNetPts: "Rebound Offensive Net Points",
-  rebound_dNetPts: "Rebound Defensive Net Points",
-  putback_tNetPts: "Putback Total Net Points",
-  putback_oNetPts: "Putback Offensive Net Points",
-  putback_dNetPts: "Putback Defensive Net Points",
-  turnover_tNetPts: "Turnover Total Net Points",
-  turnover_oNetPts: "Turnover Offensive Net Points",
-  turnover_dNetPts: "Turnover Defensive Net Points",
-  badpass_tNetPts: "Bad Pass Total Net Points",
-  badpass_oNetPts: "Bad Pass Offensive Net Points",
-  badpass_dNetPts: "Bad Pass Defensive Net Points",
-  foul_tNetPts: "Foul Total Net Points",
-  foul_oNetPts: "Foul Offensive Net Points",
-  foul_dNetPts: "Foul Defensive Net Points",
-  fastbreak_tNetPts: "Fastbreak Total Net Points",
-  fastbreak_oNetPts: "Fastbreak Offensive Net Points",
-  fastbreak_dNetPts: "Fastbreak Defensive Net Points",
+  // Detailed Net Points Breakdowns (from player_details), named
+  // {action_type}_{side}_net_pts
+  "3pt_t_net_pts": "3PT Total Net Points",
+  "3pt_o_net_pts": "3PT Offensive Net Points",
+  "3pt_d_net_pts": "3PT Defensive Net Points",
+  "2pt_t_net_pts": "2PT Total Net Points",
+  "2pt_o_net_pts": "2PT Offensive Net Points",
+  "2pt_d_net_pts": "2PT Defensive Net Points",
+  rim_t_net_pts: "Rim Total Net Points",
+  rim_o_net_pts: "Rim Offensive Net Points",
+  rim_d_net_pts: "Rim Defensive Net Points",
+  mid_t_net_pts: "Mid-Range Total Net Points",
+  mid_o_net_pts: "Mid-Range Offensive Net Points",
+  mid_d_net_pts: "Mid-Range Defensive Net Points",
+  corner_t_net_pts: "Corner Total Net Points",
+  corner_o_net_pts: "Corner Offensive Net Points",
+  corner_d_net_pts: "Corner Defensive Net Points",
+  freethrow_t_net_pts: "Free Throw Total Net Points",
+  freethrow_o_net_pts: "Free Throw Offensive Net Points",
+  freethrow_d_net_pts: "Free Throw Defensive Net Points",
+  layup_t_net_pts: "Layup Total Net Points",
+  layup_o_net_pts: "Layup Offensive Net Points",
+  layup_d_net_pts: "Layup Defensive Net Points",
+  dunk_t_net_pts: "Dunk Total Net Points",
+  dunk_o_net_pts: "Dunk Offensive Net Points",
+  dunk_d_net_pts: "Dunk Defensive Net Points",
+  driving_t_net_pts: "Driving Total Net Points",
+  driving_o_net_pts: "Driving Offensive Net Points",
+  driving_d_net_pts: "Driving Defensive Net Points",
+  cutting_t_net_pts: "Cutting Total Net Points",
+  cutting_o_net_pts: "Cutting Offensive Net Points",
+  cutting_d_net_pts: "Cutting Defensive Net Points",
+  floating_t_net_pts: "Floater Total Net Points",
+  floating_o_net_pts: "Floater Offensive Net Points",
+  floating_d_net_pts: "Floater Defensive Net Points",
+  hook_t_net_pts: "Hook Shot Total Net Points",
+  hook_o_net_pts: "Hook Shot Offensive Net Points",
+  hook_d_net_pts: "Hook Shot Defensive Net Points",
+  fade_t_net_pts: "Fadeaway Total Net Points",
+  fade_o_net_pts: "Fadeaway Offensive Net Points",
+  fade_d_net_pts: "Fadeaway Defensive Net Points",
+  bank_t_net_pts: "Bank Shot Total Net Points",
+  bank_o_net_pts: "Bank Shot Offensive Net Points",
+  bank_d_net_pts: "Bank Shot Defensive Net Points",
+  assist_t_net_pts: "Assist Total Net Points",
+  assist_o_net_pts: "Assist Offensive Net Points",
+  assist_d_net_pts: "Assist Defensive Net Points",
+  rebound_t_net_pts: "Rebound Total Net Points",
+  rebound_o_net_pts: "Rebound Offensive Net Points",
+  rebound_d_net_pts: "Rebound Defensive Net Points",
+  putback_t_net_pts: "Putback Total Net Points",
+  putback_o_net_pts: "Putback Offensive Net Points",
+  putback_d_net_pts: "Putback Defensive Net Points",
+  turnover_t_net_pts: "Turnover Total Net Points",
+  turnover_o_net_pts: "Turnover Offensive Net Points",
+  turnover_d_net_pts: "Turnover Defensive Net Points",
+  badpass_t_net_pts: "Bad Pass Total Net Points",
+  badpass_o_net_pts: "Bad Pass Offensive Net Points",
+  badpass_d_net_pts: "Bad Pass Defensive Net Points",
+  foul_t_net_pts: "Foul Total Net Points",
+  foul_o_net_pts: "Foul Offensive Net Points",
+  foul_d_net_pts: "Foul Defensive Net Points",
+  fastbreak_t_net_pts: "Fastbreak Total Net Points",
+  fastbreak_o_net_pts: "Fastbreak Offensive Net Points",
+  fastbreak_d_net_pts: "Fastbreak Defensive Net Points",
 
   // Traditional Box Score Stats
   pts: "Points Scored",
-  plusMinusPoints: "Plus/Minus",
-  fgmplyr: "Field Goals Made",
-  fgaplyr: "Field Goals Attempted",
-  fg3mplyr: "3-Pointers Made",
-  fg3aplyr: "3-Pointers Attempted",
-  ftmplyr: "Free Throws Made",
-  ftaplyr: "Free Throws Attempted",
-  rebounder: "Total Rebounds",
-  orebounder: "Offensive Rebounds",
-  drebounder: "Defensive Rebounds",
-  assister: "Assists",
-  stlr: "Steals",
-  blockplyr: "Blocks",
-  tov1: "Turnovers",
-  dfoulplyr: "Defensive Fouls",
-  ofoulplyr: "Offensive Fouls",
+  plus_minus: "Plus/Minus",
+  fgm: "Field Goals Made",
+  fga: "Field Goals Attempted",
+  fg3m: "3-Pointers Made",
+  fg3a: "3-Pointers Attempted",
+  ftm: "Free Throws Made",
+  fta: "Free Throws Attempted",
+  reb: "Total Rebounds",
+  oreb: "Offensive Rebounds",
+  dreb: "Defensive Rebounds",
+  ast: "Assists",
+  stl: "Steals",
+  blk: "Blocks",
+  tov: "Turnovers",
+  def_fouls: "Defensive Fouls",
+  off_fouls: "Offensive Fouls",
 }
 
 const metricKeys = Object.keys(metricLabels)
@@ -162,13 +162,13 @@ const metricKeys = Object.keys(metricLabels)
 // Get metric from URL hash
 function getMetricFromHash() {
   const hash = window.location.hash.slice(1)
-  if (!hash) return "tNetPts"
+  if (!hash) return "t_net_pts"
   try {
     const params = new URLSearchParams(hash)
     const metric = params.get("metric")
-    return metricKeys.includes(metric) ? metric : "tNetPts"
+    return metricKeys.includes(metric) ? metric : "t_net_pts"
   } catch (e) {
-    return "tNetPts"
+    return "t_net_pts"
   }
 }
 
@@ -186,7 +186,7 @@ const selectedMetric = Generators.input(metricSelect)
 const selectedMetricLabel = metricLabels[selectedMetric]
 {
   const params = new URLSearchParams(window.location.hash.slice(1))
-  if (selectedMetric && selectedMetric !== "tNetPts") {
+  if (selectedMetric && selectedMetric !== "t_net_pts") {
     params.set("metric", selectedMetric)
   } else {
     params.delete("metric")
@@ -201,63 +201,59 @@ const selectedMetricLabel = metricLabels[selectedMetric]
 ```
 
 ```js
-// Dynamic data loading based on selected season
-const alldata = await sql`
-SELECT *
-from players
-where season=${selectedSeason}
-and (game_id LIKE '002%' or game_id LIKE '003%')
-`
+// Metrics that come from player_details are named
+// {action_type}_{side}_net_pts, like "3pt_t_net_pts"
+function detailMetric(metric) {
+  const m = metric.match(/^(.+)_([odt])_net_pts$/)
+  return m ? { action: m[1], column: `${m[2]}_net_pts` } : null
+}
 
-const details = await sql`
-SELECT *
-from player_details
-where season=${selectedSeason}
-and (gameId LIKE '002%' or gameId LIKE '003%')
-`
-
-// ESPN season 2026 = 2025-26 season, gamelogs uses "2025-26" format
-const seasonYearStr = `${selectedSeason - 1}-${String(selectedSeason).slice(2)}`
-const gamelogs = await sql`
-select game_id, game_date from gamelogs_raw where season_year=${seasonYearStr}
-`
+// Get the metric column dynamically from the data
+function getMetricValue(row, metric) {
+  return row[metric] ?? 0
+}
 ```
 
 ```js
-const dates = new Map(
-  gamelogs.toArray().map(row => [row.game_id, new Date(row.game_date)]),
-)
+// Dynamic data loading based on selected season and metric. player_details
+// has one row per action_type, so load just the selected one, with the
+// player's name, team and game date from player_box
+const detail = detailMetric(selectedMetric)
+const alldata = detail
+  ? await sql([
+      `SELECT b.game_id, b.player_name, b.team_abbrev, b.game_date,
+        d.${detail.column} AS "${selectedMetric}"
+      FROM players b
+      LEFT JOIN player_details d
+        ON d.season = b.season
+        AND d.game_id = b.game_id
+        AND d.player_id = b.player_id
+        AND d.action_type = '${detail.action}'
+      WHERE b.season = ${selectedSeason}
+        AND b.game_type = 'regular_season'`,
+    ])
+  : await sql`
+SELECT *
+from players
+where season=${selectedSeason}
+and game_type = 'regular_season'
+`
 ```
 
 ```js
 const agg = await sql`
 SELECT
-  name,
-  team,
+  player_name,
+  team_abbrev,
   count(*) n,
-  sum(tNetPts) tNetPts
+  sum(t_net_pts) t_net_pts
 from players
 where season=${selectedSeason}
-and (game_id LIKE '002%' or game_id LIKE '003%')
-group by player_id, name, team
+and game_type = 'regular_season'
+group by player_id, player_name, team_abbrev
 having n > 0
-order by tNetPts desc
+order by t_net_pts desc
 `
-```
-
-```js
-// Get the metric column dynamically from the data
-function getMetricValue(row, metric) {
-  return row[metric] ?? 0
-}
-
-// Metrics that come from player_details (have underscore in name like "3pt_tNetPts")
-const detailMetrics = new Set(
-  Object.keys(metricLabels).filter(k => k.includes("_")),
-)
-function isDetailMetric(metric) {
-  return detailMetrics.has(metric)
-}
 ```
 
 ```js
@@ -268,10 +264,10 @@ const aggArray = agg.toArray()
 // Group by player name to find multi-team players
 const playerTeams = new Map()
 aggArray.forEach(p => {
-  if (!playerTeams.has(p.name)) {
-    playerTeams.set(p.name, [])
+  if (!playerTeams.has(p.player_name)) {
+    playerTeams.set(p.player_name, [])
   }
-  playerTeams.get(p.name).push(p.team)
+  playerTeams.get(p.player_name).push(p.team_abbrev)
 })
 
 // Build the list of selectable player options
@@ -356,11 +352,18 @@ function clearAll() {
 ```
 
 ```js
-// Fuzzy search: matches if all search terms appear in the player name
-// e.g., "ron holland" matches "Ronald Holland II"
+// Fuzzy search: matches if all search terms appear in the player name,
+// ignoring case and accents
+// e.g., "ron holland" matches "Ronald Holland II", "jokic" matches "Nikola Jokić"
+const fold = s =>
+  s
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+
 function fuzzyMatch(search, name) {
-  const searchLower = search.toLowerCase()
-  const nameLower = name.toLowerCase()
+  const searchLower = fold(search)
+  const nameLower = fold(name)
 
   // Split search into terms
   const terms = searchLower.split(/\s+/).filter(t => t.length > 0)
@@ -594,12 +597,6 @@ const chips =
 const cumulativeData = []
 const playerCumulatives = new Map()
 
-// Choose data source based on metric type
-// player_details uses "gameId" and "playerId", players uses "game_id" and "player_id"
-const useDetails = isDetailMetric(selectedMetric)
-const dataSource = useDetails ? details : alldata
-const gameIdField = useDetails ? "gameId" : "game_id"
-
 // Filter data based on selected players (which may include team constraints)
 const selectedPlayerInfo = selectedPlayers
   .map(dp => ({
@@ -608,41 +605,36 @@ const selectedPlayerInfo = selectedPlayers
   }))
   .filter(p => p.name) // filter out any that weren't found
 
-const sortedForCumulative = dataSource
+const sortedForCumulative = alldata
   .toArray()
-  .map(p => ({ ...p }))
+  .map(p => ({ ...p, game_date: new Date(p.game_date) }))
   .filter(row => {
     // Check if this row matches any selected player
     return selectedPlayerInfo.some(sel => {
-      if (row.name !== sel.name) return false
+      if (row.player_name !== sel.name) return false
       // If team is null (TOT), include all teams; otherwise match team
       if (sel.team === null) return true
-      return row.team === sel.team
+      return row.team_abbrev === sel.team
     })
   })
   .map(row => {
     // Add displayName to each row for grouping
     const match = selectedPlayerInfo.find(sel => {
-      if (row.name !== sel.name) return false
+      if (row.player_name !== sel.name) return false
       if (sel.team === null) return true
-      return row.team === sel.team
+      return row.team_abbrev === sel.team
     })
-    return { ...row, displayName: match?.displayName || row.name }
+    return { ...row, displayName: match?.displayName || row.player_name }
   })
   .sort((a, b) => {
     if (a.displayName !== b.displayName)
       return a.displayName.localeCompare(b.displayName)
     // Sort by game_date (not game_id, which is NOT chronological)
-    const dateA = dates.get(a[gameIdField])
-    const dateB = dates.get(b[gameIdField])
-    if (dateA && dateB) return dateA - dateB
-    // Fall back to game_id if dates are missing
-    return a[gameIdField].localeCompare(b[gameIdField])
+    return a.game_date - b.game_date
   })
 
 sortedForCumulative.forEach(pt => {
   const metricValue = getMetricValue(pt, selectedMetric)
-  const gameId = pt[gameIdField]
   const key = pt.displayName
 
   if (!playerCumulatives.has(key)) {
@@ -664,7 +656,7 @@ sortedForCumulative.forEach(pt => {
     name: key,
     gameN: state.gameN,
     cumValue: state.cumValue,
-    gameDate: dates.get(gameId),
+    gameDate: pt.game_date,
     gameValue: metricValue,
   })
 })
@@ -687,9 +679,9 @@ display(
       </div>`
     : (() => {
         // Format values - use decimals for floating point metrics, integers for counts
-        // All NetPts and WPA metrics are floats (including detail breakdowns)
+        // All net points and WPA metrics are floats (including detail breakdowns)
         const isFloatMetric =
-          selectedMetric.includes("NetPts") || selectedMetric.includes("WPA")
+          selectedMetric.includes("net_pts") || selectedMetric.includes("wpa")
         const formatValue = v => (isFloatMetric ? v.toFixed(1) : Math.round(v))
 
         const plot = Plot.plot({

@@ -3,7 +3,7 @@ theme: cotton
 title: Net Points Swarm
 toc: false
 sql:
-  players: ./data/espn.players.parquet
+  players: ./data/player_box.parquet
 ---
 
 # Net Points Swarm
@@ -39,11 +39,11 @@ const selectedSeason = Generators.input(seasonSelect)
 ```
 
 ```js
-// Team selector — ESPN abbreviations
+// Team selector
 const teamAbbreviations = [
-  "ATL", "BOS", "BRK", "CHA", "CHI", "CLE", "DAL", "DEN", "DET", "GSW",
-  "HOU", "IND", "LAC", "LAL", "MEM", "MIA", "MIL", "MIN", "NOR", "NYK",
-  "OKC", "ORL", "PHI", "PHO", "POR", "SAC", "SAN", "TOR", "UTA", "WAS"
+  "ATL", "BOS", "BKN", "CHA", "CHI", "CLE", "DAL", "DEN", "DET", "GSW",
+  "HOU", "IND", "LAC", "LAL", "MEM", "MIA", "MIL", "MIN", "NOP", "NYK",
+  "OKC", "ORL", "PHI", "PHX", "POR", "SAC", "SAS", "TOR", "UTA", "WAS"
 ]
 
 const teamSelect = Inputs.select(teamAbbreviations, {
@@ -57,19 +57,19 @@ const selectedTeam = Generators.input(teamSelect)
 ```js
 // Metric selector
 const metricLabels = {
-  tNetPts: "Total Net Points",
-  oNetPts: "Offensive Net Points",
-  dNetPts: "Defensive Net Points",
-  tWPA: "Total Win Probability Added",
-  oWPA: "Offensive Win Probability Added",
-  dWPA: "Defensive Win Probability Added",
-  plusMinusPoints: "Plus/Minus",
+  t_net_pts: "Total Net Points",
+  o_net_pts: "Offensive Net Points",
+  d_net_pts: "Defensive Net Points",
+  t_wpa: "Total Win Probability Added",
+  o_wpa: "Offensive Win Probability Added",
+  d_wpa: "Defensive Win Probability Added",
+  plus_minus: "Plus/Minus",
 }
 
 const metricKeys = Object.keys(metricLabels)
 
 const metricSelect = Inputs.select(metricKeys, {
-  value: getFromHash("metric", "tNetPts", metricKeys),
+  value: getFromHash("metric", "t_net_pts", metricKeys),
   format: d => metricLabels[d],
   label: "Stat:",
 })
@@ -98,7 +98,7 @@ const minGames = Generators.input(minGamesInput)
   const params = new URLSearchParams()
   if (selectedSeason !== CURRENT_SEASON) params.set("season", selectedSeason)
   if (selectedTeam !== "BOS") params.set("team", selectedTeam)
-  if (selectedMetric !== "tNetPts") params.set("metric", selectedMetric)
+  if (selectedMetric !== "t_net_pts") params.set("metric", selectedMetric)
   if (minGames !== 20) params.set("minGames", minGames)
   const newHash = params.toString()
   history.replaceState(
@@ -112,24 +112,24 @@ const minGames = Generators.input(minGamesInput)
 ```js
 const alldata = await sql`
   SELECT
-    name,
-    team,
+    player_name,
+    team_abbrev,
     player_id,
     game_id,
-    tNetPts,
-    oNetPts,
-    dNetPts,
-    tWPA,
-    oWPA,
-    dWPA,
-    plusMinusPoints,
-    minutes_played,
+    t_net_pts,
+    o_net_pts,
+    d_net_pts,
+    t_wpa,
+    o_wpa,
+    d_wpa,
+    plus_minus,
+    seconds_played,
     pts
   FROM players
   WHERE season = ${selectedSeason}
-    AND team = ${selectedTeam}
-    AND played = 1
-    AND (game_id LIKE '002%' OR game_id LIKE '003%')
+    AND team_abbrev = ${selectedTeam}
+    AND played
+    AND game_type = 'regular_season'
 `
 ```
 
@@ -137,8 +137,8 @@ const alldata = await sql`
 // Compute per-player stats, filter by minGames, sort by median metric value
 const playerGames = new Map()
 for (const row of alldata) {
-  if (!playerGames.has(row.name)) playerGames.set(row.name, [])
-  playerGames.get(row.name).push(row)
+  if (!playerGames.has(row.player_name)) playerGames.set(row.player_name, [])
+  playerGames.get(row.player_name).push(row)
 }
 
 const qualifiedPlayers = [...playerGames.entries()]
@@ -168,16 +168,15 @@ const medianData = qualifiedPlayers.map(p => ({
 
 const filteredData = alldata
   .toArray()
-  .filter(row => qualifiedSet.has(row.name))
+  .filter(row => qualifiedSet.has(row.player_name))
   .map(row => {
     const metricValue = row[selectedMetric] ?? 0
-    const parts = (row.minutes_played || "0:00").split(":")
-    const mins = parseFloat(parts[0]) + parseFloat(parts[1] || 0) / 60
+    const mins = (row.seconds_played ?? 0) / 60
     return {
       ...row,
       metricValue,
       mins,
-      label: playerLabels.get(row.name),
+      label: playerLabels.get(row.player_name),
     }
   })
 ```
@@ -193,7 +192,7 @@ const filteredData = alldata
 
 ```js
 const isFloatMetric =
-  selectedMetric.includes("NetPts") || selectedMetric.includes("WPA")
+  selectedMetric.includes("net_pts") || selectedMetric.includes("wpa")
 const formatValue = v => (isFloatMetric ? v.toFixed(1) : Math.round(v))
 
 const facetHeight = 50
@@ -237,7 +236,7 @@ display(
             strokeOpacity: 0.3,
             strokeWidth: 0.5,
             tip: true,
-            title: d => `${d.name}\n${selectedMetricLabel}: ${formatValue(d.metricValue)}\nMinutes: ${d.minutes_played}\nPoints: ${d.pts}`,
+            title: d => `${d.player_name}\n${selectedMetricLabel}: ${formatValue(d.metricValue)}\nMinutes: ${d.mins.toFixed(1)}\nPoints: ${d.pts}`,
           })),
 
           // Median tick mark

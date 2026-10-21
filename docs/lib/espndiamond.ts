@@ -10,11 +10,6 @@ import { label } from "./labels.js"
 import { sliceQuantile } from "./util.js"
 
 function getTeam(abbrev: string): Team {
-  // if there's an espnName that matches, use it
-  const eteam = Array.from(teams.values()).filter(t => t.espnName == abbrev)
-  if (eteam.length > 0) return eteam[0]
-
-  // otherwise match on the key name
   const team = teams.get(abbrev)
   if (!team) {
     throw new Error(`unable to get team ${abbrev}`)
@@ -53,10 +48,11 @@ function handleTooltip(
 
 export function espnDiamond(
   espnData: {
-    name: string
-    oNetPts: number
-    dNetPts: number
-    tNetPts: number
+    player_name: string
+    team_abbrev: string
+    o_net_pts: number
+    d_net_pts: number
+    t_net_pts: number
     n: number
     minutes: number
   }[],
@@ -74,8 +70,8 @@ export function espnDiamond(
 ) {
   options.size ||= 600
   options.extraSubtitle ||= ""
-  options.x ||= "oNetPts"
-  options.y ||= "dNetPts"
+  options.x ||= "o_net_pts"
+  options.y ||= "d_net_pts"
   const {
     by,
     selectedTeams,
@@ -90,7 +86,7 @@ export function espnDiamond(
 
   let data = sliceQuantile(espnData, by, (100 - percentile) / 100)
   if (selectedTeams?.length > 0) {
-    data = data.filter(d => selectedTeams.includes(d.team))
+    data = data.filter(d => selectedTeams.includes(d.team_abbrev))
   }
 
   // Used if the "show rest of NBA" option is selected, to show the rest of the
@@ -121,7 +117,7 @@ export function espnDiamond(
       label(data, {
         x,
         y,
-        label: "name",
+        label: "player_name",
         padding: 10,
         minCellSize: 2000,
         rotate: 45,
@@ -133,15 +129,17 @@ export function espnDiamond(
             fill: "grey",
             fillOpacity: 0.1,
             r: 8,
-            title: d => `${d.name}\n${d.team}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+            title: d =>
+              `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
           })
         : null,
       Plot.dot(data, {
         x,
         y,
-        fill: d => getTeam(d.team).colors[0],
-        stroke: d => getTeam(d.team).colors[1],
-        title: d => `${d.name}\n${d.team}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
+        fill: d => getTeam(d.team_abbrev).colors[0],
+        stroke: d => getTeam(d.team_abbrev).colors[1],
+        title: d =>
+          `${d.player_name}\n${d.team_abbrev}\n${x}: ${d[x]}\n${y}: ${d[y]}`,
         r: 8,
       }),
     ],
