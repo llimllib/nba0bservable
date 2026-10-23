@@ -9,11 +9,11 @@ sql:
 # Team Net Points Distribution
 
 ```js
-const CURRENT_SEASON = 2026
+import { CURRENT_SEASON, seasonLabel } from "./lib/season.js"
 ```
 
 ```js
-const availableSeasons = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019]
+const availableSeasons = d3.range(CURRENT_SEASON, 2018, -1)
 
 function getFromHash(param, defaultVal) {
   const hash = window.location.hash.slice(1)
@@ -31,7 +31,7 @@ function getFromHash(param, defaultVal) {
 const seasonSelect = Inputs.select(availableSeasons, {
   value:
     parseInt(getFromHash("season", String(CURRENT_SEASON))) || CURRENT_SEASON,
-  format: d => `${String(d - 1)}-${String(d).slice(2)}`,
+  format: seasonLabel,
   label: "Season:",
 })
 
@@ -134,7 +134,7 @@ function logoUrl(team) {
 display(
   Plot.plot({
     title: `Season Total Net Points — Top ${nPlayers} Players by Minutes`,
-    subtitle: `${selectedSeason - 1}-${String(selectedSeason).slice(2)} season · Each dot is a player's season total · Sorted by team median`,
+    subtitle: `${seasonLabel(selectedSeason)} season · Each dot is a player's season total · Sorted by team median`,
     caption: html`Data: espnanalytics.com · Chart: billmill.org/nba`,
     width: 500,
     height: 1000,

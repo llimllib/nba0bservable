@@ -8,15 +8,16 @@ sql:
 
 ```js
 import { teams } from "./lib/teams.js"
+import { CURRENT_SEASON } from "./lib/season.js"
 import { label } from "./lib/labels.js"
 import { sliceQuantile } from "./lib/util.js"
 ```
 
 ```js
-const seasons = [...Array(12).keys()].map(x => x + 2015)
+const seasons = d3.range(2015, CURRENT_SEASON + 1)
 const season = view(
   Inputs.select(seasons, {
-    value: 2026,
+    value: CURRENT_SEASON,
     label: "year",
     format: y => `${y - 1}-${String(y).slice(2)}`,
   }),

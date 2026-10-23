@@ -30,6 +30,7 @@ This is **Step Back Club**, an [Observable Framework](https://observablehq.com/f
 │   │   ├── teams.ts             # Team metadata/colors
 │   │   ├── labels.ts            # Label utilities
 │   │   ├── util.ts              # General utilities (e.g. sliceQuantile)
+│   │   ├── season.ts            # CURRENT_SEASON (bump each fall) and seasonLabel
 │   │   ├── scatter.ts           # Scatter plot component
 │   │   ├── lineEndLabels.ts     # Line chart end-label component
 │   │   ├── sortable_table.ts    # Sortable table component
@@ -74,7 +75,7 @@ If the cache is empty, run the data loaders first: `npm run dev` (which triggers
 | **[llimllib/nba_data](https://github.com/llimllib/nba_data)** v2 (sister repo; a DuckDB catalog at `https://basketball-data.billmill.org/nba/nba.duckdb`) | `player_season_stats.parquet.sh`, `player_game_logs.parquet.sh`, `team_game_logs.parquet.sh`, `player_box.parquet.sh`, `player_details.parquet.sh` | Player season stats, player and team game logs, ESPN box scores (including **net points** and WPA) |
 | **[dunksandthrees.com](https://dunksandthrees.com)** | `epm.json.sh`, `epm.json.js`, `epm_season.json.js`, `epm_playoffs.json.sh` | EPM (Estimated Plus-Minus) data — scraped from HTML |
 | **[cleaningtheglass.com](https://cleaningtheglass.com)** | `cleantheglass_teams.json.js` | Team summary stats — scraped from HTML |
-| **[basketball-reference.com](https://www.basketball-reference.com)** | `bbref_2025.json.mjs`, `bbref_2026.json.mjs`, `bbref_salaries.json.mjs` | Team stats by season, player salary data — scraped from HTML |
+| **[basketball-reference.com](https://www.basketball-reference.com)** | `bbref_[season].json.mjs` (parameterized: `data/bbref_2027.json`), `bbref_salaries.json.mjs` | Team stats by season, player salary data — scraped from HTML |
 | **ESPN Analytics** (S3 bucket) | `netpoints.json.sh` | Pre-aggregated net points per 100 possessions by player/season (same ESPN net points data as `player_box.parquet`, but pre-aggregated). Uses ESPN team abbreviations (`BRK`, `NOR`, `PHO`, `SAN`); `normalizeESPN` in `lib/teams.ts` converts them |
 
 ### nba_data v2 datasets

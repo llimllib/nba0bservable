@@ -13,6 +13,19 @@ Compare two players' net points impact by play type.
 
 ```js
 import { teams } from "./lib/teams.js"
+import { CURRENT_SEASON, seasonLabel } from "./lib/season.js"
+```
+
+```js
+const season = view(
+  Inputs.select(d3.range(CURRENT_SEASON, 2018, -1), {
+    value:
+      Number(new URLSearchParams(window.location.hash.slice(1)).get("season")) ||
+      CURRENT_SEASON,
+    label: "Season",
+    format: seasonLabel,
+  }),
+)
 ```
 
 ```sql id=playerList
@@ -22,10 +35,11 @@ SELECT
   team_abbrev,
   count(*) as games
 FROM espn_players
-WHERE season = 2026
+WHERE season = ${season}
   AND game_type IN ('regular_season', 'cup_final')
 GROUP BY player_id, player_name, team_abbrev
-HAVING games >= 10
+-- early in the season, nobody has played 10 games yet
+QUALIFY games >= least(10, max(games) OVER () / 2)
 ORDER BY player_name
 ```
 
@@ -49,8 +63,14 @@ function getHashParams() {
 
 const initParams = getHashParams()
 // default to Shai Gilgeous-Alexander and Nikola Jokić
-const initPlayer1 = playerIdMap.get(initParams.p1) ?? playerIdMap.get("1628983")
-const initPlayer2 = playerIdMap.get(initParams.p2) ?? playerIdMap.get("203999")
+const initPlayer1 =
+  playerIdMap.get(initParams.p1) ??
+  playerIdMap.get("1628983") ??
+  playerOptions[0]
+const initPlayer2 =
+  playerIdMap.get(initParams.p2) ??
+  playerIdMap.get("203999") ??
+  playerOptions[1]
 const initPer36 = initParams.per36 === "1"
 const initShowAll = initParams.allCats === "1"
 
@@ -99,6 +119,7 @@ const showAll = view(
 // Update URL hash when inputs change
 {
   const params = new URLSearchParams()
+  if (season !== CURRENT_SEASON) params.set("season", season)
   params.set("p1", player1.player_id)
   params.set("p2", player2.player_id)
   if (per36) params.set("per36", "1")
@@ -224,7 +245,7 @@ SELECT
   ${netPts("total", "t")} as total_t_net_pts
 FROM player_details pd
 JOIN espn_players b USING (game_id, player_id)
-WHERE pd.season = 2026
+WHERE pd.season = ${season}
   AND b.game_type IN ('regular_season', 'cup_final')
   AND pd.player_id IN (${idList})
 GROUP BY pd.player_id, b.player_name
@@ -237,7 +258,7 @@ SELECT
   player_id,
   sum(seconds_played) / 60 AS total_minutes
 FROM espn_players
-WHERE season = 2026
+WHERE season = ${season}
   AND game_type IN ('regular_season', 'cup_final')
   AND player_id IN (${idList})
 GROUP BY player_id

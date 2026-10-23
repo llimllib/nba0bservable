@@ -10,13 +10,18 @@ sql:
 
 ```js
 import { teams } from "./lib/teams.js"
+import { CURRENT_SEASON } from "./lib/season.js"
 import { label } from "./lib/labels.js"
 import { sliceQuantile } from "./lib/util.js"
 ```
 
 ```js
 const year = view(
-  Inputs.range([2014, 2026], { value: "2026", label: "year", step: 1 }),
+  Inputs.range([2014, CURRENT_SEASON], {
+    value: CURRENT_SEASON,
+    label: "year",
+    step: 1,
+  }),
 )
 ```
 

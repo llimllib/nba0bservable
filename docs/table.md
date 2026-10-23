@@ -10,11 +10,16 @@ sql:
 import { sql } from "npm:@observablehq/duckdb"
 
 import { espnAbbrev, teams } from "./lib/teams.js"
+import { CURRENT_SEASON } from "./lib/season.js"
 ```
 
 ```js
 const year = view(
-  Inputs.range([2014, 2026], { value: "2026", label: "year", step: 1 }),
+  Inputs.range([2014, CURRENT_SEASON], {
+    value: CURRENT_SEASON,
+    label: "year",
+    step: 1,
+  }),
 )
 ```
 

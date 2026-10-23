@@ -13,6 +13,7 @@ import { sql } from "npm:@observablehq/duckdb"
 
 import { sliceQuantile } from "./lib/util.js"
 import { teams } from "./lib/teams.js"
+import { CURRENT_SEASON } from "./lib/season.js"
 import { label } from "./lib/labels.js"
 ```
 
@@ -20,7 +21,7 @@ import { label } from "./lib/labels.js"
 const percentile = 25
 const x = "usg_pct"
 const y = "ts_pct"
-const players = await sql(["SELECT * FROM players WHERE season=2026 AND season_type='regular_season'"])
+const players = await sql`SELECT * FROM players WHERE season=${CURRENT_SEASON} AND season_type='regular_season'`
 const data = sliceQuantile(players.toArray(), "fga", (100 - percentile) / 100)
 const [xMin, xMax] = d3.extent(data, d => d[x])
 const [yMin, yMax] = d3.extent(data, d => d[y])

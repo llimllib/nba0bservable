@@ -9,6 +9,7 @@ sql:
 
 ```js
 import { teams } from "./lib/teams.js"
+import { CURRENT_SEASON, seasonLabel } from "./lib/season.js"
 ```
 
 ```sql
@@ -25,7 +26,7 @@ SELECT a.game_id,
 FROM gamelogs a
 INNER JOIN gamelogs b
   ON a.game_id = b.game_id and a.team_id!=b.team_id
-WHERE a.season=2025 AND a.game_type='regular_season'
+WHERE a.season=${CURRENT_SEASON} AND a.game_type='regular_season'
 ORDER BY opp_tov_pct desc
 ```
 
@@ -54,7 +55,7 @@ const teams_by_opp_tov = d3.groupSort(
 ```js
 Plot.plot({
   title: "Opponent turnover percentage",
-  subtitle: "As of 12/30",
+  subtitle: `${seasonLabel(CURRENT_SEASON)} season`,
   y: {
     domain: teams_by_opp_tov,
     label: null,
@@ -81,7 +82,7 @@ SELECT
 FROM gamelogs a
 INNER JOIN gamelogs b
   ON a.game_id = b.game_id and a.team_id!=b.team_id
-WHERE a.season=2025 AND a.game_type='regular_season' AND team_abb='OKC'
+WHERE a.season=${CURRENT_SEASON} AND a.game_type='regular_season' AND team_abb='OKC'
 ORDER BY opp_tov_pct desc
 ```
 

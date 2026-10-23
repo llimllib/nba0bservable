@@ -8,6 +8,7 @@ sql:
 
 ```js
 import { teams } from "./lib/teams.js"
+import { CURRENT_SEASON, seasonLabel } from "./lib/season.js"
 ```
 
 ```sql id=seasons
@@ -29,6 +30,11 @@ ORDER BY g.season, g.team_abbrev
 
 ```js
 const data = seasons.toArray().map(d => ({ ...d }))
+// a few games into a season, its ratings are mostly noise, so compare against
+// completed seasons only
+const history = data.filter(d => d.season < CURRENT_SEASON)
+const current = data.filter(d => d.season == CURRENT_SEASON)
+const [firstSeason, lastSeason] = d3.extent(history, d => d.season)
 display(data)
 ```
 
@@ -37,7 +43,7 @@ Pace has no discernable effect on net rating
 ```js
 Plot.plot({
   marks: [
-    Plot.dot(data, {
+    Plot.dot(history, {
       x: "pace",
       y: "net_rating",
       title: d => `${d.season} ${d.team_name}`,
@@ -53,20 +59,20 @@ const x = "pace"
 const y = "off_rating"
 const graph = Plot.plot({
   marks: [
-    Plot.dot(data, {
+    Plot.dot(history, {
       x,
       y,
       title: d => `${d.season} ${d.team_name}`,
     }),
     Plot.tip(
-      data,
+      history,
       Plot.pointer({
         x,
         y,
         title: d => `${d.season} ${d.team_name}`,
       }),
     ),
-    Plot.linearRegressionY(data, { x, y, stroke: "blue" }),
+    Plot.linearRegressionY(history, { x, y, stroke: "blue" }),
   ],
 })
 display(graph)
@@ -78,7 +84,7 @@ const y = "off_rating"
 const graph = Plot.plot({
   grid: true,
   title: "Pace vs offensive efficiency",
-  subtitle: "2010-2025. This season's teams shown as logos",
+  subtitle: `${firstSeason}-${lastSeason}. This season's teams shown as logos`,
   y: {
     label: "Offensive Efficiency",
     labelAnchor: "center",
@@ -93,9 +99,9 @@ const graph = Plot.plot({
     tickSize: 0,
   },
   marks: [
-    Plot.linearRegressionY(data, { x, y, stroke: "blue" }),
+    Plot.linearRegressionY(history, { x, y, stroke: "blue" }),
     Plot.dot(
-      data.filter(d => d.season != 2025),
+      history,
       {
         x,
         y,
@@ -106,7 +112,7 @@ const graph = Plot.plot({
       },
     ),
     Plot.image(
-      data.filter(d => d.season == 2025),
+      current,
       {
         x,
         y,
@@ -150,7 +156,7 @@ const graph = Plot.plot({
   },
   marks: [
     Plot.image(
-      data.filter(d => d.season == 2025),
+      current,
       {
         x,
         y,
@@ -161,7 +167,7 @@ const graph = Plot.plot({
       },
     ),
     Plot.tip(
-      data.filter(d => d.season == 2025),
+      current,
       Plot.pointer({
         x,
         y,
@@ -176,30 +182,13 @@ display(graph)
 ```js
 const x = "pace"
 const y = "off_rating"
-const facet = {
-  2010: [0, 0],
-  2011: [0, 1],
-  2012: [0, 2],
-  2013: [1, 0],
-  2014: [1, 1],
-  2015: [1, 2],
-  2016: [2, 0],
-  2017: [2, 1],
-  2018: [2, 2],
-  2019: [3, 0],
-  2020: [3, 1],
-  2021: [3, 2],
-  2022: [4, 0],
-  2023: [4, 1],
-  2024: [4, 2],
-  2025: [5, 1],
-}
-const fx = d => facet[d.season][1]
-const fy = d => facet[d.season][0]
+// three seasons per row
+const fx = d => (d.season - firstSeason) % 3
+const fy = d => Math.floor((d.season - firstSeason) / 3)
 const graph = Plot.plot({
   grid: true,
   title: "Pace vs offensive efficiency",
-  subtitle: "2010-202",
+  subtitle: `${firstSeason}-${lastSeason}`,
   y: {
     label: "Offensive Efficiency",
     labelAnchor: "center",
@@ -213,23 +202,17 @@ const graph = Plot.plot({
     ticks: 5,
     tickSize: 0,
   },
-  fx: {
-    label: null,
-    tickLabel: () => "",
-  },
-  fy: {
-    label: null,
-    tickLabel: () => "",
-  },
+  fx: { axis: null },
+  fy: { axis: null },
   marks: [
-    Plot.linearRegressionY(data, {
+    Plot.linearRegressionY(history, {
       x,
       y,
       stroke: "blue",
       fx,
       fy,
     }),
-    Plot.dot(data, {
+    Plot.dot(history, {
       x,
       y,
       fill: "grey",
@@ -239,8 +222,8 @@ const graph = Plot.plot({
       title: d =>
         `${d.season} ${d.team_name}\npace: ${d.pace}\noff. eff: ${d.off_rating}`,
     }),
-    Plot.text(data, {
-      text: d => d.season,
+    Plot.text(history, {
+      text: d => String(d.season),
       fx,
       fy,
       frameAnchor: "top-left",
@@ -248,7 +231,7 @@ const graph = Plot.plot({
       dy: 6,
     }),
     Plot.tip(
-      data,
+      history,
       Plot.pointer({
         x,
         y,
@@ -268,7 +251,7 @@ const y = "season"
 const x = "off_rating"
 const graph = Plot.plot({
   title: "Best and worst offenses",
-  subtitle: "Offensive Efficiency 2009-10 through 2024-25",
+  subtitle: `Offensive Efficiency ${seasonLabel(firstSeason)} through ${seasonLabel(lastSeason)}`,
   height: 640,
   marginLeft: 50,
   y: {
@@ -277,6 +260,7 @@ const graph = Plot.plot({
     labelOffset: 48,
     ticks: 3,
     tickSize: 0,
+    tickFormat: "d",
     type: "point",
   },
   x: {
@@ -289,12 +273,12 @@ const graph = Plot.plot({
     tickSize: 0,
   },
   marks: [
-    Plot.dot(data, { x, y, fill: "grey", fillOpacity: 0.4 }),
+    Plot.dot(history, { x, y, fill: "grey", fillOpacity: 0.4 }),
     // make the best team each year have an image
     Plot.image(
-      new Set(data.map(d => d.season)).values().map(year =>
+      new Set(history.map(d => d.season)).values().map(year =>
         d3.least(
-          data.filter(d => d.season === year),
+          history.filter(d => d.season === year),
           d => d[x],
         ),
       ),
@@ -309,9 +293,9 @@ const graph = Plot.plot({
     ),
     // and the worst
     Plot.image(
-      new Set(data.map(d => d.season)).values().map(year =>
+      new Set(history.map(d => d.season)).values().map(year =>
         d3.greatest(
-          data.filter(d => d.season === year),
+          history.filter(d => d.season === year),
           d => d[x],
         ),
       ),
@@ -325,7 +309,7 @@ const graph = Plot.plot({
       },
     ),
     Plot.tip(
-      data,
+      history,
       Plot.pointer({
         x,
         y,
@@ -342,7 +326,7 @@ const y = "season"
 const x = "def_rating"
 const graph = Plot.plot({
   title: "Best and worst defenses",
-  subtitle: "2009-10 through 2024-25; lower defensive rating is better",
+  subtitle: `${seasonLabel(firstSeason)} through ${seasonLabel(lastSeason)}; lower defensive rating is better`,
   height: 640,
   marginLeft: 50,
   y: {
@@ -351,6 +335,7 @@ const graph = Plot.plot({
     labelOffset: 48,
     ticks: 3,
     tickSize: 0,
+    tickFormat: "d",
     type: "point",
   },
   x: {
@@ -364,12 +349,12 @@ const graph = Plot.plot({
     tickSize: 0,
   },
   marks: [
-    Plot.dot(data, { x, y, fill: "grey", fillOpacity: 0.4 }),
+    Plot.dot(history, { x, y, fill: "grey", fillOpacity: 0.4 }),
     // make the best team each year have an image
     Plot.image(
-      new Set(data.map(d => d.season)).values().map(year =>
+      new Set(history.map(d => d.season)).values().map(year =>
         d3.least(
-          data.filter(d => d.season === year),
+          history.filter(d => d.season === year),
           d => d[x],
         ),
       ),
@@ -384,9 +369,9 @@ const graph = Plot.plot({
     ),
     // and the worst
     Plot.image(
-      new Set(data.map(d => d.season)).values().map(year =>
+      new Set(history.map(d => d.season)).values().map(year =>
         d3.greatest(
-          data.filter(d => d.season === year),
+          history.filter(d => d.season === year),
           d => d[x],
         ),
       ),
@@ -400,7 +385,7 @@ const graph = Plot.plot({
       },
     ),
     Plot.tip(
-      data,
+      history,
       Plot.pointer({
         x,
         y,

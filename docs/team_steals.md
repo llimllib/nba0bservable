@@ -9,7 +9,7 @@ import { teams } from "./lib/teams.js"
 ```
 
 ```js
-const bbref = await FileAttachment("data/bbref_2025.json").json()
+const bbref = await FileAttachment("data/bbref_2027.json").json()
 // display(bbref)
 const dd = bbref.advanced.map(t =>
   Object.assign({}, t, bbref.perPoss.filter(tt => tt.team == t.team)[0]),

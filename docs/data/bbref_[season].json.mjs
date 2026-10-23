@@ -1,5 +1,12 @@
+// A parameterized loader: data/bbref_2027.json is the 2026-27 season
+import { parseArgs } from "node:util"
+
+const {
+  values: { season },
+} = parseArgs({ options: { season: { type: "string" } } })
+
 const res = await fetch(
-  "https://www.basketball-reference.com/leagues/NBA_2026.html",
+  `https://www.basketball-reference.com/leagues/NBA_${season}.html`,
 )
 const data = await res.text()
 

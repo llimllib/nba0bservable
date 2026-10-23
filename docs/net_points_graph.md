@@ -10,12 +10,13 @@ sql:
 
 ```js
 import { teams } from "./lib/teams.js"
+import { CURRENT_SEASON } from "./lib/season.js"
 ```
 
 ```sql id=alldata
 SELECT *
 from players
-where season=2026
+where season=${CURRENT_SEASON}
 and game_type = 'regular_season'
 -- limit to playoffs:
 -- and game_type = 'playoffs'
@@ -36,7 +37,7 @@ SELECT
   sum(seconds_played) / 60 AS minutes,
   sum(seconds_played) / 60 / count(*) AS minutes_per_g,
 from players
-where season=2026
+where season=${CURRENT_SEASON}
 and game_type = 'regular_season'
 -- playoffs
 -- and game_type = 'playoffs'

@@ -12,11 +12,12 @@ sql:
 ```js
 import { espnDiamond } from "./lib/espndiamond.js"
 import { teams } from "./lib/teams.js"
+import { CURRENT_SEASON, seasonLabel } from "./lib/season.js"
 ```
 
 ```sql id=alldata
 SELECT * from players
-where season=2026
+where season=${year}
 and game_type = 'regular_season'
 -- limit to playoffs:
 -- and game_type = 'playoffs'
@@ -41,7 +42,7 @@ SELECT
   sum(seconds_played) / 60 AS minutes,
   sum(seconds_played) / 60 / count(*) AS minutes_per_g,
 from players
-where season=2026
+where season=${year}
 and game_type = 'regular_season'
 -- playoffs
 -- and game_type = 'playoffs'
@@ -58,7 +59,11 @@ order by t_net_pts desc
 
 ```js
 const year = view(
-  Inputs.range([2026, 2026], { value: "2026", label: "year", step: 1 }),
+  Inputs.range([2019, CURRENT_SEASON], {
+    value: CURRENT_SEASON,
+    label: "year",
+    step: 1,
+  }),
 )
 
 // console.log("year", (await year.next()).value);
@@ -292,7 +297,7 @@ SELECT
   abs(o_net_pts-d_net_pts) delta,
 from players p
 left join gamelogs g ON g.game_id = p.game_id AND g.team_id = p.team_id
-where p.season=2026
+where p.season=${year}
 and p.game_type = 'regular_season'
 order by delta desc
 ```
@@ -350,7 +355,7 @@ container
   .style("font-size", "14px")
   .style("color", "#666")
   .style("font-weight", "600")
-  .text("2025-26 season, data via espnanalytics.com")
+  .text(`${seasonLabel(year)} season, data via espnanalytics.com`)
 
 const table = container
   .append("table")
@@ -458,7 +463,7 @@ SELECT
   abs(o_net_pts-d_net_pts) delta,
 from players p
 left join gamelogs g ON g.game_id = p.game_id AND g.team_id = p.team_id
-where p.season=2026
+where p.season=${year}
 and d_net_pts > o_net_pts
 and p.game_type = 'regular_season'
 order by delta desc
@@ -517,7 +522,7 @@ container
   .style("font-size", "14px")
   .style("color", "#666")
   .style("font-weight", "600")
-  .text("Defense > offense only, 2025-26 season, data via espnanalytics.com")
+  .text(`Defense > offense only, ${seasonLabel(year)} season, data via espnanalytics.com`)
 
 const table = container
   .append("table")
@@ -625,7 +630,7 @@ SELECT
   abs(o_net_pts-d_net_pts) delta,
 from players p
 left join gamelogs g ON g.game_id = p.game_id AND g.team_id = p.team_id
-where p.season=2026
+where p.season=${year}
 and abs(o_net_pts) > 4 and abs(d_net_pts) > 4
 and (d_net_pts <0 or o_net_pts < 0)
 and p.game_type = 'regular_season'
@@ -685,7 +690,7 @@ container
   .style("font-size", "14px")
   .style("color", "#666")
   .style("font-weight", "600")
-  .text("2025-26 season, data via espnanalytics.com")
+  .text(`${seasonLabel(year)} season, data via espnanalytics.com`)
 
 const table = container
   .append("table")

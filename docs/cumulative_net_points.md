@@ -12,12 +12,12 @@ sql:
 ```js
 import { lineEndLabels } from "./lib/lineEndLabels.js"
 
-const CURRENT_SEASON = 2026
+import { CURRENT_SEASON, seasonLabel } from "./lib/season.js"
 ```
 
 ```js
 // Season selector
-const availableSeasons = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019]
+const availableSeasons = d3.range(CURRENT_SEASON, 2018, -1)
 
 function getSeasonFromHash() {
   const hash = window.location.hash.slice(1)
@@ -33,7 +33,7 @@ function getSeasonFromHash() {
 
 const seasonSelect = Inputs.select(availableSeasons, {
   value: getSeasonFromHash(),
-  format: d => `${String(d - 1)}-${String(d).slice(2)}`,
+  format: seasonLabel,
   label: "Season:",
 })
 

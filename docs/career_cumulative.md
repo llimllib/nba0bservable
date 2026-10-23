@@ -10,6 +10,7 @@ sql:
 
 ```js
 import { lineEndLabels } from "./lib/lineEndLabels.js"
+import { CURRENT_SEASON, seasonLabel } from "./lib/season.js"
 ```
 
 ```js
@@ -88,17 +89,7 @@ const selectedMetricLabel = metricLabels[selectedMetric]
 
 ```js
 // Season range picker
-const availableSeasons = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
-const seasonLabels = {
-  2019: "2018-19",
-  2020: "2019-20",
-  2021: "2020-21",
-  2022: "2021-22",
-  2023: "2022-23", 
-  2024: "2023-24",
-  2025: "2024-25",
-  2026: "2025-26",
-}
+const availableSeasons = d3.range(2019, CURRENT_SEASON + 1)
 
 function getSeasonFromHash(param, defaultVal) {
   const hash = window.location.hash.slice(1)
@@ -114,13 +105,13 @@ function getSeasonFromHash(param, defaultVal) {
 
 const startSeasonSelect = Inputs.select(availableSeasons, {
   value: getSeasonFromHash("startSeason", 2019),
-  format: d => seasonLabels[d],
+  format: seasonLabel,
   label: "From:",
 })
 
 const endSeasonSelect = Inputs.select(availableSeasons, {
-  value: getSeasonFromHash("endSeason", 2026),
-  format: d => seasonLabels[d],
+  value: getSeasonFromHash("endSeason", CURRENT_SEASON),
+  format: seasonLabel,
   label: "To:",
 })
 
@@ -137,7 +128,7 @@ const endSeason = Generators.input(endSeasonSelect)
   } else {
     params.delete("startSeason")
   }
-  if (endSeason && endSeason !== 2026) {
+  if (endSeason && endSeason !== CURRENT_SEASON) {
     params.set("endSeason", endSeason)
   } else {
     params.delete("endSeason")

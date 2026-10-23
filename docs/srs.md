@@ -13,8 +13,10 @@ import { sliceQuantile } from "./lib/util.js"
 ```
 
 ```js
-const bbref = (await FileAttachment("data/bbref_2026.json").json()).advanced
+const bbref = (await FileAttachment("data/bbref_2027.json").json()).advanced
 display(bbref)
+// early in the season, a team's schedule strength can be far outside ±4
+const sosMax = Math.max(4, d3.max(bbref, d => Math.abs(d.sos)))
 const width = 640
 const height = 400
 const fontOptions = {
@@ -38,7 +40,7 @@ const sos = Plot.plot({
     // nice: true,
     // ticks: 7,
     ticks: null,
-    domain: [-4, 4],
+    domain: [-sosMax, sosMax],
     inset: 20,
   },
   marks: [
@@ -53,11 +55,11 @@ const sos = Plot.plot({
       },
     }),
     Plot.ruleY([0]),
-    Plot.text([[-1, 4.5]], {
+    Plot.text([[-1, sosMax * 1.125]], {
       text: ["↑ Harder Schedule"],
       ...fontOptions,
     }),
-    Plot.text([[-12, -4]], {
+    Plot.text([[d3.min(bbref, d => d.net_rtg), -sosMax]], {
       text: ["→ Net Rating"],
       ...fontOptions,
       fill: "black",

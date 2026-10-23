@@ -9,11 +9,11 @@ sql:
 # Net Points Swarm
 
 ```js
-const CURRENT_SEASON = 2026
+import { CURRENT_SEASON, seasonLabel } from "./lib/season.js"
 ```
 
 ```js
-const availableSeasons = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019]
+const availableSeasons = d3.range(CURRENT_SEASON, 2018, -1)
 
 function getFromHash(param, defaultVal, valid) {
   const hash = window.location.hash.slice(1)
@@ -31,7 +31,7 @@ function getFromHash(param, defaultVal, valid) {
 
 const seasonSelect = Inputs.select(availableSeasons, {
   value: parseInt(getFromHash("season", String(CURRENT_SEASON))) || CURRENT_SEASON,
-  format: d => `${String(d - 1)}-${String(d).slice(2)}`,
+  format: seasonLabel,
   label: "Season:",
 })
 
@@ -205,7 +205,7 @@ display(
       </div>`
     : Plot.plot({
         title: `${selectedMetricLabel} per Game`,
-        subtitle: `${selectedTeam} — ${selectedSeason - 1}-${String(selectedSeason).slice(2)} season · Black line = median · Sorted by median`,
+        subtitle: `${selectedTeam} — ${seasonLabel(selectedSeason)} season · Black line = median · Sorted by median`,
         caption: html`Each dot is one game. Larger dots = more minutes played.<br>Data: espnanalytics.com · Chart: billmill.org/nba`,
         width: 928,
         height: chartHeight,

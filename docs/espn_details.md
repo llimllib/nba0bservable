@@ -11,10 +11,17 @@ sql:
 import { label } from "./lib/labels.js"
 import { teams } from "./lib/teams.js"
 import { sliceQuantile } from "./lib/util.js"
+import { CURRENT_SEASON } from "./lib/season.js"
 ```
 
 ```js
-// console.log("year", (await year.next()).value);
+const year = view(
+  Inputs.range([2019, CURRENT_SEASON], {
+    value: CURRENT_SEASON,
+    label: "year",
+    step: 1,
+  }),
+)
 const percentile = view(
   Inputs.range([5, 100], {
     value: "15",
@@ -22,7 +29,6 @@ const percentile = view(
     step: 5,
   }),
 )
-const year = 2026
 ```
 
 ```sql id=twos_vs_threes
@@ -32,7 +38,7 @@ WITH shooting AS (
     any_value(o_net_pts) FILTER (WHERE action_type = '2pt') AS twos,
     any_value(o_net_pts) FILTER (WHERE action_type = '3pt') AS threes
   FROM player_details
-  WHERE season = 2026
+  WHERE season = ${year}
   GROUP BY game_id, player_id
 )
 SELECT b.player_name,
@@ -42,7 +48,7 @@ SELECT b.player_name,
   avg(b.fga) AS fga
 FROM player_box b
 JOIN shooting s USING (game_id, player_id)
-WHERE b.season = 2026
+WHERE b.season = ${year}
   AND b.game_type = 'regular_season'
 GROUP BY b.player_id, b.player_name, b.team_abbrev
 ```

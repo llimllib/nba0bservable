@@ -9,6 +9,7 @@ toc: false
 ```js
 import { epmDiamond, netPointsDiamond } from "./lib/epmdiamond.js"
 import { normalizeESPN, teams } from "./lib/teams.js"
+import { CURRENT_SEASON } from "./lib/season.js"
 ```
 
 ```js
@@ -30,7 +31,11 @@ display(epmUpdated)
 
 ```js
 const year = view(
-  Inputs.range([2025, 2026], { value: "2026", label: "year", step: 1 }),
+  Inputs.range([2025, CURRENT_SEASON], {
+    value: CURRENT_SEASON,
+    label: "year",
+    step: 1,
+  }),
 )
 // console.log("year", (await year.next()).value);
 const percentile = view(
