@@ -1,0 +1,19 @@
+---
+import Base from "../layouts/Base.astro"
+---
+
+<Base title="Rotations" description="Who played when in a game, and the score margin in each stint">
+  <h1>Rotations</h1>
+  <p class="lede">
+    Each bar is one stint on the floor, labeled with the score margin while
+    the player was on. Starters first, then the bench in the order they
+    came in.
+  </p>
+  <div id="tool"></div>
+</Base>
+
+<script>
+  import { mount } from "../kit/mount"
+  import { rotations } from "../tools/rotations"
+  mount(document.getElementById("tool")!, rotations)
+</script>

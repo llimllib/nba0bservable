@@ -28,6 +28,8 @@ export interface Mark {
   x: number
   y: number
   r: number
+  // half the width of a bar-shaped mark, which is hit along its length
+  w?: number
   label: string
 }
 

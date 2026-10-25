@@ -93,7 +93,7 @@ export class AnnotationLayer {
     let best: Mark | undefined
     let bestD = Infinity
     for (const m of this.marks.values()) {
-      const d = Math.hypot(m.x - x, m.y - y)
+      const d = Math.hypot(Math.max(Math.abs(m.x - x) - (m.w ?? 0), 0), m.y - y)
       if (d <= m.r + 3 && d < bestD) {
         best = m
         bestD = d
@@ -121,14 +121,16 @@ export class AnnotationLayer {
     const x = m.x + a.dx
     const y = m.y + a.dy
     const g = el("g", { "data-i": i, class: "ann ann-label" }, this.g)
-    // a leader line once the label has been dragged away from its mark
-    const dist = Math.hypot(a.dx, a.dy)
+    // a leader line once the label has been dragged away from its mark,
+    // measured from the nearest end of a bar
+    const w = Math.sign(a.dx) * Math.min(Math.abs(a.dx), m.w ?? 0)
+    const dist = Math.hypot(a.dx - w, a.dy)
     if (dist > m.r + 16) {
       const k = (m.r + 2) / dist
       el(
         "line",
         {
-          x1: m.x + a.dx * k,
+          x1: m.x + w + (a.dx - w) * k,
           y1: m.y + a.dy * k,
           x2: x,
           y2: y - 4,
@@ -150,7 +152,7 @@ export class AnnotationLayer {
         "stroke-width": 4,
         "stroke-linejoin": "round",
         "paint-order": "stroke",
-        "text-anchor": a.dx < -m.r ? "end" : "start",
+        "text-anchor": a.dx < -m.r - (m.w ?? 0) ? "end" : "start",
       },
       g,
     )
@@ -317,7 +319,13 @@ export class AnnotationLayer {
     if (mark) {
       const i = this.anns.findIndex(a => a.t === "label" && a.key === mark.key)
       if (i >= 0) this.anns.splice(i, 1)
-      else this.anns.push({ t: "label", key: mark.key, dx: mark.r + 4, dy: 4 })
+      else
+        this.anns.push({
+          t: "label",
+          key: mark.key,
+          dx: (mark.w ?? 0) + mark.r + 4,
+          dy: 4,
+        })
       this.selected = undefined
       return this.commit()
     }
