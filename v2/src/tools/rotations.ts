@@ -2,6 +2,7 @@
 // game clock, colored and labeled by the score margin while they were on
 import { max, scaleLinear, select, sum } from "d3"
 import { lookups, read, type Row as DataRow } from "../kit/data"
+import { agate } from "../kit/frame"
 import { color, type } from "../kit/theme"
 import type { Body, Mark, Tool } from "../kit/tool"
 
@@ -52,9 +53,9 @@ interface Row {
 }
 
 const fmtSeason = (s: number) => `${s - 1}–${String(s).slice(2)}`
-const fmtDate = (d: Date, year = false) =>
+const fmtDate = (d: Date, year = false, month: "short" | "long" = "short") =>
   d.toLocaleDateString("en-US", {
-    month: "short",
+    month,
     day: "numeric",
     year: year ? "numeric" : undefined,
     timeZone: "UTC",
@@ -259,15 +260,8 @@ export const rotations: Tool<P, D> = {
     const g = d.games.get(team.team_id)!.find(gm => gm.game_id === p.game)!
     return {
       title: `${team.name} rotation`,
-      context: [
-        g.where,
-        fmtDate(g.date, true),
-        g.kind,
-        result(g),
-        `${substitutions(d.stints.get(`${g.game_id}:${team.team_id}`)!)} subs (${g.opp} ${substitutions(d.stints.get(`${g.game_id}:${g.opp_team_id}`)!)})`,
-      ]
-        .filter(Boolean)
-        .join(" · "),
+      context: `${g.pts > g.opp_pts ? "Won" : "Lost"} ${g.pts}–${g.opp_pts} ${g.where.replace(/^@/, "at")} on ${fmtDate(g.date, true, "long")}${g.kind ? `, ${g.kind}` : ""}`,
+      counts: `${substitutions(d.stints.get(`${g.game_id}:${team.team_id}`)!)} subs · ${g.opp} ${substitutions(d.stints.get(`${g.game_id}:${g.opp_team_id}`)!)}`,
       legend: [
         { symbol: "bar", color: color.pos, label: "+1", text: "won the stint" },
         {
@@ -278,6 +272,7 @@ export const rotations: Tool<P, D> = {
         },
       ],
       source: "Data: NBA.com play-by-play",
+      team: p.team,
     }
   },
 
@@ -349,9 +344,7 @@ export const rotations: Tool<P, D> = {
       .attr("x", (t, i) => (x(t) + x(bounds[i + 1])) / 2)
       .attr("y", -9)
       .attr("text-anchor", "middle")
-      .attr("font-size", type.tick.size)
-      .attr("font-weight", 600)
-      .attr("fill", color.muted)
+      .call(agate)
       .text((_, i) => periodName(i + 1))
     for (const [i, label] of ["MIN", "+/−"].entries())
       plot
@@ -359,9 +352,7 @@ export const rotations: Tool<P, D> = {
         .attr("x", size.width - colW * (1 - i))
         .attr("y", -9)
         .attr("text-anchor", "end")
-        .attr("font-size", type.tick.size)
-        .attr("font-weight", 600)
-        .attr("fill", color.muted)
+        .call(agate)
         .text(label)
 
     // minutes elapsed, beneath
@@ -382,9 +373,7 @@ export const rotations: Tool<P, D> = {
       .attr("x", x(end / 2))
       .attr("y", 18)
       .attr("text-anchor", "middle")
-      .attr("font-size", type.tick.size)
-      .attr("font-weight", 600)
-      .attr("fill", color.muted)
+      .call(agate)
       .text("minutes")
 
     const marks: Mark[] = []
@@ -426,7 +415,6 @@ export const rotations: Tool<P, D> = {
           .attr("y", -barH / 2)
           .attr("width", w)
           .attr("height", barH)
-          .attr("rx", 2)
           .attr("fill", fill)
           // a hairline gap between stints that end and start at once
           .attr("stroke", color.bg)

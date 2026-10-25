@@ -2,7 +2,7 @@
 // references is inline, so fonts and images are fetched and embedded as data
 // URLs first. Cross-origin images that don't allow CORS can't be embedded;
 // they're left out and reported
-import { fontFiles } from "./theme"
+import { fontFace, fontFiles } from "./theme"
 
 function dataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -43,9 +43,7 @@ export async function toPng(
   const faces = await Promise.all(
     fontFiles.map(async f => {
       const src = await inline(new URL(f.url, baseUrl).href)
-      return src
-        ? `@font-face{font-family:${f.family};font-weight:${f.weight};src:url(${src}) format("woff2")}`
-        : ""
+      return src ? fontFace(f, src) : ""
     }),
   )
   const style = document.createElementNS("http://www.w3.org/2000/svg", "style")
@@ -71,6 +69,10 @@ export async function toPng(
   const img = new Image()
   img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`
   await img.decode()
+  // decode() can resolve before the SVG's embedded fonts have loaded, and
+  // text in a face that's still loading draws as nothing. There's no event
+  // for that inside an image, so give the fonts a moment
+  await new Promise(r => setTimeout(r, 300))
   const canvas = document.createElement("canvas")
   canvas.width = width * scale
   canvas.height = height * scale

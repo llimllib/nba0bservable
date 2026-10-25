@@ -1,18 +1,19 @@
 ---
 import Base from "../layouts/Base.astro"
+import { catalog } from "../tools/catalog"
 const base = import.meta.env.BASE_URL.replace(/\/?$/, "/")
-const tools = [
-  { href: "playoffs", name: "Playoff net points", blurb: "Every player's net points in every playoff game, by team" },
-  { href: "rotations", name: "Rotations", blurb: "Who played when in a game, and the score margin in each stint" },
-]
 ---
 
 <Base title="Tools">
   <h1>Tools</h1>
   <p class="lede">Make a chart, annotate it, export it.</p>
-  <ul class="cards">
-    {tools.map(t => (
-      <li><a href={`${base}${t.href}`}><strong>{t.name}</strong><span>{t.blurb}</span></a></li>
+  <ul class="index">
+    {catalog.map(t => (
+      <li>
+        <h2><a href={`${base}${t.href}`}>{t.name}</a></h2>
+        <p>{t.blurb}</p>
+        <span class="takes">{t.takes.join(" · ")}</span>
+      </li>
     ))}
   </ul>
 </Base>

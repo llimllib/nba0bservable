@@ -71,9 +71,9 @@ SAT · OCT 25, 2026          2026–27 SEASON          UPDATED OCT 24
 
 - Wordmark in headline type; nav in agate on the same baseline.
 - The dateline carries real information: today, the current season, and
-  when the data last changed. "Updated" comes from `updated` in
-  `nba/metadata.json` (see `2026-10-24-nba-data-metadata-json.md`), read
-  at run time; leave it off until that file exists.
+  when the data last changed: the newest `updated` in `nba/metadata.json`
+  (see `2026-10-24-nba-data-metadata-json.md`), read at run time. If the
+  file can't be read, that part is left blank.
 - Mobile: nav drops under the wordmark, the dateline wraps, rules stay.
 - Footer: one agate line, `DATA: NBA.COM · ESPN ANALYTICS · BILLMILL.ORG/NBA`.
 

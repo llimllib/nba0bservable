@@ -17,6 +17,11 @@ import type { Control, Tool } from "./tool"
 
 const framing = { title: "", sub: "", size: "auto" }
 
+// the site root, for fetching fonts. BASE_URL has no trailing slash in dev,
+// and without one, relative URLs resolve against the parent directory
+const base = () =>
+  new URL(import.meta.env.BASE_URL.replace(/\/?$/, "/"), location.href).href
+
 export async function mount<P extends Params, D>(
   root: HTMLElement,
   tool: Tool<P, D>,
@@ -31,26 +36,29 @@ export async function mount<P extends Params, D>(
   let layer: AnnotationLayer | undefined
   let frame: ReturnType<typeof buildFrame> | undefined
 
+  // question controls, the chart, then framing and export: a rail beside the
+  // chart on wide screens, in that order down the page on narrow ones
+  root.classList.add("tool")
   root.innerHTML = `
     <form class="controls"></form>
     <div class="chart-host"><div class="chart"></div><div class="status"></div></div>
     <div class="actions">
-      <div class="seg sizes">${Object.entries(sizes)
+      <fieldset class="sizes"><legend>Size</legend>${Object.entries(sizes)
         .map(
           ([k, s]) =>
             `<button type="button" data-size="${k}">${s.label}</button>`,
         )
-        .join("")}</div>
-      <div class="seg modes">
+        .join("")}</fieldset>
+      <fieldset class="modes"><legend>Annotate</legend>
         <button type="button" data-mode="text" title="Click the chart to add a note (N)">✎ Note</button>
         <button type="button" data-mode="arrow" title="Drag to draw an arrow (A)">↗ Arrow</button>
-      </div>
-      <button type="button" class="clear">Clear</button>
-      <button type="button" class="export primary">Export PNG</button>
-    </div>
-    <p class="hint">Click a dot to label it. Drag labels and notes to move them;
-    double-click a note to edit it; select one and press Delete to remove it.
-    Click the title or subtitle to rewrite it.</p>`
+        <button type="button" class="clear">Clear</button>
+      </fieldset>
+      <button type="button" class="export">Export PNG</button>
+      <p class="hint">Click a dot to label it. Drag labels and notes to move
+      them; double-click a note to edit it; select one and press Delete to
+      remove it. Click the headline or deck to rewrite it.</p>
+    </div>`
   const controlsEl = root.querySelector<HTMLFormElement>(".controls")!
   const chartEl = root.querySelector<HTMLElement>(".chart")!
   const statusEl = root.querySelector<HTMLElement>(".status")!
@@ -72,7 +80,9 @@ export async function mount<P extends Params, D>(
     controlsEl.replaceChildren(
       ...controls.map(c => {
         const label = document.createElement("label")
-        label.append(c.label)
+        const name = document.createElement("span")
+        name.textContent = c.label
+        label.append(name)
         const value = p[c.key]
         let input: HTMLInputElement | HTMLSelectElement
         if (c.kind === "select") {
@@ -151,7 +161,8 @@ export async function mount<P extends Params, D>(
     const host = chartEl.parentElement!.getBoundingClientRect()
     const input = document.createElement("input")
     input.className = `framing-input framing-${key}`
-    input.value = target.textContent ?? ""
+    // the deck is wrapped into lines, so its text is kept whole on the element
+    input.value = target.dataset.text ?? target.textContent ?? ""
     const cs = getComputedStyle(target)
     Object.assign(input.style, {
       left: `${r.left - host.left - 4}px`,
@@ -227,8 +238,7 @@ export async function mount<P extends Params, D>(
   root.querySelector(".export")!.addEventListener("click", async () => {
     if (!frame) return
     statusEl.textContent = "Exporting…"
-    const base = new URL(import.meta.env.BASE_URL, location.href).href
-    const { blob, missingImages } = await toPng(frame.svg, base)
+    const { blob, missingImages } = await toPng(frame.svg, base())
     const name = (frame.title.textContent || tool.id)
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")

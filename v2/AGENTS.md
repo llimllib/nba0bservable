@@ -3,6 +3,9 @@
 The Step Back Club rewrite: Astro + a small D3/SVG chart kit, reading nba_data
 v2 parquet directly in the browser. The design and its reasons are in
 `docs/plans/2026-10-10-site-v2-design.md`; read it before adding a tool.
+The look (newspaper-derived HTML brutalism) is in
+`docs/plans/2026-10-25-newspaper-design.md`; read it before touching CSS
+or the frame.
 
 ## Commands
 
@@ -17,13 +20,16 @@ v2 parquet directly in the browser. The design and its reasons are in
   screenshots the page instead
 - `node scripts/annotate-test.mjs`: drives labels, notes and arrows, reloads
   from the URL hash, and exports `shots/annotated.png`
+- `node scripts/design-check.mjs`: checks every team's header band passes
+  WCAG contrast, and renders an ink-band frame to `shots/ink-band.png`
 - `npx astro check`: type check
 
 ## Layout
 
 - `src/kit/`: shared by every tool
   - `tool.ts`: the tool contract (`load`, `controls`, `describe`, `render`)
-  - `frame.ts`: title, context line + legend, body, footer with the URL
+  - `frame.ts`: header band (headline, deck, logo box), legend strip, body,
+    footer with the URL
   - `annotate.ts`: labels on marks (data typography) and notes/arrows
     (hand-drawn, voice color)
   - `mount.ts`: wires a tool to the page, URL state and export
@@ -36,7 +42,8 @@ v2 parquet directly in the browser. The design and its reasons are in
 
 - Question controls only (season, team, metric): five at most. No rendering
   knobs; fix the kit instead
-- Color: team colors for identity, `pos`/`neg` for value, `voice` only for
+- Rules, not boxes: no `border-radius`, shadows or cards
+- Color: team colors for identity (the header band only), `pos`/`neg` for value, `voice` only for
   annotations
 - Accessibility: about 1 in 12 men is colorblind, and charts get posted as
   images, often viewed small. Never let color be the only way to read a

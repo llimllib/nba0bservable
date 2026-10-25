@@ -1,13 +1,16 @@
+/* Rules, not boxes. See docs/plans/2026-10-25-newspaper-design.md */
+
 :root {
-  --bg: #f3f0ea;
-  --paper: #faf8f4;
-  --ink: #1d1d1f;
-  --muted: #6b6862;
-  --faint: #a8a49c;
-  --line: #e2ddd3;
+  --paper: #f2efe6;
+  --ink: #141414;
+  --muted: #5c5a55;
   --voice: #e8471c;
-  --sans: Inter, system-ui, sans-serif;
+  --head: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --agate: "JetBrains Mono", ui-monospace, monospace;
+  --serif: "Source Serif 4", Georgia, serif;
   --hand: Caveat, cursive;
+  --rule: 1px solid var(--ink);
+  accent-color: var(--ink);
 }
 
 * {
@@ -15,38 +18,70 @@
 }
 
 body {
-  margin: 0;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--sans);
-  font-size: 15px;
-  line-height: 1.5;
+  font: 17px/1.5 var(--serif);
 }
 
 a {
   color: inherit;
+  text-underline-offset: 0.15em;
 }
 
-header.site {
+h1,
+h2,
+.wordmark {
+  font-family: var(--head);
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 0.95;
+}
+
+/* agate: anything that's metadata */
+nav,
+.dateline,
+.colophon,
+.tool label > span,
+.tool legend,
+.tool button,
+.status,
+.takes,
+time {
+  font-family: var(--agate);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* --- masthead */
+
+.masthead {
+  border-top: 6px solid var(--ink);
+  border-bottom: 3px solid var(--ink);
+  margin-bottom: 1.5rem;
+}
+
+.nameplate {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 2rem;
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--line);
+  justify-content: space-between;
+  gap: 0 2rem;
+  padding: 0.6rem 0 0.4rem;
+  border-bottom: var(--rule);
 }
 
 .wordmark {
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  font-size: 1.15rem;
+  font-size: 2.6rem;
   text-decoration: none;
 }
 
 nav {
   display: flex;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 nav a {
@@ -56,83 +91,167 @@ nav a {
 
 nav a[aria-current="page"] {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 700;
+  text-decoration: underline 2px;
 }
 
-main {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 1.5rem;
+.dateline {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 2rem;
+  margin: 0;
+  padding: 0.35rem 0;
 }
+
+.colophon {
+  margin-top: 3rem;
+  padding: 0.6rem 0 2rem;
+  border-top: var(--rule);
+  color: var(--muted);
+}
+
+/* --- page heads */
 
 h1 {
-  font-size: 1.6rem;
-  letter-spacing: -0.02em;
-  margin: 0 0 0.25rem;
+  font-size: 3.2rem;
+  margin: 0 0 0.4rem;
 }
 
 .lede {
-  color: var(--muted);
-  margin: 0 0 1.25rem;
   max-width: 40rem;
+  margin: 0 0 1.25rem;
+  font-size: 1.15rem;
 }
 
-/* --- tools */
+/* --- a tool: the chart, with a rail of controls beside it */
 
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.5rem;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.controls label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.controls select,
-.controls input,
-.actions button {
-  font: inherit;
-  font-size: 0.9rem;
-  color: var(--ink);
-}
-
-.controls select {
-  padding: 0.3rem 0.5rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: white;
-}
-
-.controls output {
-  min-width: 2ch;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
+.tool {
+  display: grid;
+  grid-template-columns: minmax(0, 720px) minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "chart controls"
+    "chart actions";
+  border-top: var(--rule);
+  padding-top: 1.25rem;
 }
 
 .chart-host {
+  grid-area: chart;
   position: relative;
+}
+
+.controls,
+.actions {
+  margin-left: 1.25rem;
+  padding-left: 1.25rem;
+  border-left: var(--rule);
+}
+
+.controls {
+  grid-area: controls;
+}
+
+.actions {
+  grid-area: actions;
+  border-top: 3px solid var(--ink);
+}
+
+.tool label,
+.tool fieldset {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.6rem 0;
+  border: 0;
+  border-bottom: var(--rule);
+}
+
+.tool label > span,
+.tool legend {
+  color: var(--muted);
+}
+
+.tool label > :is(select, input),
+.tool legend {
+  grid-column: 1 / -1;
+}
+
+.tool output {
+  grid-row: 1;
+  grid-column: 2;
+  font-family: var(--agate);
+  font-size: 0.8rem;
+}
+
+.tool legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+}
+
+.tool fieldset {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+select {
+  font: 1rem var(--head);
+  font-weight: 600;
+  padding: 0.25rem;
+  border: var(--rule);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.tool button {
+  padding: 0.4rem 0.6rem;
+  border: var(--rule);
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.tool fieldset button + button {
+  margin-left: -1px;
+}
+
+.tool button.on,
+.tool button.export {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.tool .modes button.on {
+  background: var(--voice);
+  border-color: var(--voice);
+}
+
+.tool button.export {
+  width: 100%;
+  margin-top: 0.9rem;
+  padding: 0.7rem;
+  font-weight: 700;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .chart svg.frame {
   display: block;
   max-width: 100%;
   height: auto;
-  border-radius: 10px;
-  box-shadow:
-    0 1px 3px rgb(0 0 0 / 0.08),
-    0 8px 24px rgb(0 0 0 / 0.05);
   user-select: none;
 }
 
-.chart svg.frame .frame-title,
-.chart svg.frame .frame-context {
+.chart svg.frame :is(.frame-title, .frame-context) {
   cursor: text;
 }
 
@@ -151,70 +270,34 @@ h1 {
 
 .status {
   min-height: 1.5em;
-  font-size: 0.85rem;
+  margin-top: 0.4rem;
   color: var(--muted);
-  margin-top: 0.5rem;
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
+/* narrow: ask, see, then make an image, down the page */
+@media (max-width: 900px) {
+  .tool {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas: "controls" "chart" "actions";
+  }
+
+  .controls,
+  .actions {
+    margin: 0;
+    padding: 0;
+    border-left: 0;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1.5rem;
+    margin-bottom: 1rem;
+  }
 }
 
-.actions button {
-  padding: 0.35rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: white;
-  cursor: pointer;
-}
-
-.actions .seg {
-  display: flex;
-}
-
-.actions .seg button {
-  border-radius: 0;
-  margin-left: -1px;
-}
-
-.actions .seg button:first-child {
-  border-radius: 6px 0 0 6px;
-}
-
-.actions .seg button:last-child {
-  border-radius: 0 6px 6px 0;
-}
-
-.actions button.on {
-  background: var(--ink);
-  color: white;
-  border-color: var(--ink);
-}
-
-.actions .modes button.on {
-  background: var(--voice);
-  border-color: var(--voice);
-}
-
-.actions .export {
-  margin-left: auto;
-}
-
-.actions button.primary {
-  background: var(--ink);
-  color: white;
-  border-color: var(--ink);
-}
-
-.hint {
-  font-size: 0.8rem;
-  color: var(--faint);
-  max-width: 44rem;
-}
-
+/* text typed over the chart */
 .note-input,
 .framing-input {
   position: absolute;
@@ -235,34 +318,68 @@ h1 {
 }
 
 .framing-input {
-  font-family: var(--sans);
+  font-family: var(--head);
   color: var(--ink);
 }
 
-/* --- index cards */
-
-.cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
-  padding: 0;
-  list-style: none;
+.framing-sub {
+  font-family: var(--serif);
 }
 
-.cards a {
-  display: block;
-  padding: 1rem 1.25rem;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: white;
+/* --- lists of things: the front page, the tools, the notes */
+
+.index {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 3px solid var(--ink);
+}
+
+.index li {
+  padding: 0.9rem 0;
+  border-bottom: var(--rule);
+}
+
+:is(.index, .lead, .columns) h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.9rem;
+}
+
+:is(.index, .lead, .columns) h2 a {
   text-decoration: none;
 }
 
-.cards strong {
-  display: block;
+:is(.index, .columns) p {
+  margin: 0 0 0.25rem;
+  max-width: 40rem;
 }
 
-.cards span {
+.takes,
+time {
   color: var(--muted);
-  font-size: 0.9rem;
+}
+
+/* the front page: a lead story, then columns split by rules */
+.lead {
+  margin-bottom: 1.5rem;
+}
+
+.lead h2 {
+  font-size: 4rem;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  border-top: 3px solid var(--ink);
+}
+
+.columns > * {
+  padding: 0.9rem 1.25rem;
+  border-left: var(--rule);
+}
+
+.columns > :first-child {
+  padding-left: 0;
+  border-left: 0;
 }

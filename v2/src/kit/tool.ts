@@ -51,10 +51,17 @@ export interface LegendItem {
 }
 
 export interface Description {
+  // the headline: short
   title: string
+  // the deck under it, written as a phrase ("Net points per game in the
+  // 2025–26 playoffs, through June 13")
   context: string
   legend?: LegendItem[]
+  // the right side of the legend strip ("7 games · 9 players")
+  counts?: string
   source: string
+  // the team the view is about: the band takes its color and logo
+  team?: string
 }
 
 export interface Tool<P extends Params, D> {

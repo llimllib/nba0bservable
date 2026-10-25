@@ -2,6 +2,7 @@
 // playoff game, and a tick at the player's average
 import { extent, max, mean, scaleLinear, select } from "d3"
 import { headshotUrl, lookups, read } from "../kit/data"
+import { agate } from "../kit/frame"
 import { color, type } from "../kit/theme"
 import type { Body, Mark, Tool } from "../kit/tool"
 
@@ -40,9 +41,9 @@ interface D {
 }
 
 const fmtSeason = (s: number) => `${s - 1}–${String(s).slice(2)}`
-const fmtDate = (d: Date) =>
+const fmtDate = (d: Date, month: "short" | "long" = "short") =>
   d.toLocaleDateString("en-US", {
-    month: "short",
+    month,
     day: "numeric",
     timeZone: "UTC",
   })
@@ -170,12 +171,14 @@ export const playoffs: Tool<P, D> = {
     ).size
     return {
       title: team.name,
-      context: `Net points per game, ${fmtSeason(d.season)} playoffs · ${n} games · through ${fmtDate(d.lastDate)}`,
+      context: `Net points per game in the ${fmtSeason(d.season)} playoffs, through ${fmtDate(d.lastDate, "long")}`,
+      counts: `${n} games · ${players(d, p).length} players`,
       legend: [
         { symbol: "dot", color: color.pos, text: "one game" },
         { symbol: "tick", color: color.zero, text: "average" },
       ],
       source: "Data: ESPN Analytics",
+      team: p.team,
     }
   },
 
@@ -248,9 +251,7 @@ export const playoffs: Tool<P, D> = {
       .attr("x", x(0))
       .attr("y", 20)
       .attr("text-anchor", "middle")
-      .attr("font-size", type.tick.size)
-      .attr("font-weight", 600)
-      .attr("fill", color.muted)
+      .call(agate)
       .text("← worse · net points in one game · better →")
 
     const marks: Mark[] = []
@@ -276,7 +277,8 @@ export const playoffs: Tool<P, D> = {
           .append("text")
           .attr("x", tx)
           .attr("y", 13)
-          .attr("font-size", 11)
+          .attr("font-size", type.sub.size)
+          .attr("font-weight", type.sub.weight)
           .attr("fill", color.muted)
           .text(
             `${signed(pl.avg)} avg · ${pl.games.length} g · ${Math.round(pl.mpg)} mpg`,

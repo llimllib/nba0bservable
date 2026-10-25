@@ -42,6 +42,26 @@ export function read(
   return rows
 }
 
+export interface DatasetInfo {
+  source: string
+  first_season: number
+  last_season: number
+  seasons: number
+  updated: string
+}
+
+let meta: Promise<Record<string, DatasetInfo>> | undefined
+
+// The catalog's description of every dataset: which seasons it has, and when
+// it last changed
+export function metadata() {
+  meta ??= fetch(`${BASE}/nba/metadata.json`)
+    .then(r => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then(m => m.datasets)
+  meta.catch(() => (meta = undefined))
+  return meta
+}
+
 // The lookup tables, which every tool needs to turn ids into names
 export async function lookups(season: number) {
   const [teams, players, games] = await Promise.all([
