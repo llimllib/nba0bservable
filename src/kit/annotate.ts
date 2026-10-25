@@ -19,6 +19,8 @@ export type Pos = { d: unknown } | { f: [number, number] }
 
 export type Annotation =
   | { t: "label"; key: string; dx: number; dy: number }
+  // hides the chart's own label for a mark
+  | { t: "hide"; key: string }
   | { t: "text"; at: Pos; text: string }
   | { t: "arrow"; from: Pos; to: Pos | { key: string }; s: number }
 
@@ -106,10 +108,17 @@ export class AnnotationLayer {
 
   render() {
     this.g.replaceChildren()
+    const hidden = new Set(
+      this.anns.flatMap(a => (a.t === "hide" ? [a.key] : [])),
+    )
+    for (const e of this.frame.svg.querySelectorAll("[data-mark]"))
+      if (hidden.has(e.getAttribute("data-mark")!))
+        e.setAttribute("display", "none")
+      else e.removeAttribute("display")
     this.anns.forEach((a, i) => {
       if (a.t === "label") this.drawLabel(a, i)
       else if (a.t === "text") this.drawText(a, i)
-      else this.drawArrow(a, i)
+      else if (a.t === "arrow") this.drawArrow(a, i)
     })
     this.frame.svg.classList.toggle("mode-text", this.mode === "text")
     this.frame.svg.classList.toggle("mode-arrow", this.mode === "arrow")
@@ -117,7 +126,7 @@ export class AnnotationLayer {
 
   private drawLabel(a: Extract<Annotation, { t: "label" }>, i: number) {
     const m = this.marks.get(a.key)
-    if (!m) return
+    if (!m?.label) return
     const x = m.x + a.dx
     const y = m.y + a.dy
     const g = el("g", { "data-i": i, class: "ann ann-label" }, this.g)
@@ -145,8 +154,8 @@ export class AnnotationLayer {
       {
         x,
         y,
-        "font-size": type.label.size,
-        "font-weight": 600,
+        "font-size": m.labelSize ?? type.label.size,
+        "font-weight": type.label.weight,
         fill: color.ink,
         stroke: color.bg,
         "stroke-width": 4,
@@ -293,7 +302,7 @@ export class AnnotationLayer {
     if (this.mode !== "select") return
     const [x, y] = this.pointer(e)
     const over =
-      (e.target as Element).closest(".ann") || this.markAt(x, y) !== undefined
+      (e.target as Element).closest(".ann") || this.markAt(x, y)?.label
     this.frame.svg.style.cursor = over ? "pointer" : ""
   }
 
@@ -316,9 +325,13 @@ export class AnnotationLayer {
       return this.dragAnnotation(e, Number(target.getAttribute("data-i")), x, y)
 
     const mark = this.markAt(x, y)
-    if (mark) {
-      const i = this.anns.findIndex(a => a.t === "label" && a.key === mark.key)
+    if (mark?.label) {
+      // toggle the mark's label: the chart's own if it drew one, else ours
+      const i = this.anns.findIndex(
+        a => (a.t === "label" || a.t === "hide") && a.key === mark.key,
+      )
       if (i >= 0) this.anns.splice(i, 1)
+      else if (mark.labeled) this.anns.push({ t: "hide", key: mark.key })
       else
         this.anns.push({
           t: "label",

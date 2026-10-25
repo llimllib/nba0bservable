@@ -14,6 +14,8 @@ export interface LabelPoint {
   priority: number
   // label it whatever its cell size
   always?: boolean
+  // the mark it labels, written to data-mark so a click can toggle it
+  key?: string
 }
 
 type Side = "right" | "top" | "left" | "bottom"
@@ -39,9 +41,11 @@ export function placeLabels(
   points: LabelPoint[],
   bounds: { width: number; height: number },
   opts: { size: number; pad?: number; minCell?: number; avoid?: Box[] },
-) {
+): Set<string> {
   const { size, pad = 4, minCell = 1500, avoid = [] } = opts
-  if (!points.length) return
+  // the keys of the points that got a label
+  const labeled = new Set<string>()
+  if (!points.length) return labeled
   const g = select(node)
   const voronoi = Delaunay.from(
     points,
@@ -94,7 +98,9 @@ export function placeLabels(
       (p.always ? tries.map(side => box(p, side, w)).find(inBounds) : undefined)
     if (!b) continue
     placed.push(b)
+    if (p.key !== undefined) labeled.add(p.key)
     g.append("text")
+      .attr("data-mark", p.key ?? null)
       .attr("x", (b.x0 + b.x1) / 2)
       .attr("y", b.y1 - size * 0.18)
       .attr("text-anchor", "middle")
@@ -102,4 +108,5 @@ export function placeLabels(
       .text(p.text)
   }
   measure.remove()
+  return labeled
 }

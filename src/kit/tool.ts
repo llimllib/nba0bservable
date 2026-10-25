@@ -47,7 +47,14 @@ export interface Mark {
   r: number
   // half the width of a bar-shaped mark, which is hit along its length
   w?: number
-  label: string
+  // what a click on the mark labels it with. Without one, a click doesn't
+  // label it, but arrows still point at it
+  label?: string
+  // the chart drew its own label for this mark, as an element with
+  // data-mark set to the key: clicking the mark hides and shows that one
+  labeled?: boolean
+  // the size of the chart's labels, so a label added by a click matches them
+  labelSize?: number
 }
 
 export interface Body {

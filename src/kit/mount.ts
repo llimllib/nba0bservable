@@ -55,8 +55,8 @@ export async function mount<P extends Params, D>(
         <button type="button" class="clear">Clear</button>
       </fieldset>
       <button type="button" class="export">Export PNG</button>
-      <p class="hint">Click a dot to label it. Drag labels and notes to move
-      them; double-click a note to edit it; select one and press Delete to
+      <p class="hint"><span class="hint-label">Click a dot to label it.</span>
+      Drag labels and notes to move them; double-click a note to edit it; select one and press Delete to
       remove it. Click the headline or deck to rewrite it.</p>
     </div>`
   const controlsEl = root.querySelector<HTMLFormElement>(".controls")!
@@ -108,6 +108,8 @@ export async function mount<P extends Params, D>(
       tool.render(g, data!, p, s),
     )
     layer = new AnnotationLayer(frame, anns, mode, saveAnnotations, showMode)
+    root.querySelector<HTMLElement>(".hint-label")!.hidden =
+      !frame.body.marks.some(m => m.label)
     frame.title.addEventListener("click", () => editFraming("title"))
     frame.context.addEventListener("click", () => editFraming("sub"))
     for (const b of root.querySelectorAll<HTMLButtonElement>("[data-size]"))

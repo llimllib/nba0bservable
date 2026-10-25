@@ -376,6 +376,8 @@ export const rotations: Tool<P, D> = {
       .call(agate)
       .text("minutes")
 
+    // stints are marks for arrows to point at, with no labels: the bars
+    // already print their margins
     const marks: Mark[] = []
     rs.forEach((r, i) => {
       const cy = i * rowH + rowH / 2
@@ -444,7 +446,6 @@ export const rotations: Tool<P, D> = {
           y: cy + topHeight,
           r: barH / 2,
           w: w / 2,
-          label: `${signed(s.pm)}, ${span(s)}`,
         })
       }
     })

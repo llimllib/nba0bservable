@@ -326,7 +326,6 @@ export const shooting: Tool<P, D> = {
     // is identity, not value: names and position carry the reading
     const mine = (pl: Player) => !p.team || pl.team === p.team
     const order = [...ps].sort((a, b) => Number(mine(a)) - Number(mine(b)))
-    const marks: Mark[] = []
     for (const pl of order) {
       const cx = x(pl.usg)
       const cy = y(pl.ts)
@@ -343,17 +342,12 @@ export const shooting: Tool<P, D> = {
         .text(
           `${pl.name} (${pl.team})\n${pct(pl.usg)} usage · ${(pl.ts * 100).toFixed(1)}% TS · ${pl.fga} FGA`,
         )
-      marks.push({
-        key: pl.player_id,
-        x: cx + left,
-        y: cy + top,
-        r,
-        label: `${pl.name} ${(pl.ts * 100).toFixed(1)}%`,
-      })
     }
 
-    // names: the busiest shooters first, and all of a highlighted team's
-    placeLabels(
+    // names: the busiest shooters first, and all of a highlighted team's.
+    // A click on a dot toggles its name
+    const labelSize = 12.5
+    const labeled = placeLabels(
       plot.append("g").attr("font-weight", type.label.weight).node()!,
       ps
         .map(pl => ({
@@ -363,11 +357,21 @@ export const shooting: Tool<P, D> = {
           text: pl.name,
           priority: (mine(pl) ? 1e6 : 0) + pl.fga,
           always: Boolean(p.team) && mine(pl),
+          key: pl.player_id,
         }))
         .filter(lp => !p.team || lp.always),
       { width: plotW, height: plotH },
-      { size: 12.5, minCell: 1800, avoid },
+      { size: labelSize, minCell: 1800, avoid },
     )
+    const marks: Mark[] = ps.map(pl => ({
+      key: pl.player_id,
+      x: x(pl.usg) + left,
+      y: y(pl.ts) + top,
+      r,
+      label: pl.name,
+      labeled: labeled.has(pl.player_id),
+      labelSize,
+    }))
 
     if (!ps.length)
       plot
