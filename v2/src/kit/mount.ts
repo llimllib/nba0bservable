@@ -2,7 +2,7 @@
 // annotation layer, and the framing actions below it. All state round-trips
 // through the URL
 import { AnnotationLayer, type Annotation, type Mode } from "./annotate"
-import { buildFrame, sizes, type Size } from "./frame"
+import { buildFrame, fontsReady, sizes, type Size } from "./frame"
 import { download, toPng } from "./export"
 import {
   decodeHash,
@@ -200,7 +200,8 @@ export async function mount<P extends Params, D>(
     statusEl.textContent = "Loading…"
     root.classList.add("loading")
     try {
-      data = await tool.load(p)
+      const [loaded] = await Promise.all([tool.load(p), fontsReady()])
+      data = loaded
       p = { ...p, ...tool.normalize?.(data, p) }
       renderControls(tool.controls(data, p))
       save()
@@ -257,4 +258,20 @@ export async function mount<P extends Params, D>(
   })
 
   await update()
+}
+
+// A tool's frame at preset params, without controls: for the front page
+export async function embed<P extends Params, D>(
+  root: HTMLElement,
+  tool: Tool<P, D>,
+  params: Partial<P> = {},
+) {
+  let p = { ...tool.defaults, ...params }
+  const [data] = await Promise.all([tool.load(p), fontsReady()])
+  p = { ...p, ...tool.normalize?.(data, p) }
+  const url = `${SITE}/${tool.id}${queryString(p, {})}`
+  buildFrame(root, "auto", tool.describe(data, p), url, (g, s) =>
+    tool.render(g, data, p, s),
+  )
+  return { data, p }
 }

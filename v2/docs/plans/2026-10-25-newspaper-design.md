@@ -45,8 +45,10 @@ exported PNG depends on what's installed on the exporting machine.
 
 - Newsprint `#f2efe6`, ink `#141414`.
 - Color has three jobs only:
-  - _identity_: team colors, in the chart's header band and nowhere in
-    the plot area
+  - _identity_: team colors, in the chart's header band, and on marks in
+    charts that use no value colors (the shooting scatter's dots: primary
+    fill, secondary outline). Never in a plot that also uses blue/red for
+    value
   - _value_: blue/red for positive/negative, the ends of ColorBrewer's
     colorblind-safe RdBu scale (`#2166ac`, `#b2182b`). Not green/red,
     which red-green colorblind readers (about 1 in 12 men) see as one
@@ -149,10 +151,13 @@ Each dot is one player's net points in one playoff game.    (serif)
 
 ## Other pages
 
-- **Now** is a front page: a lead chart (one live tool at a preset) full
-  width under a big headline with a serif sentence, then two or three
-  columns of smaller items split by vertical rules: headline, serif lede,
-  thumbnail. Every item is a linked headline, not a card.
+- **Now** is a front page on one three-column grid, so every rule lines
+  up. The lead chart (a live tool at its defaults) spans two columns; a
+  side caption fills the first, opening "RIGHT:" ("ABOVE:" on phones) and
+  stating what the chart shows today, generated from the data. The chart
+  carries its own headline, so the page doesn't add a second. Below it,
+  one item per column split by vertical rules. Every item is a linked
+  headline, not a card.
 - **Tools** is a table of contents: a `<ul>` with a rule between rows;
   name in condensed caps, serif blurb, the controls it takes in agate
   (`SEASON · TEAM · MPG`).

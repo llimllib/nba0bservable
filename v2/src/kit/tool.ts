@@ -43,7 +43,7 @@ export interface Body {
 }
 
 export interface LegendItem {
-  symbol: "dot" | "tick" | "bar"
+  symbol: "dot" | "tick" | "bar" | "dash"
   color: string
   // drawn inside a bar, so the legend doesn't rely on color alone
   label?: string

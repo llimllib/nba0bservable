@@ -1,6 +1,13 @@
 // The tools, for the pages that list them
 export const catalog = [
   {
+    href: "shooting",
+    name: "Shooting by usage",
+    blurb:
+      "True shooting against usage rate for the players who take the most shots.",
+    takes: ["Season", "Games", "Team", "Top %"],
+  },
+  {
     href: "playoffs",
     name: "Playoff net points",
     blurb: "Every player's net points in every playoff game, by team.",

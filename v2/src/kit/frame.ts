@@ -61,6 +61,18 @@ const logoCodes: Record<string, string> = { NOP: "no", UTA: "utah" }
 export const logoUrl = (abbrev: string) =>
   `https://a.espncdn.com/i/teamlogos/nba/500/${logoCodes[abbrev] ?? abbrev.toLowerCase()}.png`
 
+// Load the faces frames draw with before the first render: text is measured
+// as it's laid out, and a face still loading measures as its fallback
+export function fontsReady() {
+  const faces = [
+    ...["500", "600", "700"].map(w => `${w} 16px "Barlow Condensed"`),
+    `400 16px "JetBrains Mono"`,
+    `600 16px "JetBrains Mono"`,
+    `400 16px "Source Serif 4"`,
+  ]
+  return Promise.all(faces.map(f => document.fonts.load(f)))
+}
+
 // Break text into lines no wider than `width`, measuring with `probe`
 function wrap(probe: SVGTextElement, text: string, width: number) {
   const lines: string[] = []
@@ -103,7 +115,18 @@ function drawLegend(g: G, items: LegendItem[], y: number) {
         .attr("cy", cy)
         .attr("r", 4.5)
         .attr("fill", item.color)
-    else if (item.symbol === "tick")
+    else if (item.symbol === "dash") {
+      // a reference line, drawn as the chart draws it
+      w = 22
+      g.append("line")
+        .attr("x1", x)
+        .attr("x2", x + w)
+        .attr("y1", cy)
+        .attr("y2", cy)
+        .attr("stroke", item.color)
+        .attr("stroke-width", 1.25)
+        .attr("stroke-dasharray", "5 4")
+    } else if (item.symbol === "tick")
       g.append("line")
         .attr("x1", x + 5)
         .attr("x2", x + 5)

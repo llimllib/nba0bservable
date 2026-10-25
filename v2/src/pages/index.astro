@@ -2,20 +2,55 @@
 import Base from "../layouts/Base.astro"
 import { catalog } from "../tools/catalog"
 const base = import.meta.env.BASE_URL.replace(/\/?$/, "/")
-const [lead, ...rest] = catalog
+const lead = catalog.find(t => t.href === "shooting")!
+const rest = catalog.filter(t => t !== lead)
 ---
 
 <Base title="Now">
-  <article class="lead">
-    <h2><a href={`${base}${lead.href}`}>{lead.name}</a></h2>
-    <p class="lede">{lead.blurb}</p>
-  </article>
-  <div class="columns">
+  <div class="front">
+    <figure class="lead">
+      <a class="inset" href={`${base}${lead.href}`} aria-label={lead.name}><div id="lead-chart"></div></a>
+      <figcaption>
+        <p>
+          <b class="where"><span class="wide">Right</span><span class="narrow">Above</span>:</b>{" "}
+          <span id="lead-caption">{lead.blurb}</span>
+        </p>
+        <p class="aside">
+          Higher is more efficient; further right uses more of the offense.
+          The dashed lines are league average.
+        </p>
+        <a class="more" href={`${base}${lead.href}`}>Make your own →</a>
+      </figcaption>
+    </figure>
     {rest.map(t => (
       <article>
         <h2><a href={`${base}${t.href}`}>{t.name}</a></h2>
         <p>{t.blurb}</p>
       </article>
     ))}
+    <aside class="about">
+      <h2>About</h2>
+      <p>
+        Every chart here is a tool: change the season or the team, label it,
+        and export it as an image to post.
+      </p>
+    </aside>
   </div>
 </Base>
+
+<script>
+  import { embed } from "../kit/mount"
+  import { leaders, shooting } from "../tools/shooting"
+
+  const pct = (v: number) => `${(v * 100).toFixed(1)}%`
+  const { data, p } = await embed(document.getElementById("lead-chart")!, shooting)
+  const { usage, efficient, games } = leaders(data, p)
+  // the caption states what the chart shows today
+  if (usage && efficient)
+    document.getElementById("lead-caption")!.textContent =
+      `${games} games in, ${usage.name} is using ${pct(usage.usg)} of ` +
+      `${usage.team}'s possessions while he's on the floor, the most in the ` +
+      `league. Of the players carrying more than an average load, ` +
+      `${efficient.name} (${efficient.team}) is scoring most efficiently, ` +
+      `at ${pct(efficient.ts)} true shooting.`
+</script>
