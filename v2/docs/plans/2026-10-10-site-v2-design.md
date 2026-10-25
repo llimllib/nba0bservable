@@ -68,31 +68,22 @@ Rules that follow:
 
 Every tool renders into one frame, which is what gets exported:
 
-1. Title: bold, near-black, short. Editable on the chart.
-2. Context line: grey, generated ("2026 playoffs · 9 games · through May 2"),
-   with an inline legend for anything the chart can't explain itself.
+1. Header band: title (short, editable on the chart) and a generated deck
+   ("Net points per game in the 2026 playoffs, through May 2"), in the
+   team's color, with its logo.
+2. Legend strip, for anything the chart can't explain itself, and counts.
 3. The chart.
 4. Footer: source, then the URL of this exact view.
+
+How it looks is in `2026-10-25-newspaper-design.md`.
 
 Export sizes: square, 16:9, 4:5 portrait. PNG export in the browser
 (SVG → canvas, fonts and images inlined).
 
 ## Visual design
 
-- **Data layer is crisp; annotation layer is a sketch.** They never mix, so
-  the take is always distinguishable from the data.
-- Type: one sans with tabular numerals for all data text. One handwriting
-  font for annotations, with hand-drawn (rough.js) arrows.
-- Color has three jobs only:
-  - _identity_: team colors, for logos and team/player marks
-  - _value_: blue/red for positive/negative, the ends of ColorBrewer's
-    colorblind-safe RdBu scale (`#2166ac`, `#b2182b`). Not green/red,
-    which red-green colorblind readers (about 1 in 12 men) see as one
-    olive. Not Okabe-Ito's blue/vermilion: the vermilion is too close to
-    the voice color
-  - _voice_: one red-orange, used only by annotations
-- Zero is the strongest line on any signed axis. Gridlines are faint. Axis
-  titles sit beside their axis. Warm off-white background.
+Moved to `2026-10-25-newspaper-design.md`: newspaper-derived HTML
+brutalism, with the color and annotation rules that were here.
 
 ## Rendering: a D3/SVG kit, not Plot
 
