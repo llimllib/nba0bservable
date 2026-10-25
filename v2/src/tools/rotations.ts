@@ -1,7 +1,7 @@
 // A team's rotation in one game: one row per player, one bar per stint on the
 // game clock, colored and labeled by the score margin while they were on
 import { max, scaleLinear, select, sum } from "d3"
-import { lookups, read } from "../kit/data"
+import { lookups, read, type Row as DataRow } from "../kit/data"
 import { color, type } from "../kit/theme"
 import type { Body, Mark, Tool } from "../kit/tool"
 
@@ -26,6 +26,8 @@ interface Game {
   where: string
   // "Finals G7", "Preseason", ... empty for the regular season
   kind: string
+  opp_team_id: string
+  opp: string
   pts: number
   opp_pts: number
 }
@@ -94,6 +96,14 @@ function span(s: Stint) {
   return `${a.period} ${mmss(a.left)}–${end}`
 }
 
+// Substitutions: every check-in after the opening tip, between periods
+// included, except a player shown leaving and re-entering at the same moment
+function substitutions(stints: Stint[]) {
+  const outs = new Set(stints.map(s => `${s.player_id}:${s.out}`))
+  return stints.filter(s => s.in > 0 && !outs.has(`${s.player_id}:${s.in}`))
+    .length
+}
+
 function rows(d: D, p: P): Row[] {
   const team = d.teams.get(p.team)
   const byPlayer = new Map<string, Stint[]>()
@@ -125,7 +135,7 @@ export const rotations: Tool<P, D> = {
   defaults,
 
   async load(p) {
-    const [rot, logs, lk] = await Promise.all([
+    const [rot, lk] = await Promise.all([
       read("stats", "game_rotations", p.season, [
         "game_id",
         "team_id",
@@ -136,19 +146,13 @@ export const rotations: Tool<P, D> = {
         "plus_minus",
         "matches_box_score",
       ]),
-      read("stats", "team_game_logs", p.season, [
-        "game_id",
-        "team_id",
-        "opp_team_id",
-        "home",
-        "pts",
-        "plus_minus",
-      ]),
       lookups(p.season),
     ])
     // games whose stints don't add up to the box score have a missed
-    // substitution or similar, so they're left out
+    // substitution or similar, so they're left out. The ones that do add up
+    // have every point scored, so they also give the final score
     const stints = new Map<string, Stint[]>()
+    const teamPts = new Map<string, Map<string, number>>()
     for (const r of rot) {
       if (!r.matches_box_score) continue
       const key = `${r.game_id}:${r.team_id}`
@@ -160,12 +164,14 @@ export const rotations: Tool<P, D> = {
         pts: r.pts,
         pm: r.plus_minus,
       })
+      if (!teamPts.has(r.game_id)) teamPts.set(r.game_id, new Map())
+      const pts = teamPts.get(r.game_id)!
+      pts.set(r.team_id, (pts.get(r.team_id) ?? 0) + r.pts)
     }
     const games = new Map<string, Game[]>()
-    for (const l of logs) {
-      const g = lk.games.get(l.game_id)
-      if (!g || !stints.has(`${l.game_id}:${l.team_id}`)) continue
-      const opp = lk.teams.get(l.opp_team_id)?.nba_abbrev ?? ""
+    for (const [game_id, pts] of teamPts) {
+      const g = lk.games.get(game_id)
+      if (!g) continue
       const kind =
         g.game_type === "playoffs"
           ? `${rounds[g.playoff_round]} G${g.series_game}`
@@ -176,22 +182,31 @@ export const rotations: Tool<P, D> = {
               : g.game_type === "cup_final"
                 ? "Cup final"
                 : ""
-      if (!games.has(l.team_id)) games.set(l.team_id, [])
-      games.get(l.team_id)!.push({
-        game_id: l.game_id,
-        date: g.game_date,
-        where: `${l.home === false ? "@" : "vs"} ${opp}`,
-        kind,
-        pts: l.pts,
-        opp_pts: l.pts - l.plus_minus,
-      })
+      for (const [team_id, own] of pts) {
+        const [opp_id, opp_pts] = [...pts].find(([id]) => id !== team_id) ?? []
+        if (!opp_id) continue
+        if (!games.has(team_id)) games.set(team_id, [])
+        games.get(team_id)!.push({
+          game_id,
+          date: g.game_date,
+          // neutral-site games have no home team, and read "vs"
+          where: `${g.away_team_id === team_id ? "@" : "vs"} ${lk.teams.get(opp_id)?.nba_abbrev ?? ""}`,
+          opp_team_id: opp_id,
+          opp: lk.teams.get(opp_id)?.nba_abbrev ?? "",
+          kind,
+          pts: own,
+          opp_pts: opp_pts!,
+        })
+      }
     }
     for (const gs of games.values())
       gs.sort((a, b) => +b.date - +a.date || b.game_id.localeCompare(a.game_id))
     const teams = new Map(
       [...games.keys()]
-        .map(id => lk.teams.get(id)!)
-        .filter(t => t.is_nba)
+        .map(id => lk.teams.get(id))
+        // a team missing from team_seasons is a lookup that's behind the
+        // rotations, so skip it rather than fail
+        .filter((t): t is DataRow => Boolean(t?.is_nba))
         .sort((a, b) => a.full_name.localeCompare(b.full_name))
         .map(t => [t.nba_abbrev, { team_id: t.team_id, name: t.full_name }]),
     )
@@ -244,12 +259,23 @@ export const rotations: Tool<P, D> = {
     const g = d.games.get(team.team_id)!.find(gm => gm.game_id === p.game)!
     return {
       title: `${team.name} rotation`,
-      context: [g.where, fmtDate(g.date, true), g.kind, result(g)]
+      context: [
+        g.where,
+        fmtDate(g.date, true),
+        g.kind,
+        result(g),
+        `${substitutions(d.stints.get(`${g.game_id}:${team.team_id}`)!)} subs (${g.opp} ${substitutions(d.stints.get(`${g.game_id}:${g.opp_team_id}`)!)})`,
+      ]
         .filter(Boolean)
         .join(" · "),
       legend: [
-        { symbol: "dot", color: color.pos, text: "won the stint" },
-        { symbol: "dot", color: color.neg, text: "lost the stint" },
+        { symbol: "bar", color: color.pos, label: "+1", text: "won the stint" },
+        {
+          symbol: "bar",
+          color: color.neg,
+          label: "−1",
+          text: "lost the stint",
+        },
       ],
       source: "Data: NBA.com play-by-play",
     }
@@ -359,7 +385,7 @@ export const rotations: Tool<P, D> = {
       .attr("font-size", type.tick.size)
       .attr("font-weight", 600)
       .attr("fill", color.muted)
-      .text("minutes into the game")
+      .text("minutes")
 
     const marks: Mark[] = []
     rs.forEach((r, i) => {

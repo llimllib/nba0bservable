@@ -15,8 +15,9 @@ await page.waitForSelector("svg.frame circle")
 
 // the rightmost dot in Tatum's row (the first row)
 const dot = await page.evaluate(() => {
-  const circles = [...document.querySelectorAll("svg.frame circle")]
-  const row = circles[0].parentElement
+  const row = document.querySelector(
+    "svg.frame .frame-body circle",
+  ).parentElement
   const c = [...row.querySelectorAll("circle")].sort(
     (a, b) => b.cx.baseVal.value - a.cx.baseVal.value,
   )[0]

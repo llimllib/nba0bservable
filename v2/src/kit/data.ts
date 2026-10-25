@@ -1,6 +1,8 @@
-// Reads nba_data v2's parquet files directly from the browser. Each dataset
+// Reads nba_data v2's parquet files directly from the browser, from the
+// published bucket: the only data source, in dev and production. Each dataset
 // is one file per season at nba/<source>/<dataset>/season=<season>/data.parquet;
-// see ~/code/nba_data/docs/DATA_DICTIONARY.md
+// see ~/code/nba_data/docs/DATA_DICTIONARY.md, and "Data" in
+// docs/plans/2026-10-10-site-v2-design.md
 import {
   asyncBufferFromUrl,
   cachedAsyncBuffer,
@@ -8,8 +10,7 @@ import {
 } from "hyparquet"
 import { compressors } from "hyparquet-compressors"
 
-const BASE =
-  import.meta.env.PUBLIC_DATA_BASE ?? "https://basketball-data.billmill.org"
+const BASE = "https://basketball-data.billmill.org"
 
 export type Row = Record<string, any>
 

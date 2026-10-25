@@ -1,5 +1,5 @@
 // Render a tool view to a PNG, so you (or an agent) can see a chart without
-// opening a browser. Needs the dev server running (`npm run dev:local`).
+// opening a browser. Needs the dev server running (`npm run dev`).
 //
 //   npm run shot -- "playoffs?team=BOS&season=2026"
 //   npm run shot -- "playoffs?team=BOS" --dom   # screenshot the page instead

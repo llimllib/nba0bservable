@@ -5,8 +5,8 @@ oxlint = "latest"
 oxfmt = "latest"
 
 [tasks.dev]
-description = "Dev server, reading parquet from a local nba_data checkout"
-run = "npm run dev:local"
+description = "Dev server"
+run = "npm run dev"
 
 [tasks.build]
 description = "Build the static site into dist/"

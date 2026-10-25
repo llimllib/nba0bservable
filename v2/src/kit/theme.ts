@@ -8,8 +8,10 @@ export const color = {
   faint: "#a8a49c",
   grid: "#e2ddd3",
   zero: "#3a3834",
-  pos: "#3f8f5f",
-  neg: "#c0504a",
+  // the ends of ColorBrewer's RdBu, which is colorblind-safe. Green/red read
+  // as one olive to red-green colorblind readers
+  pos: "#2166ac",
+  neg: "#b2182b",
   voice: "#e8471c",
 }
 

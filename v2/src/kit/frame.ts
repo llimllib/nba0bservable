@@ -14,7 +14,7 @@ export const sizes = {
 export type Size = keyof typeof sizes
 
 const pad = 28
-const headerHeight = pad + type.title.size + 8 + type.context.size + 22
+const baseHeaderHeight = pad + type.title.size + 8 + type.context.size + 22
 const footerHeight = 18 + type.footer.size + pad - 6
 
 export interface Frame {
@@ -69,19 +69,23 @@ export function buildFrame(
     .attr("fill", color.muted)
     .text(desc.context)
 
-  // the legend continues the context line
-  let lx = pad + context.node()!.getComputedTextLength() + 14
+  // the legend continues the context line, or goes on its own line below it
+  // when it doesn't fit. It's drawn from x = 0, then moved into place
+  const legend = svg.append("g").attr("class", "frame-legend")
+  let lx = 0
   for (const item of desc.legend ?? []) {
     const cy = contextY - type.context.size * 0.33
+    // the symbol's width, so the text after it lines up
+    let w = 10
     if (item.symbol === "dot")
-      svg
+      legend
         .append("circle")
         .attr("cx", lx + 5)
         .attr("cy", cy)
         .attr("r", 4.5)
         .attr("fill", item.color)
-    else
-      svg
+    else if (item.symbol === "tick")
+      legend
         .append("line")
         .attr("x1", lx + 5)
         .attr("x2", lx + 5)
@@ -89,15 +93,43 @@ export function buildFrame(
         .attr("y2", cy + 7)
         .attr("stroke", item.color)
         .attr("stroke-width", 2.5)
-    const t = svg
+    else {
+      // a small bar, with its label inside as on the chart's own bars
+      const rect = legend
+        .append("rect")
+        .attr("y", cy - 9)
+        .attr("height", 18)
+        .attr("rx", 2)
+        .attr("fill", item.color)
+      const label = legend
+        .append("text")
+        .attr("y", cy + 4)
+        .attr("text-anchor", "middle")
+        .attr("font-size", 11)
+        .attr("font-weight", 600)
+        .attr("fill", color.bg)
+        .text(item.label ?? "")
+      w = Math.max(label.node()!.getComputedTextLength() + 12, 16)
+      rect.attr("x", lx).attr("width", w)
+      label.attr("x", lx + w / 2)
+    }
+    const t = legend
       .append("text")
-      .attr("x", lx + 14)
+      .attr("x", lx + w + 5)
       .attr("y", contextY)
       .attr("font-size", type.context.size)
       .attr("fill", color.muted)
       .text(item.text)
-    lx += 14 + t.node()!.getComputedTextLength() + 16
+    lx += w + 5 + t.node()!.getComputedTextLength() + 16
   }
+  const inlineX = pad + context.node()!.getComputedTextLength() + 14
+  const wraps = desc.legend?.length && inlineX + lx - 16 > width - pad
+  const legendLine = type.context.size + 12
+  legend.attr(
+    "transform",
+    wraps ? `translate(${pad},${legendLine})` : `translate(${inlineX},0)`,
+  )
+  const headerHeight = baseHeaderHeight + (wraps ? legendLine : 0)
 
   const g = svg
     .append("g")
