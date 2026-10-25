@@ -45,6 +45,7 @@ nav,
 .dateline,
 .colophon,
 .tool label > span,
+.tool .field > span,
 .tool legend,
 .tool button,
 .status,
@@ -159,6 +160,7 @@ h1 {
 }
 
 .tool label,
+.tool .field,
 .tool fieldset {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -170,14 +172,22 @@ h1 {
   border-bottom: var(--rule);
 }
 
-.tool label > span,
+.tool :is(label, .field) > span,
 .tool legend {
   color: var(--muted);
 }
 
 .tool label > :is(select, input),
+.tool .field > :is(.dual, .search, .chips),
 .tool legend {
   grid-column: 1 / -1;
+}
+
+/* a checkbox sits on its label's line, where an output would */
+.tool label > input[type="checkbox"] {
+  grid-row: 1;
+  grid-column: 2;
+  margin: 0;
 }
 
 .tool output {
@@ -239,6 +249,164 @@ select {
   font-weight: 700;
 }
 
+/* two-handle slider: two range inputs on one track, only their thumbs
+   taking pointer events. The track between the handles is ink */
+.dual {
+  --thumb: 14px;
+  position: relative;
+  height: calc(var(--thumb) + 6px);
+}
+
+@media (pointer: coarse) {
+  .dual {
+    --thumb: 24px;
+  }
+}
+
+.dual::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--thumb) / 2);
+  right: calc(var(--thumb) / 2);
+  top: calc(50% - 2px);
+  height: 4px;
+  background: linear-gradient(
+    to right,
+    #dcd7ca var(--lo),
+    var(--ink) var(--lo),
+    var(--ink) var(--hi),
+    #dcd7ca var(--hi)
+  );
+}
+
+.dual input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  appearance: none;
+  background: none;
+  pointer-events: none;
+}
+
+.dual input::-webkit-slider-runnable-track {
+  height: 100%;
+  background: none;
+}
+
+.dual input::-moz-range-track {
+  background: none;
+}
+
+.dual input::-webkit-slider-thumb {
+  appearance: none;
+  pointer-events: auto;
+  width: var(--thumb);
+  height: var(--thumb);
+  margin-top: 3px;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  cursor: grab;
+}
+
+.dual input::-moz-range-thumb {
+  pointer-events: auto;
+  width: var(--thumb);
+  height: var(--thumb);
+  box-sizing: border-box;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  cursor: grab;
+}
+
+.dual input:focus-visible {
+  outline: none;
+}
+
+.dual input:focus-visible::-webkit-slider-thumb {
+  background: var(--ink);
+}
+
+.dual input:focus-visible::-moz-range-thumb {
+  background: var(--ink);
+}
+
+/* player search: a native search box, matches in a list under it, and the
+   picked players as chips */
+.search {
+  position: relative;
+}
+
+.search input {
+  width: 100%;
+  font: 1rem var(--head);
+  font-weight: 600;
+  padding: 0.25rem;
+  border: var(--rule);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.search ul {
+  position: absolute;
+  z-index: 10;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--paper);
+}
+
+.search ul:not(:empty) {
+  border: var(--rule);
+  border-top: 0;
+}
+
+.search li {
+  padding: 0.3rem 0.4rem;
+  font: 1rem var(--head);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.search li + li {
+  border-top: 1px solid #dcd7ca;
+}
+
+.search li.on,
+.search li:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.chips:empty {
+  display: none;
+}
+
+.tool button.chip {
+  padding: 0.15rem 0.4rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font: 0.95rem var(--head);
+  font-weight: 600;
+}
+
+.tool button.chip:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
 .hint {
   font-size: 0.85rem;
   color: var(--muted);
@@ -294,6 +462,10 @@ select {
     flex-wrap: wrap;
     gap: 0 1.5rem;
     margin-bottom: 1rem;
+  }
+
+  .controls .field {
+    flex: 1 1 14rem;
   }
 }
 

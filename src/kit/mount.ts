@@ -13,6 +13,7 @@ import {
   type Params,
 } from "./state"
 import { SITE } from "./theme"
+import { controlElement } from "./controls"
 import type { Control, Tool } from "./tool"
 
 const framing = { title: "", sub: "", size: "auto" }
@@ -77,54 +78,27 @@ export async function mount<P extends Params, D>(
   }
 
   function renderControls(controls: Control[]) {
+    // a re-render replaces the controls, so keep the focus where it was:
+    // adding players one after another shouldn't need a click each
+    const focused = (
+      document.activeElement as HTMLElement | null
+    )?.closest<HTMLElement>(".controls [data-key]")?.dataset.key
     controlsEl.replaceChildren(
       ...controls.map(c => {
-        const label = document.createElement("label")
-        const name = document.createElement("span")
-        name.textContent = c.label
-        label.append(name)
-        const value = p[c.key]
-        let input: HTMLInputElement | HTMLSelectElement
-        if (c.kind === "select") {
-          input = document.createElement("select")
-          for (const o of c.options) {
-            const opt = new Option(o.label, String(o.value))
-            opt.selected = o.value === value
-            input.add(opt)
-          }
-        } else if (c.kind === "range") {
-          input = document.createElement("input")
-          Object.assign(input, {
-            type: "range",
-            min: c.min,
-            max: c.max,
-            step: c.step,
-            value,
-          })
-          const out = document.createElement("output")
-          out.value = String(value)
-          input.addEventListener("input", () => (out.value = input.value))
-          label.append(input, out)
-        } else {
-          input = document.createElement("input")
-          input.type = "checkbox"
-          input.checked = Boolean(value)
-        }
-        if (!input.parentElement) label.append(input)
-        input.addEventListener("change", () => {
-          const d = tool.defaults[c.key]
-          const v =
-            c.kind === "toggle"
-              ? (input as HTMLInputElement).checked
-              : typeof d === "number"
-                ? Number(input.value)
-                : input.value
-          p = { ...p, [c.key]: v }
+        const el = controlElement(c, p, patch => {
+          p = { ...p, ...patch }
           update()
         })
-        return label
+        el.dataset.key = c.key
+        return el
       }),
     )
+    if (focused)
+      controlsEl
+        .querySelector<HTMLElement>(
+          `[data-key="${focused}"] :is(input[type=search], input, select)`,
+        )
+        ?.focus()
   }
 
   function draw() {

@@ -51,6 +51,8 @@ shared code was in `docs/lib/`. Don't restore it into the tree.
   - `annotate.ts`: labels on marks (data typography) and notes/arrows
     (hand-drawn, voice color)
   - `mount.ts`: wires a tool to the page, URL state and export
+  - `controls.ts`: the question controls, including a two-handle `span`
+    slider and a `players` search with chips
   - `data.ts`: hyparquet reads of `nba/<source>/<dataset>/season=<n>/data.parquet`
   - `theme.ts`: colors, type scale, fonts
 - `src/tools/`: one module per tool

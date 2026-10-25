@@ -30,7 +30,8 @@ export function queryString(params: Params, defaults: Params) {
     if (v === undefined || v === "" || v === defaults[k]) continue
     q.set(k, typeof v === "boolean" ? (v ? "1" : "0") : String(v))
   }
-  const s = q.toString()
+  // commas are fine in a query string, and lists read better without %2C
+  const s = q.toString().replace(/%2C/g, ",")
   return s ? `?${s}` : ""
 }
 

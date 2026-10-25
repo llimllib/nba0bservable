@@ -316,7 +316,23 @@ export function buildFrame(
     .append("g")
     .attr("class", "frame-body")
     .attr("transform", `translate(${pad},${headerHeight})`)
-  const bodyHeight = height && height - headerHeight - footerHeight
+  // the footer: source and URL on one line, or the URL on a line of its own
+  // when they don't both fit, shrunk if it still doesn't
+  const source = svg.append("text").call(agate).text(desc.source)
+  const link = svg
+    .append("text")
+    .attr("font-family", font.agate)
+    .attr("font-size", type.agate.size)
+    .attr("font-weight", 600)
+    .text(url)
+  const sourceW = source.node()!.getComputedTextLength()
+  const linkW = link.node()!.getComputedTextLength()
+  const inner = width - pad * 2
+  const twoLines = sourceW + linkW + 24 > inner
+  if (twoLines && linkW > inner)
+    link.attr("font-size", (type.agate.size * inner) / linkW)
+  const footer = footerHeight + (twoLines ? 16 : 0)
+  const bodyHeight = height && height - headerHeight - footer
   const body = renderBody(g.node()!, {
     width: width - pad * 2,
     height: bodyHeight,
@@ -324,8 +340,8 @@ export function buildFrame(
 
   // --- the footer: a rule, the source, and the URL, which keeps its case so
   // it can be typed
-  const total = height ?? headerHeight + body.height + footerHeight
-  const ruleY = total - footerHeight + 6
+  const total = height ?? headerHeight + body.height + footer
+  const ruleY = total - footer + 6
   svg
     .append("line")
     .attr("x1", pad)
@@ -334,21 +350,13 @@ export function buildFrame(
     .attr("y2", ruleY)
     .attr("stroke", color.ink)
   const footerY = ruleY + 20
-  svg
-    .append("text")
-    .attr("x", pad)
-    .attr("y", footerY)
-    .call(agate)
-    .text(desc.source)
-  svg
-    .append("text")
-    .attr("x", width - pad)
-    .attr("y", footerY)
-    .attr("text-anchor", "end")
-    .attr("font-family", font.agate)
-    .attr("font-size", type.agate.size)
-    .attr("font-weight", 600)
-    .text(url)
+  source.attr("x", pad).attr("y", footerY)
+  if (twoLines) link.attr("x", pad).attr("y", footerY + 16)
+  else
+    link
+      .attr("x", width - pad)
+      .attr("y", footerY)
+      .attr("text-anchor", "end")
 
   svg
     .attr("width", width)

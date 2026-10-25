@@ -21,6 +21,23 @@ export type Control =
       step: number
     }
   | { key: string; label: string; kind: "toggle" }
+  // a two-handle slider over a list of values, writing two params
+  | {
+      key: string
+      keyTo: string
+      label: string
+      kind: "span"
+      options: Option[]
+    }
+  // pick several from a long list by searching: a comma-separated param
+  | {
+      key: string
+      label: string
+      kind: "players"
+      options: Option[]
+      // at most this many
+      max: number
+    }
 
 // Something a label or arrow can attach to, in body coordinates
 export interface Mark {

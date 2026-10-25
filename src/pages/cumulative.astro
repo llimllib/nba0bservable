@@ -1,0 +1,18 @@
+---
+import Base from "../layouts/Base.astro"
+---
+
+<Base title="Cumulative stats" description="The running total of a stat, game by game, for a season or a career">
+  <h1>Cumulative stats</h1>
+  <p class="lede">
+    The running total of one stat, game by game. Drag both ends of the
+    seasons slider together for one season, or apart for a career.
+  </p>
+  <div id="tool"></div>
+</Base>
+
+<script>
+  import { mount } from "../kit/mount"
+  import { cumulative } from "../tools/cumulative"
+  mount(document.getElementById("tool")!, cumulative)
+</script>
