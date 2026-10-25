@@ -12,12 +12,20 @@ or the frame.
 - `npm run dev`: dev server. Tools read the published bucket
   (`basketball-data.billmill.org`), in dev as in production; there is no
   local data mode. See "Data" in the design doc
-- Astro 7's dev server is a **background daemon**. `pkill` doesn't stop it;
-  use `npx astro dev stop`. If code changes don't show up, a stale daemon is
-  the likely cause
+- Astro 7's dev server is a **background daemon** when an agent starts it.
+  `pkill` doesn't stop it; use `npx astro dev stop`. If code changes don't
+  show up, a stale daemon is the likely cause
+- Agents: don't run `npm run dev`. Wrap the command that needs a server in
+  `node scripts/with-dev.mjs <command>`. It starts a foreground server on a
+  free port, passes its URL to the command as `SHOT_SERVER`, and stops it
+  when the command exits. In a sandbox that can't see the daemon's pid,
+  `astro dev stop`/`status` delete its lock file instead of stopping it, and
+  every `npm run dev` leaves another server running
 - `npm run shot -- "playoffs?team=BOS&season=2026"`: clicks Export PNG and
   saves the result to `shots/`, so you can look at what you built. `--dom`
-  screenshots the page instead
+  screenshots the page instead. It and the two scripts below expect a
+  server; an agent runs them as
+  `node scripts/with-dev.mjs npm run shot -- "..."`
 - `node scripts/annotate-test.mjs`: drives labels, notes and arrows, reloads
   from the URL hash, and exports `shots/annotated.png`
 - `node scripts/design-check.mjs`: checks every team's header band passes
