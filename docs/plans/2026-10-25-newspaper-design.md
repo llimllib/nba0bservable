@@ -96,7 +96,7 @@ The exported PNG is the product, so this is the part that matters most.
 │                     −8   −4    0   +4   +8                    │
 │                 ← WORSE · NET POINTS IN ONE GAME · BETTER →   │
 ├──────────────────────────────────────────────────────────────┤  1px ink
-│ DATA: ESPN ANALYTICS       billmill.org/nba/playoffs?team=BOS…│
+│ DATA: ESPN ANALYTICS                   billmill.org/nba/playoffs │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -113,8 +113,8 @@ The exported PNG is the product, so this is the part that matters most.
   never sit on a team color. Counts ("7 games · 9 players") go on its
   right.
 - **Plot**: names and ticks in Barlow Condensed; axis titles in agate.
-- **Footer**: source and URL in mono; the URL keeps its case so it can be
-  typed.
+- **Footer**: source and the tool's URL in mono, without the query
+  string, so it can be typed from a picture.
 - No outer border, no rounded corners: the PNG's edge is the frame's edge.
 
 `Description` changes to match: `context` becomes the deck, and a new

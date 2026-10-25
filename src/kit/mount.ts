@@ -7,7 +7,6 @@ import { download, toPng } from "./export"
 import {
   decodeHash,
   encodeHash,
-  queryString,
   readParams,
   writeParams,
   type Params,
@@ -65,11 +64,6 @@ export async function mount<P extends Params, D>(
   const statusEl = root.querySelector<HTMLElement>(".status")!
 
   const save = () => writeParams(p, defaults, hash)
-  const toolParams = () => {
-    const q: Params = {}
-    for (const k of Object.keys(tool.defaults)) q[k] = p[k]
-    return q
-  }
 
   async function saveAnnotations(next: Annotation[]) {
     anns = next
@@ -106,9 +100,9 @@ export async function mount<P extends Params, D>(
     const desc = tool.describe(data, p)
     if (p.title) desc.title = p.title
     if (p.sub) desc.context = p.sub
-    // always spell out every param: the printed URL has to stand on its own,
-    // even after the defaults change
-    const url = `${SITE}/${tool.id}${queryString(toolParams(), {})}`
+    // the printed URL names the tool, not the view: a reader types it in
+    // from an image, and a query string is too long to type
+    const url = `${SITE}/${tool.id}`
     const size = (p.size in sizes ? p.size : "auto") as Size
     frame = buildFrame(chartEl, size, desc, url, (g, s) =>
       tool.render(g, data!, p, s),
@@ -243,7 +237,7 @@ export async function embed<P extends Params, D>(
   let p = { ...tool.defaults, ...params }
   const [data] = await Promise.all([tool.load(p), fontsReady()])
   p = { ...p, ...tool.normalize?.(data, p) }
-  const url = `${SITE}/${tool.id}${queryString(p, {})}`
+  const url = `${SITE}/${tool.id}`
   buildFrame(root, "auto", tool.describe(data, p), url, (g, s) =>
     tool.render(g, data, p, s),
   )

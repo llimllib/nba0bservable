@@ -1,6 +1,5 @@
-// URL state. Tool params live in a readable query string, so the URL printed
-// on an exported image means something; annotations are long and live in a
-// compressed #a= hash
+// URL state. Tool params live in a readable query string, so a shared link
+// means something; annotations are long and live in a compressed #a= hash
 
 export type ParamValue = string | number | boolean
 export type Params = Record<string, ParamValue>

@@ -39,8 +39,11 @@ Cut or archive: table, sortable_table, players, tovpct, team_steals,
 v2_experiment, epm_playoffs. College (four_factors) moves elsewhere.
 
 URLs: tool state in readable query strings (`/playoffs?team=BOS&season=2026`)
-so the URL printed on the image means something. Annotations, which are long
-and unreadable anyway, go in a compressed `#a=` hash.
+so a shared link means something. Annotations, which are long and
+unreadable anyway, go in a compressed `#a=` hash. The image prints only the
+tool's URL (`billmill.org/nba/playoffs`): a reader types it in from a
+picture, and a query string with player ids is too long to type
+(decided 2026-10-25).
 
 ## Lessons from the predecessors
 
@@ -73,7 +76,7 @@ Every tool renders into one frame, which is what gets exported:
    team's color, with its logo.
 2. Legend strip, for anything the chart can't explain itself, and counts.
 3. The chart.
-4. Footer: source, then the URL of this exact view.
+4. Footer: source, then the URL of the tool.
 
 How it looks is in `2026-10-25-newspaper-design.md`.
 
