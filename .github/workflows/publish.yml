@@ -1,12 +1,12 @@
 name: Publish
+# The site reads its data in the browser at run time, so it only needs a
+# build when the code changes: no schedule
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "7 0,4,8,12,16,20 * * *" # run every 4 hours
   push:
     branches: ["main"]
 permissions:
-  contents: write
+  contents: read
   issues: write
 jobs:
   build:
@@ -50,11 +50,6 @@ jobs:
             -d '{"files": ["*"]}' \
             "https://api.digitalocean.com/v2/cdn/endpoints/${{ secrets.DO_NBA_SPACES_ID }}/cache"
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: ./dist
-
       # if there's a failure:
       # - check for an existing ticket
       # - make one if not found
@@ -66,7 +61,7 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const issueTitle = 'Observable notebook build failed';
+            const issueTitle = 'Site build failed';
 
             // Search for an open issue with our title
             const issues = await github.rest.issues.listForRepo({
@@ -98,17 +93,3 @@ jobs:
               });
               console.log(`Created new issue #${newIssue.data.number}`);
             }
-
-  deploy:
-    needs: build
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
