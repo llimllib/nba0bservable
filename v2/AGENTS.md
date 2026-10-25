@@ -6,8 +6,9 @@ v2 parquet directly in the browser. The design and its reasons are in
 
 ## Commands
 
-- `npm run dev:local`: dev server reading parquet from `../../nba_data/out`
-  (override with `NBA_DATA_DIR`). `npm run dev` reads the CDN instead
+- `npm run dev`: dev server. Tools read the published bucket
+  (`basketball-data.billmill.org`), in dev as in production; there is no
+  local data mode. See "Data" in the design doc
 - Astro 7's dev server is a **background daemon**. `pkill` doesn't stop it;
   use `npx astro dev stop`. If code changes don't show up, a stale daemon is
   the likely cause
@@ -37,7 +38,15 @@ v2 parquet directly in the browser. The design and its reasons are in
   knobs; fix the kit instead
 - Color: team colors for identity, `pos`/`neg` for value, `voice` only for
   annotations
+- Accessibility: about 1 in 12 men is colorblind, and charts get posted as
+  images, often viewed small. Never let color be the only way to read a
+  value: pair it with a sign (`+4`/`−4`), position (which side of zero),
+  shape, or a direct label, so the chart still reads in grayscale. New
+  colors come from a published colorblind-safe palette (ColorBrewer,
+  Okabe-Ito, Paul Tol), not picked by hand
 - Zero is the strongest line on a signed axis
+- Data comes only from the published bucket, read at run time through
+  `kit/data.ts`: no data loaders, no build-time pulls, no local copies
 - Data reference: `~/code/nba_data/docs/DATA_DICTIONARY.md`
 
 ## Known issues
