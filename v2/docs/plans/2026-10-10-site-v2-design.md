@@ -85,7 +85,11 @@ Export sizes: square, 16:9, 4:5 portrait. PNG export in the browser
   font for annotations, with hand-drawn (rough.js) arrows.
 - Color has three jobs only:
   - _identity_: team colors, for logos and team/player marks
-  - _value_: a muted green/red diverging scale for positive/negative
+  - _value_: blue/red for positive/negative, the ends of ColorBrewer's
+    colorblind-safe RdBu scale (`#2166ac`, `#b2182b`). Not green/red,
+    which red-green colorblind readers (about 1 in 12 men) see as one
+    olive. Not Okabe-Ito's blue/vermilion: the vermilion is too close to
+    the voice color
   - _voice_: one red-orange, used only by annotations
 - Zero is the strongest line on any signed axis. Gridlines are faint. Axis
   titles sit beside their axis. Warm off-white background.
@@ -122,11 +126,8 @@ Built into every chart:
 - **Tool contract**: a tool module exports `params` (typed schema; drives the
   control bar and URL state), `load(params)` and `render(rows, params,
   frame)`. Frame, export, annotations and URL state come free.
-- **No data loaders.** Tools read nba_data v2's season-partitioned parquet
-  files directly in the browser with hyparquet (~0.45s measured), so the
-  site rebuilds only when code changes. DuckDB-wasm loads lazily, only for
-  tools that need SQL. If a tool needs a join that's expensive in the
-  browser, nba_data publishes a small derived table for it.
+- **No data loaders.** Tools read nba_data's published parquet in the
+  browser, so the site rebuilds only when code changes. See [Data](#data).
 - **Notes freeze data**: a note stores tool state, the rows the chart used,
   and the caption, so it always shows what you saw when you posted.
 - **Link previews**: Open Graph images generated at build time for tools and
@@ -134,6 +135,57 @@ Built into every chart:
 
 Risk: headshots (`cdn.nba.com`) and logos (ESPN) may not allow CORS, which
 breaks canvas export. Fallback: nba_data mirrors them into the bucket.
+
+## Data
+
+Where data comes from, and how it gets updated. Settled 2026-10-24.
+
+**One source: the published bucket.** Every tool reads nba_data v2 from
+`https://basketball-data.billmill.org/nba/`, in production, in `npm run
+dev`, in `npm run shot` and in tests. There is no local data mode: an
+nba_data checkout's `out/` directory is half-built pipeline output, not a
+published dataset, and reading it showed stale and mismatched data. The
+bucket is coherent because nba_data checks every run (every key is in the
+lookup tables) and publishes only if the checks pass. Data the checks
+can't fix is flagged, not dropped: a tool filters on it, as the rotations
+tool does with `matches_box_score`. Testing unpublished nba_data changes is nba_data's job, not
+this site's.
+
+**Read at run time, in the browser.** The site holds no data. A tool reads
+the files it needs when the page loads, so a chart shows new data as soon
+as nba_data publishes it, and the site rebuilds only when its code
+changes. Pulling data at build time would bring back the Framework site's
+rebuild-every-4-hours cron and its stale-until-rebuilt pages. The bucket
+sends `max-age=3600`, so a browser can be up to an hour behind it. The
+exception is notes, which freeze the rows they show on purpose.
+
+**hyparquet by default; DuckDB-wasm only for SQL.** Each dataset is one
+parquet file per season (`nba/<source>/<dataset>/season=<n>/data.parquet`),
+and most tools want one season of two or three datasets. `kit/data.ts`
+reads those with hyparquet (tens of KB of JS, ~0.45s per file measured),
+only the columns asked for, with HTTP range requests.
+
+The catalog, `nba/nba.duckdb`, holds no data: it's 290 KB of views over
+the same parquet URLs, plus a `metadata` table. Querying it returns exactly
+what hyparquet reads, so it's another way to query the one source, not a
+second source. A tool that needs SQL (joins across seasons, the scatter
+tool's filter language) loads DuckDB-wasm lazily and attaches the catalog.
+The cost is why it isn't the default: about 8 MB gzipped plus the httpfs
+extension, and ~1.7s for a cold one-season query.
+
+**Joins happen in the tool.** Tools join datasets on their keys
+(`game_id`, `player_id`, `team_id` with `season`) and get names from the
+lookup tables (`team_seasons`, `player_seasons`, `games`), which
+`lookups()` loads. Prefer deriving from fewer datasets when the data allows:
+the rotations tool sums its stints for the final score rather than also
+reading `team_game_logs`. If a join is too expensive in the browser,
+nba_data publishes a small derived table for it.
+
+**Seasons come from the data.** nba_data publishes `nba/metadata.json`,
+the catalog's `metadata` table as JSON (per dataset: `first_season`,
+`last_season`, `updated`), and the kit builds season controls from it,
+so a new season appears without a code change. Until it exists, tools
+list their seasons by hand.
 
 ## Working with agents
 
