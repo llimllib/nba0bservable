@@ -143,7 +143,7 @@ function who(d: D, p: P) {
   const what = statName(d.stat)
   if (!n) return ""
   if (n === 1) return `The leader in ${what}`
-  return `The ${["two", "three", "four", "five"][n - 2]} leaders in ${what}`
+  return `The top ${["two", "three", "four", "five"][n - 2]} in ${what}`
 }
 
 // each shown player's running total, from zero before his first game
