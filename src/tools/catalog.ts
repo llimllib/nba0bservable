@@ -30,7 +30,8 @@ export const catalog = [
   {
     href: "rotations",
     name: "Rotations",
-    blurb: "Who played when in a game, and the score margin in each stint.",
+    blurb:
+      "Who played when in a game for both teams, the score margin in each stint, and the game's margin between them.",
     takes: ["Season", "Team", "Game"],
   },
 ]

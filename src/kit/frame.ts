@@ -125,6 +125,26 @@ function drawLegend(g: G, items: LegendItem[], y: number) {
         .attr("stroke", item.color)
         .attr("stroke-width", 1.25)
         .attr("stroke-dasharray", "5 4")
+    } else if (item.symbol === "line" || item.symbol === "dotline") {
+      w = 22
+      const pts: [number, number][] = [
+        [x, cy + 3],
+        [x + 8, cy - 4],
+        [x + 15, cy + 1],
+        [x + w, cy - 3],
+      ]
+      g.append("polyline")
+        .attr("points", pts.join(" "))
+        .attr("fill", "none")
+        .attr("stroke", item.color)
+        .attr("stroke-width", 1.25)
+      if (item.symbol === "dotline")
+        for (const [px, py] of pts)
+          g.append("circle")
+            .attr("cx", px)
+            .attr("cy", py)
+            .attr("r", 1.75)
+            .attr("fill", item.color)
     } else if (item.symbol === "tick")
       g.append("line")
         .attr("x1", x + 5)

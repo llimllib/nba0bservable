@@ -6,7 +6,9 @@
 import {
   asyncBufferFromUrl,
   cachedAsyncBuffer,
+  parquetMetadataAsync,
   parquetReadObjects,
+  type ParquetQueryFilter,
 } from "hyparquet"
 import { compressors } from "hyparquet-compressors"
 
@@ -36,6 +38,48 @@ export function read(
       const file = cachedAsyncBuffer(await asyncBufferFromUrl({ url }))
       return parquetReadObjects({ file, columns, compressors })
     })()
+    rows.catch(() => cache.delete(key))
+    cache.set(key, rows)
+  }
+  return rows
+}
+
+const opened = new Map<string, ReturnType<typeof open>>()
+
+// A file and its footer, read once. hyparquet's first read is otherwise the
+// file's last 512KB, which for a table read a game at a time is most of it
+async function open(url: string) {
+  const file = cachedAsyncBuffer(await asyncBufferFromUrl({ url }))
+  const metadata = await parquetMetadataAsync(file, {
+    initialFetchSize: 32_768,
+  })
+  return { file, metadata }
+}
+
+// Read the rows of one season of a dataset that match a filter, such as one
+// game's. On a column the file is sorted by, an operator filter
+// (`{ game_id: { $eq: id } }`) skips the row groups that can't match, so
+// only the matching rows are fetched
+export function readWhere(
+  source: string,
+  dataset: string,
+  season: number,
+  columns: string[],
+  filter: ParquetQueryFilter,
+): Promise<Row[]> {
+  const url = datasetUrl(source, dataset, season)
+  const key = `${url}|${columns.join(",")}|${JSON.stringify(filter)}`
+  let rows = cache.get(key)
+  if (!rows) {
+    let file = opened.get(url)
+    if (!file) {
+      file = open(url)
+      file.catch(() => opened.delete(url))
+      opened.set(url, file)
+    }
+    rows = file.then(f =>
+      parquetReadObjects({ ...f, columns, filter, compressors }),
+    )
     rows.catch(() => cache.delete(key))
     cache.set(key, rows)
   }

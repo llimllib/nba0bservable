@@ -1,7 +1,19 @@
-// A team's rotation in one game: one row per player, one bar per stint on the
-// game clock, colored and labeled by the score margin while they were on
-import { max, scaleLinear, select, sum } from "d3"
-import { lookups, read, type Row as DataRow } from "../kit/data"
+// A team's rotation in one game, over its opponent's: one row per player, one
+// bar per stint on the game clock, colored and labeled by the score margin
+// while they were on, with the game's margin between the two
+import {
+  area,
+  curveLinear,
+  curveMonotoneX,
+  line,
+  max,
+  min,
+  range,
+  scaleLinear,
+  select,
+  sum,
+} from "d3"
+import { lookups, read, readWhere, type Row as DataRow } from "../kit/data"
 import { agate } from "../kit/frame"
 import { color, type } from "../kit/theme"
 import type { Body, Mark, Tool } from "../kit/tool"
@@ -29,6 +41,7 @@ interface Game {
   kind: string
   opp_team_id: string
   opp: string
+  opp_name: string
   pts: number
   opp_pts: number
 }
@@ -42,6 +55,8 @@ interface D {
   // stints by `${game_id}:${team_id}`
   stints: Map<string, Stint[]>
   names: Map<string, string>
+  // the shown game's scoring plays, in order, when its season has them
+  scoring?: { game_id: string; plays: DataRow[] }
 }
 
 interface Row {
@@ -65,6 +80,9 @@ const mmss = (s: number) =>
   `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`
 const result = (g: Game) =>
   `${g.pts > g.opp_pts ? "W" : "L"} ${g.pts}–${g.opp_pts}`
+
+// the margin graph's clip paths need ids unique on the page
+let clips = 0
 
 const rounds = ["", "Round 1", "Round 2", "Conf. finals", "Finals"]
 
@@ -105,10 +123,96 @@ function substitutions(stints: Stint[]) {
     .length
 }
 
-function rows(d: D, p: P): Row[] {
-  const team = d.teams.get(p.team)
+// The team and game a view shows: the team asked for, or the first, and the
+// game asked for, or the team's latest
+function pick(d: Omit<D, "scoring">, p: P) {
+  const team = d.teams.has(p.team) ? p.team : [...d.teams.keys()][0]
+  const games = d.games.get(d.teams.get(team)!.team_id)!
+  const game = games.some(g => g.game_id === p.game)
+    ? p.game
+    : games[0].game_id
+  return { team, game }
+}
+
+const byPlay = (d: D, game: string) =>
+  d.scoring?.game_id === game && d.scoring.plays.length > 0
+
+// Ramer-Douglas-Peucker: the points of a line, kept where they stray more
+// than eps pixels from the line through their neighbors, plus the indices in
+// `must`
+function simplify<T>(
+  pts: T[],
+  at: (p: T) => [number, number],
+  eps: number,
+  must: number[] = [],
+) {
+  const xy = pts.map(at)
+  const keep = new Set([0, pts.length - 1, ...must])
+  const walk = (i: number, j: number) => {
+    const [x0, y0] = xy[i]
+    const [x1, y1] = xy[j]
+    const len = Math.hypot(x1 - x0, y1 - y0) || 1
+    let far = -1
+    let dist = eps
+    for (let k = i + 1; k < j; k++) {
+      const [x, y] = xy[k]
+      const d =
+        Math.abs((y1 - y0) * x - (x1 - x0) * y + x1 * y0 - y1 * x0) / len
+      if (d > dist) [far, dist] = [k, d]
+    }
+    if (far < 0) return
+    keep.add(far)
+    walk(i, far)
+    walk(far, j)
+  }
+  const fixed = [...keep].sort((a, b) => a - b)
+  for (let n = 1; n < fixed.length; n++) walk(fixed[n - 1], fixed[n])
+  return pts.filter((_, i) => keep.has(i))
+}
+
+// The margin, from team_id's side, after every scoring play
+function margins(d: D, game: Game, team_id: string) {
+  if (byPlay(d, game.game_id)) {
+    const plays = d.scoring!.plays
+    const sign = plays[0].home_team_id === team_id ? 1 : -1
+    return [
+      { t: 0, m: 0 },
+      ...plays.map(r => ({
+        t: r.time as number,
+        m: sign * (r.home_score - r.away_score),
+      })),
+    ]
+  }
+  return subMargins(d, game, team_id)
+}
+
+// The margin, from team_id's side, at every substitution, for seasons
+// without scoring plays. A stint's plus-minus is the change in margin across
+// it, so from 0–0 at the tip each stint gives the margin when it ends from
+// the margin when it began. Runs between substitutions don't show
+function subMargins(d: D, game: Game, team_id: string) {
+  const at = new Map([[0, 0]])
+  for (const [id, sign] of [
+    [team_id, 1],
+    [game.opp_team_id, -1],
+  ] as const) {
+    // a stint begins when another ends, so by then that one's been counted
+    const ss = [...(d.stints.get(`${game.game_id}:${id}`) ?? [])].sort(
+      (a, b) => a.out - b.out || a.in - b.in,
+    )
+    for (const s of ss) {
+      const m = at.get(s.in)
+      if (m !== undefined && !at.has(s.out)) at.set(s.out, m + sign * s.pm)
+    }
+  }
+  return [...at]
+    .map(([t, m]) => ({ t, m }))
+    .sort((a, b) => a.t - b.t)
+}
+
+function rows(d: D, game: string, team_id: string): Row[] {
   const byPlayer = new Map<string, Stint[]>()
-  for (const s of d.stints.get(`${p.game}:${team?.team_id}`) ?? [])
+  for (const s of d.stints.get(`${game}:${team_id}`) ?? [])
     byPlayer.set(s.player_id, [...(byPlayer.get(s.player_id) ?? []), s])
   const out = [...byPlayer].map(([player_id, stints]) => ({
     player_id,
@@ -194,6 +298,7 @@ export const rotations: Tool<P, D> = {
           where: `${g.away_team_id === team_id ? "@" : "vs"} ${lk.teams.get(opp_id)?.nba_abbrev ?? ""}`,
           opp_team_id: opp_id,
           opp: lk.teams.get(opp_id)?.nba_abbrev ?? "",
+          opp_name: lk.teams.get(opp_id)?.full_name ?? "",
           kind,
           pts: own,
           opp_pts: opp_pts!,
@@ -211,16 +316,23 @@ export const rotations: Tool<P, D> = {
         .sort((a, b) => a.full_name.localeCompare(b.full_name))
         .map(t => [t.nba_abbrev, { team_id: t.team_id, name: t.full_name }]),
     )
-    return { season: p.season, teams, games, stints, names: lk.players }
+    const d = { season: p.season, teams, games, stints, names: lk.players }
+    // the shown game's scoring plays. A season without them (2025, or one
+    // nba_data hasn't published yet) falls back to the margin at each sub
+    const { game } = pick(d, p)
+    const plays = await readWhere(
+      "stats",
+      "game_scoring",
+      p.season,
+      ["action_id", "time", "home_team_id", "home_score", "away_score"],
+      { game_id: { $eq: game } },
+    ).catch(() => [])
+    plays.sort((a, b) => a.action_id - b.action_id)
+    return { ...d, scoring: { game_id: game, plays } }
   },
 
   normalize(d, p) {
-    const team = d.teams.has(p.team) ? p.team : [...d.teams.keys()][0]
-    const games = d.games.get(d.teams.get(team)!.team_id)!
-    const game = games.some(g => g.game_id === p.game)
-      ? p.game
-      : games[0].game_id
-    return { ...p, team, game }
+    return { ...p, ...pick(d, p) }
   },
 
   controls(d, p) {
@@ -270,6 +382,13 @@ export const rotations: Tool<P, D> = {
           label: "−1",
           text: "lost the stint",
         },
+        byPlay(d, p.game)
+          ? { symbol: "line", color: color.ink, text: "score margin" }
+          : {
+              symbol: "dotline",
+              color: color.ink,
+              text: "margin at each sub",
+            },
       ],
       source: "Data: NBA.com play-by-play",
       team: p.team,
@@ -277,28 +396,57 @@ export const rotations: Tool<P, D> = {
   },
 
   render(node, d, p, size): Body {
-    const rs = rows(d, p)
+    const team = d.teams.get(p.team)!
+    const game = d.games.get(team.team_id)!.find(gm => gm.game_id === p.game)!
+    // the team on top, its opponent under the margin
+    const blocks = [
+      { name: team.name, rows: rows(d, p.game, team.team_id) },
+      {
+        name: game.opp_name || game.opp,
+        rows: rows(d, p.game, game.opp_team_id),
+      },
+    ]
+    const ms = margins(d, game, team.team_id)
+    // the margin after each scoring play, or, without them, at each sub,
+    // which is known only at its points and so is drawn with a dot at each
+    const plays = byPlay(d, p.game)
     const g = select(node)
     const topHeight = 22
     const axisHeight = 40
+    // a team's name over its rows, and the space either side of the margin
+    const headH = 28
+    const gap = 14
+    // at a fixed size, rows share the height left, the margin graph taking
+    // four of them, or three when two long benches leave rows tight
+    const players = blocks[0].rows.length + blocks[1].rows.length
+    const room = size.height
+      ? size.height - topHeight - axisHeight - 2 * headH - 2 * gap
+      : 0
+    const marginRows = room && room / (players + 4) < 18 ? 3 : 4
     const rowH = size.height
-      ? Math.max(
-          16,
-          Math.min(
-            44,
-            (size.height - topHeight - axisHeight) / Math.max(rs.length, 1),
-          ),
-        )
+      ? Math.max(11, Math.min(44, room / (players + marginRows)))
       : 30
-    const plotH = rs.length * rowH
+    // two long benches in a small export shrink the rows' text and bars
+    // with them, so the chart fits the frame
+    const textSize = Math.min(type.label.size, rowH + 1)
+    const barH = rowH >= 16 ? Math.min(rowH * 0.66, 24) : rowH * 0.75
+
+    // from the top of the plot: a head, the team's rows, the margin, then
+    // the opponent's head and rows
+    const marginTop = headH + blocks[0].rows.length * rowH + gap
+    const marginH = marginRows * rowH
+    const heads = [0, marginTop + marginH + gap]
+    const placed = blocks.flatMap((b, j) =>
+      b.rows.map((r, i) => ({ r, y: heads[j] + headH + i * rowH })),
+    )
+    const plotH = heads[1] + headH + blocks[1].rows.length * rowH
     const height = size.height ?? topHeight + plotH + axisHeight
-    const barH = Math.min(rowH * 0.66, 24)
 
     const measure = g
       .append("text")
-      .attr("font-size", type.label.size)
+      .attr("font-size", textSize)
       .attr("font-weight", 600)
-    const nameWidth = max(rs, r =>
+    const nameWidth = max(placed, ({ r }) =>
       measure.text(r.name).node()!.getComputedTextLength(),
     )
     measure.remove()
@@ -316,13 +464,93 @@ export const rotations: Tool<P, D> = {
     let periods = 4
     while (periodStart(periods + 1) < last) periods++
     const end = periodStart(periods + 1)
+    // the last score holds to the final horn
+    if (plays) ms.push({ t: end, m: ms[ms.length - 1].m })
     const x = scaleLinear()
       .domain([0, end])
       .range([labelWidth, size.width - statsWidth - 8])
 
+    // the margin, from the team's side: above zero is a lead. Each side
+    // gets some room, so its label fits even if that team never led
+    const lo = Math.min(min(ms, s => s.m)!, -4)
+    const hi = Math.max(max(ms, s => s.m)!, 4)
+    const y = scaleLinear()
+      .domain([lo - 1, hi + 1])
+      .range([marginTop + marginH, marginTop])
+    const zero = y(0)
+    // gridlines far enough apart for their numbers
+    const step =
+      [5, 10, 20].find(s => y(0) - y(s) >= 20) ?? 40
+    const ticks = [
+      ...range(-step, lo - 0.5, -step),
+      ...range(step, hi + 0.5, step),
+    ]
+
     const plot = g.append("g").attr("transform", `translate(0,${topHeight})`)
 
-    // period boundaries, with the period names above
+    // the margin's fill, blue where the team led and red where it trailed,
+    // in the lighter blue and red of the same RdBu scale as the bars
+    const id = `rotations-margin-${++clips}`
+    const defs = plot.append("defs")
+    for (const [side, y0, y1] of [
+      ["lead", marginTop - gap, zero],
+      ["trail", zero, marginTop + marginH + gap],
+    ] as const)
+      defs
+        .append("clipPath")
+        .attr("id", `${id}-${side}`)
+        .append("rect")
+        .attr("x", 0)
+        .attr("y", y0)
+        .attr("width", size.width)
+        .attr("height", y1 - y0)
+    // a basket is a point or three, a tooth at this scale, so the line
+    // after each scoring play is simplified: it keeps the plays more than 8px
+    // off the line through their neighbors, every lead change and each
+    // side's biggest lead, and curves through them. Every point drawn is a
+    // real score
+    const drawn = plays
+      ? simplify(ms, s => [x(s.t), y(s.m)], 8, [
+          ...ms.flatMap((s, i) =>
+            i > 0 && Math.sign(s.m) !== Math.sign(ms[i - 1].m)
+              ? [i - 1, i]
+              : [],
+          ),
+          ms.indexOf(ms.reduce((a, b) => (b.m > a.m ? b : a))),
+          ms.indexOf(ms.reduce((a, b) => (b.m < a.m ? b : a))),
+        ])
+      : ms
+    // monotone, so the curve never passes a point it joins
+    const curve = plays ? curveMonotoneX : curveLinear
+    const fill = area<{ t: number; m: number }>()
+      .x(s => x(s.t))
+      .y0(zero)
+      .y1(s => y(s.m))
+      .curve(curve)
+    for (const [side, tint] of [
+      ["lead", "#92c5de"],
+      ["trail", "#f4a582"],
+    ])
+      plot
+        .append("path")
+        .datum(drawn)
+        .attr("d", fill)
+        .attr("fill", tint)
+        .attr("clip-path", `url(#${id}-${side})`)
+    plot
+      .append("g")
+      .selectAll("line")
+      .data(ticks)
+      .join("line")
+      .attr("x1", x(0))
+      .attr("x2", x(end))
+      .attr("y1", v => y(v))
+      .attr("y2", v => y(v))
+      .attr("stroke", color.grid)
+      .attr("stroke-width", 0.75)
+
+    // period boundaries through both rotations and the margin, with the
+    // period names above
     const bounds = Array.from({ length: periods + 1 }, (_, i) =>
       periodStart(i + 1),
     )
@@ -346,14 +574,102 @@ export const rotations: Tool<P, D> = {
       .attr("text-anchor", "middle")
       .call(agate)
       .text((_, i) => periodName(i + 1))
-    for (const [i, label] of ["MIN", "+/−"].entries())
+
+    // the margin: zero, its line, and the final margin at its end
+    plot
+      .append("line")
+      .attr("x1", x(0))
+      .attr("x2", x(end))
+      .attr("y1", zero)
+      .attr("y2", zero)
+      .attr("stroke", color.zero)
+      .attr("stroke-width", 1.5)
+    // the line in the fill's own blue and red, so it reads as the fill's edge
+    const edge = line<{ t: number; m: number }>()
+      .x(s => x(s.t))
+      .y(s => y(s.m))
+      .curve(curve)
+    for (const [side, stroke] of [
+      ["lead", color.pos],
+      ["trail", color.neg],
+    ])
       plot
+        .append("path")
+        .datum(drawn)
+        .attr("d", edge)
+        .attr("fill", "none")
+        .attr("stroke", stroke)
+        .attr("stroke-width", 1.5)
+        .attr("clip-path", `url(#${id}-${side})`)
+    plot
+      .append("g")
+      .selectAll("circle")
+      .data(plays ? [] : ms)
+      .join("circle")
+      .attr("cx", s => x(s.t))
+      .attr("cy", s => y(s.m))
+      .attr("r", 1.75)
+      .attr("fill", color.ink)
+    const final = game.pts - game.opp_pts
+    plot
+      .append("text")
+      .attr("x", x(end) + 6)
+      .attr("y", y(final) + 4.5)
+      .attr("font-size", type.label.size)
+      .attr("font-weight", 600)
+      .attr("fill", final > 0 ? color.pos : final < 0 ? color.neg : color.ink)
+      .text(signed(final))
+    // which side is whose, and how far ahead, in the names' column
+    for (const [text, ty] of [
+      [`${p.team} ahead`, zero - 6],
+      [`${game.opp} ahead`, zero + 14],
+    ] as const)
+      plot.append("text").attr("x", 0).attr("y", ty).call(agate).text(text)
+    plot
+      .append("g")
+      .selectAll("text")
+      .data(ticks)
+      .join("text")
+      .attr("x", labelWidth - 6)
+      .attr("y", v => y(v) + 4)
+      .attr("text-anchor", "end")
+      .attr("font-size", 12)
+      .attr("font-weight", 500)
+      .attr("fill", color.muted)
+      .text(v => Math.abs(v))
+
+    // each team's name on a rule over its rows, with its columns' heads
+    blocks.forEach((b, j) => {
+      const base = heads[j] + headH - 9
+      const head = plot.append("g")
+      head
+        .append("line")
+        .attr("x1", 0)
+        .attr("x2", size.width)
+        .attr("y1", base + 5)
+        .attr("y2", base + 5)
+        .attr("stroke", color.ink)
+      head
         .append("text")
-        .attr("x", size.width - colW * (1 - i))
-        .attr("y", -9)
-        .attr("text-anchor", "end")
+        .attr("x", 0)
+        .attr("y", base)
         .call(agate)
-        .text(label)
+        .attr("fill", color.ink)
+        .attr("font-weight", 600)
+        // the period lines run behind it
+        .attr("stroke", color.bg)
+        .attr("stroke-width", 4)
+        .attr("paint-order", "stroke")
+        .text(b.name)
+      for (const [i, label] of ["MIN", "+/−"].entries())
+        head
+          .append("text")
+          .attr("x", size.width - colW * (1 - i))
+          .attr("y", base)
+          .attr("text-anchor", "end")
+          .call(agate)
+          .text(label)
+    })
 
     // minutes elapsed, beneath
     const axis = plot
@@ -379,14 +695,14 @@ export const rotations: Tool<P, D> = {
     // stints are marks for arrows to point at, with no labels: the bars
     // already print their margins
     const marks: Mark[] = []
-    rs.forEach((r, i) => {
-      const cy = i * rowH + rowH / 2
+    for (const { r, y: top } of placed) {
+      const cy = top + rowH / 2
       const row = plot.append("g").attr("transform", `translate(0,${cy})`)
       row
         .append("text")
         .attr("x", 0)
         .attr("y", 4.5)
-        .attr("font-size", type.label.size)
+        .attr("font-size", textSize)
         .attr("font-weight", 600)
         .text(r.name)
       row
@@ -394,14 +710,14 @@ export const rotations: Tool<P, D> = {
         .attr("x", size.width - colW)
         .attr("y", 4.5)
         .attr("text-anchor", "end")
-        .attr("font-size", type.label.size)
+        .attr("font-size", textSize)
         .text(mmss(r.min * 60))
       row
         .append("text")
         .attr("x", size.width)
         .attr("y", 4.5)
         .attr("text-anchor", "end")
-        .attr("font-size", type.label.size)
+        .attr("font-size", textSize)
         .attr("font-weight", 600)
         .attr("fill", r.pm > 0 ? color.pos : r.pm < 0 ? color.neg : color.ink)
         .text(signed(r.pm))
@@ -448,25 +764,37 @@ export const rotations: Tool<P, D> = {
           w: w / 2,
         })
       }
-    })
+    }
 
     return {
       height,
       marks,
-      // a note's position: a time in the game, in a player's row
+      // a note's position: a time in the game, and a player's row or a
+      // margin
       invert(px, py) {
-        const i = Math.floor((py - topHeight) / rowH)
-        if (i < 0 || i >= rs.length) return undefined
-        return {
-          x: Math.round(x.invert(px)),
-          p: rs[i].player_id,
-          f: +((py - topHeight) / rowH - i).toFixed(3),
-        }
+        const py0 = py - topHeight
+        const t = Math.round(x.invert(px))
+        const hit = placed.find(o => py0 >= o.y && py0 < o.y + rowH)
+        if (hit)
+          return {
+            x: t,
+            p: hit.r.player_id,
+            f: +((py0 - hit.y) / rowH).toFixed(3),
+          }
+        if (py0 >= marginTop - gap && py0 < marginTop + marginH + gap)
+          return { x: t, m: +y.invert(py0).toFixed(1) }
+        return undefined
       },
       project(pos) {
-        const { x: t, p: id, f } = pos as { x: number; p: string; f: number }
-        const i = rs.findIndex(r => r.player_id === id)
-        return i < 0 ? undefined : [x(t), topHeight + (i + f) * rowH]
+        const { x: t, p: id, f, m } = pos as {
+          x: number
+          p?: string
+          f?: number
+          m?: number
+        }
+        if (m !== undefined) return [x(t), topHeight + y(m)]
+        const o = placed.find(o => o.r.player_id === id)
+        return o ? [x(t), topHeight + o.y + f! * rowH] : undefined
       },
     }
   },

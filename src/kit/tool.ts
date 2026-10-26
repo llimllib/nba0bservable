@@ -72,7 +72,8 @@ export interface Body {
 }
 
 export interface LegendItem {
-  symbol: "dot" | "tick" | "bar" | "dash"
+  // line: a series over time. dotline: one known only at its dots
+  symbol: "dot" | "tick" | "bar" | "dash" | "line" | "dotline"
   color: string
   // drawn inside a bar, so the legend doesn't rely on color alone
   label?: string
