@@ -52,6 +52,8 @@ interface D {
   latest: number
   source: string
   playoffs: boolean
+  // whether the season has playoff games yet; without them, no toggle
+  hasPlayoffs: boolean
   last: string
   // the windows this source and season type have, in slider order
   windows: { value: string; label: string }[]
@@ -91,9 +93,13 @@ async function loadNba(season: number, p: P) {
     ]),
     read("stats", "games", season, ["game_id", "game_type"]),
   ])
-  // the play-in goes with the playoffs, as it does at CTG
-  const kinds = p.playoffs ? ["playoffs", "play_in"] : ["regular_season"]
   const type = new Map(games.map(g => [g.game_id, g.game_type as string]))
+  // the play-in goes with the playoffs, as it does at CTG. A season with
+  // none played yet has no playoffs to show
+  const post = ["playoffs", "play_in"]
+  const hasPlayoffs = logs.some(r => post.includes(type.get(r.game_id)!))
+  const playoffs = p.playoffs && hasPlayoffs
+  const kinds = playoffs ? post : ["regular_season"]
   const byTeam = new Map<string, typeof logs>()
   for (const r of logs) {
     if (!kinds.includes(type.get(r.game_id)!) || !(r.poss > 0)) continue
@@ -127,7 +133,7 @@ async function loadNba(season: number, p: P) {
       games: used.length,
     }
   })
-  return { rows, windows, last, through }
+  return { rows, windows, last, through, playoffs, hasPlayoffs }
 }
 
 async function loadCtg(season: number, p: P) {
@@ -144,9 +150,11 @@ async function loadCtg(season: number, p: P) {
     "off_rtg_last_2wk",
     "def_rtg_last_2wk",
   ])
-  const kind = p.playoffs ? "playoffs" : "regular_season"
+  const hasPlayoffs = rows.some(r => r.season_type === "playoffs")
+  const playoffs = p.playoffs && hasPlayoffs
+  const kind = playoffs ? "playoffs" : "regular_season"
   // CTG's playoff numbers come for the whole playoffs only
-  const windows = p.playoffs
+  const windows = playoffs
     ? [{ value: "", label: "Season" }]
     : [
         { value: "", label: "Season" },
@@ -167,6 +175,8 @@ async function loadCtg(season: number, p: P) {
     windows,
     last,
     through: max(mine, r => r.as_of_date as Date),
+    playoffs,
+    hasPlayoffs,
   }
 }
 
@@ -223,7 +233,8 @@ export const efficiency: Tool<P, D> = {
       seasons,
       latest: last_season,
       source,
-      playoffs: p.playoffs,
+      playoffs: loaded.playoffs,
+      hasPlayoffs: loaded.hasPlayoffs,
       last: loaded.last,
       windows: loaded.windows,
       teams,
@@ -237,6 +248,7 @@ export const efficiency: Tool<P, D> = {
       ...p,
       season: d.season,
       source: d.source,
+      playoffs: d.playoffs,
       // a window the source doesn't have, as after switching sources, is
       // the source's default: the whole season
       last: d.last,
@@ -281,7 +293,9 @@ export const efficiency: Tool<P, D> = {
           label: s.label,
         })),
       },
-      { key: "playoffs", label: "Playoffs", kind: "toggle" },
+      ...(d.hasPlayoffs
+        ? [{ key: "playoffs", label: "Playoffs", kind: "toggle" as const }]
+        : []),
       ...games,
       {
         key: "sort",
