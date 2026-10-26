@@ -327,13 +327,10 @@ export const efficiency: Tool<P, D> = {
       legend: [
         { symbol: "bar", color: color.pos, label: "+", text: "better" },
         { symbol: "bar", color: color.neg, label: "−", text: "worse" },
-        {
-          symbol: "tick",
-          color: color.zero,
-          text: `average team = ${d.avg.toFixed(1)}`,
-        },
       ],
-      counts: `${d.teams.length} teams · ${most} games`,
+      // the average is zero in every column: with it, +6.4 on offense is a
+      // rating you can work out
+      counts: `average team ${d.avg.toFixed(1)} · ${d.teams.length} teams · ${most} games`,
       source: `Data: ${sources[d.source].label}`,
     }
   },
@@ -357,14 +354,25 @@ export const efficiency: Tool<P, D> = {
     const stripW = Math.round(W * 0.22)
     const gap = 18
     const colW = (W - teamW - stripW - gap) / 3
-    // in each column, its bars and then its number, close together; the
-    // space and a rule go between columns, so a number reads with its own
-    // bars and not the next column's
-    const inset = 12
-    const numW = 40
-    const numGap = 4
-    const barW = colW - inset - numGap - numW - 8
-    const numX = inset + barW + numGap + numW
+    const colX = (i: number) => teamW + i * colW
+    // each column's numbers run down its middle, and its bars grow out of
+    // them: right of the number if better, left if worse. So a bar always
+    // touches its own number, and the numbers line up. The cost: zero is
+    // the number's width, so +0.1 and −0.1 look further apart than they are
+    const center = (j: number) => colX(j) + colW / 2
+    const measure = g
+      .append("text")
+      .attr("font-size", fs)
+      .attr("font-weight", 600)
+    const half =
+      (max(ts, t =>
+        max(columns, c =>
+          measure.text(signed(t[c.key])).node()!.getComputedTextLength(),
+        ),
+      ) ?? 30) /
+        2 +
+      4
+    measure.remove()
     const maxAbs = Math.max(
       1,
       max(ts, t =>
@@ -372,13 +380,11 @@ export const efficiency: Tool<P, D> = {
       ) ?? 1,
     )
     // one scale for all three columns, so offense and defense add up to net
-    const bar = scaleLinear()
-      .domain([-maxAbs, maxAbs])
-      .range([inset, inset + barW])
-    const colX = (i: number) => teamW + i * colW
+    const len = scaleLinear()
+      .domain([0, maxAbs])
+      .range([0, colW / 2 - half - 8])
 
-    // rules every five rows, as in a newspaper's standings, and between
-    // the columns
+    // rules every five rows, as in a newspaper's standings
     const rules = g.append("g").attr("stroke", color.grid)
     for (let i = 5; i < ts.length; i += 5)
       rules
@@ -386,21 +392,14 @@ export const efficiency: Tool<P, D> = {
         .attr("x2", teamW + colW * 3)
         .attr("y1", rowY(i))
         .attr("y2", rowY(i))
-    for (let j = 1; j < 3; j++)
-      rules
-        .append("line")
-        .attr("x1", colX(j))
-        .attr("x2", colX(j))
-        .attr("y1", head - 24)
-        .attr("y2", rowY(ts.length))
 
-    // headers, over their whole column; the sorted one gets ▼ and ink, and
-    // a click on one sorts by it
+    // headers, over the numbers; the sorted one gets ▼ and ink, and a
+    // click on one sorts by it
     columns.forEach((c, i) =>
       g
         .append("text")
         .attr("class", "frame-control")
-        .attr("x", colX(i) + (inset + numX) / 2)
+        .attr("x", center(i))
         .attr("y", head - 10)
         .attr("text-anchor", "middle")
         .call(agate)
@@ -446,21 +445,21 @@ export const efficiency: Tool<P, D> = {
         )
       columns.forEach((c, j) => {
         const v = t[c.key]
-        const x0 = colX(j)
-        const [a, b] = [bar(0), bar(v)].sort((u, w) => u - w)
+        const l = len(Math.abs(v))
+        const a = v >= 0 ? center(j) + half : center(j) - half - l
         const bh = Math.max(3, Math.min(rowH * 0.55, 12))
         row
           .append("rect")
-          .attr("x", x0 + a)
+          .attr("x", a)
           .attr("y", cy - bh / 2)
-          .attr("width", Math.max(b - a, 0.5))
+          .attr("width", Math.max(l, 0.5))
           .attr("height", bh)
           .attr("fill", v >= 0 ? color.pos : color.neg)
         row
           .append("text")
-          .attr("x", x0 + numX)
+          .attr("x", center(j))
           .attr("y", cy + fs * 0.35)
-          .attr("text-anchor", "end")
+          .attr("text-anchor", "middle")
           .attr("font-size", fs)
           .attr("font-weight", c.key === sortKey ? 600 : 500)
           .attr("fill", c.key === sortKey ? color.ink : color.muted)
@@ -474,18 +473,6 @@ export const efficiency: Tool<P, D> = {
         label: `${t.name} · ${signed(t.net)} net`,
       })
     })
-
-    // zero, the strongest line, in each column
-    columns.forEach((_, j) =>
-      g
-        .append("line")
-        .attr("x1", colX(j) + bar(0))
-        .attr("x2", colX(j) + bar(0))
-        .attr("y1", head - 4)
-        .attr("y2", rowY(ts.length))
-        .attr("stroke", color.zero)
-        .attr("stroke-width", 1.5),
-    )
 
     // the strip: logos at their value in the sorted column, on a true
     // scale, so tiers and gaps show

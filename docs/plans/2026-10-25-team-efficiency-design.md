@@ -20,15 +20,23 @@ gaps a ranking hides.
 
 A table, one row per team, sorted by net, offense or defense:
 
-- **Columns**: net, offense, defense. Each cell is a small bar from a strong
-  zero line and a signed number. All three share one scale and positive is
-  always better than average, so offense and defense bars add up to the net
-  bar. Bars are `pos`/`neg`; the sign and the side of zero carry the value.
+- **Columns**: net, offense, defense. Each column's signed numbers run
+  down its middle, and each bar grows out of its number: right if better
+  than average, left if worse. All three share one scale and positive is
+  always better, so offense and defense bars add up to the net bar. Bars
+  are `pos`/`neg`; the sign and the bar's side carry the value.
+- **No zero line**, an exception to "zero is the strongest line": the
+  column of numbers is zero. Earlier versions put the number at the
+  column's edge, where it read with the next column's bars (BOS's −2.1 net
+  beside a +3.3 offense bar); rules between columns helped, a number on the
+  empty side of zero broke its alignment, and a number centered over its
+  bar with a halo cut the bar and the zero line up. The cost: zero is the
+  width of a number, so +0.1 and −0.1 look further apart than they are.
 - **Relative to average**: every number is points per 100 possessions
   better or worse than the average of the teams shown (for the playoffs,
   the playoff teams). The average is the plain mean of the teams' ratings,
   as CTG publishes no possessions; with it, offense + defense = net
-  exactly. The legend gives the average ("average team = 114.8"), so a
+  exactly. The legend strip gives the average ("average team 114.8"), so a
   reader can get back to a raw rating: +6.4 on offense is 121.2, +8.2 on
   defense is 106.6. Relative numbers read well; raw ones aren't coming
   back.
