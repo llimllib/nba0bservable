@@ -106,10 +106,14 @@ export interface Tool<P extends Params, D> {
   normalize?(d: D, p: P): P
   controls(d: D, p: P): Control[]
   describe(d: D, p: P): Description
+  // `set` changes params from the chart, as a click on a column header
+  // sorts by it. Give such elements the class frame-control; embeds ignore
+  // them
   render(
     g: SVGGElement,
     d: D,
     p: P,
     size: { width: number; height?: number },
+    set: (patch: Partial<P>) => void,
   ): Body
 }

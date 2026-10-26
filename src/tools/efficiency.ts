@@ -56,6 +56,10 @@ interface D {
   // the windows this source and season type have, in slider order
   windows: { value: string; label: string }[]
   teams: Team[]
+  // the average team's rating, offense and defense alike: zero in every
+  // column, so a team's rating is this plus its offense, or minus its
+  // defense
+  avg: number
   through?: Date
 }
 
@@ -223,6 +227,7 @@ export const efficiency: Tool<P, D> = {
       last: loaded.last,
       windows: loaded.windows,
       teams,
+      avg,
       through: loaded.through,
     }
   },
@@ -308,14 +313,18 @@ export const efficiency: Tool<P, D> = {
       legend: [
         { symbol: "bar", color: color.pos, label: "+", text: "better" },
         { symbol: "bar", color: color.neg, label: "−", text: "worse" },
-        { symbol: "tick", color: color.zero, text: "average team" },
+        {
+          symbol: "tick",
+          color: color.zero,
+          text: `average team = ${d.avg.toFixed(1)}`,
+        },
       ],
       counts: `${d.teams.length} teams · ${most} games`,
       source: `Data: ${sources[d.source].label}`,
     }
   },
 
-  render(node, d, p, size): Body {
+  render(node, d, p, size, set): Body {
     const ts = sorted(d, p)
     const sortKey = (columns.find(c => c.key === p.sort) ?? columns[0]).key
     const g = select(node)
@@ -355,17 +364,21 @@ export const efficiency: Tool<P, D> = {
         .attr("y1", rowY(i))
         .attr("y2", rowY(i))
 
-    // headers; the sorted one gets ▼ and ink
+    // headers; the sorted one gets ▼ and ink, and a click on one sorts by it
     columns.forEach((c, i) =>
       g
         .append("text")
+        .attr("class", "frame-control")
         .attr("x", colX(i) + bar(0))
         .attr("y", head - 10)
         .attr("text-anchor", "middle")
         .call(agate)
         .attr("fill", c.key === sortKey ? color.ink : color.muted)
         .attr("font-weight", c.key === sortKey ? 700 : 400)
-        .text(c.key === sortKey ? `${c.label} ▼` : c.label),
+        .text(c.key === sortKey ? `${c.label} ▼` : c.label)
+        .on("click", () => set({ sort: c.key }))
+        .append("title")
+        .text(`Sort by ${c.label.toLowerCase()}`),
     )
 
     const marks: Mark[] = []

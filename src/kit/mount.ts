@@ -72,6 +72,12 @@ export async function mount<P extends Params, D>(
     save()
   }
 
+  // change params, from a control or the chart, and redraw
+  function set(patch: Params) {
+    p = { ...p, ...patch }
+    update()
+  }
+
   function renderControls(controls: Control[]) {
     // a re-render replaces the controls, so keep the focus where it was:
     // adding players one after another shouldn't need a click each
@@ -80,10 +86,7 @@ export async function mount<P extends Params, D>(
     )?.closest<HTMLElement>(".controls [data-key]")?.dataset.key
     controlsEl.replaceChildren(
       ...controls.map(c => {
-        const el = controlElement(c, p, patch => {
-          p = { ...p, ...patch }
-          update()
-        })
+        const el = controlElement(c, p, set)
         el.dataset.key = c.key
         return el
       }),
@@ -108,8 +111,12 @@ export async function mount<P extends Params, D>(
     // from an image, and a query string is too long to type
     const url = `${SITE}/${tool.id}`
     const size = (p.size in sizes ? p.size : "auto") as Size
+    // the chart's own controls work only when a click isn't for a note
+    const fromChart = (patch: Partial<P>) => {
+      if (mode === "select") set(patch as Params)
+    }
     frame = buildFrame(chartEl, size, desc, url, (g, s) =>
-      tool.render(g, data!, p, s),
+      tool.render(g, data!, p, s, fromChart),
     )
     layer = new AnnotationLayer(frame, anns, mode, saveAnnotations, showMode)
     root.querySelector<HTMLElement>(".hint-label")!.hidden =
@@ -280,7 +287,7 @@ export async function embed<P extends Params, D>(
   p = { ...p, ...tool.normalize?.(data, p) }
   const url = `${SITE}/${tool.id}`
   buildFrame(root, "auto", tool.describe(data, p), url, (g, s) =>
-    tool.render(g, data, p, s),
+    tool.render(g, data, p, s, () => {}),
   )
   return { data, p }
 }

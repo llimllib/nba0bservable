@@ -439,6 +439,15 @@ select {
   cursor: text;
 }
 
+/* a control drawn in the chart, as a column header that sorts */
+.chart svg.frame .frame-control {
+  cursor: pointer;
+}
+
+.chart svg.frame .frame-control:hover {
+  text-decoration: underline;
+}
+
 /* a blank to fill in, so it's clear the headline and deck can be rewritten */
 .chart svg.frame :is(.frame-title, .frame-context):hover {
   text-decoration: underline dashed;

@@ -28,13 +28,17 @@ A table, one row per team, sorted by net, offense or defense:
   better or worse than the average of the teams shown (for the playoffs,
   the playoff teams). The average is the plain mean of the teams' ratings,
   as CTG publishes no possessions; with it, offense + defense = net
-  exactly. Raw ratings may come back: this is the first thing to look at.
+  exactly. The legend gives the average ("average team = 114.8"), so a
+  reader can get back to a raw rating: +6.4 on offense is 121.2, +8.2 on
+  defense is 106.6. Relative numbers read well; raw ones aren't coming
+  back.
 - **The strip**: a column on the right with each team's logo at its value
   in the sorted column, on a true scale, nudged sideways where logos
   collide. It shows tiers: OKC alone at the top, BOS and DEN side by side.
   The average is its zero line.
 - The sorted column's header gets a ▼, so an exported image says how it's
-  sorted.
+  sorted. Clicking a header sorts by it: `render` gets a `set` for params,
+  and elements that use it get the class `frame-control`.
 
 ## Controls
 
@@ -62,7 +66,6 @@ Five, the most allowed:
   `stats/team_seasons` for abbreviations, 2010 on.
 - CTG: `ctg/ctg_team_summary`, 2010 on.
 
-## Later
+## Not done
 
-- Clicking a column header to sort. The tool contract has no way for a
-  chart to set a param yet.
+- 16:9 is too short for 30 rows, and is left unreadable.
