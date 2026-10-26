@@ -423,6 +423,13 @@ select {
   cursor: text;
 }
 
+/* a blank to fill in, so it's clear the headline and deck can be rewritten */
+.chart svg.frame :is(.frame-title, .frame-context):hover {
+  text-decoration: underline dashed;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+}
+
 .chart svg.mode-text {
   cursor: text;
 }
@@ -496,6 +503,9 @@ select {
 
 .framing-sub {
   font-family: var(--serif);
+  line-height: 1.3;
+  resize: none;
+  overflow: hidden;
 }
 
 /* --- lists of things: the front page, the tools, the notes */

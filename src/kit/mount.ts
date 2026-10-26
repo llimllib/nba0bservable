@@ -55,9 +55,10 @@ export async function mount<P extends Params, D>(
         <button type="button" class="clear">Clear</button>
       </fieldset>
       <button type="button" class="export">Export PNG</button>
-      <p class="hint"><span class="hint-label">Click a dot to label it.</span>
+      <p class="hint">Click the headline or deck to rewrite it.
+      <span class="hint-label">Click a dot to label it.</span>
       Drag labels and notes to move them; double-click a note to edit it; select one and press Delete to
-      remove it. Click the headline or deck to rewrite it.</p>
+      remove it.</p>
     </div>`
   const controlsEl = root.querySelector<HTMLFormElement>(".controls")!
   const chartEl = root.querySelector<HTMLElement>(".chart")!
@@ -112,9 +113,21 @@ export async function mount<P extends Params, D>(
       !frame.body.marks.some(m => m.label)
     frame.title.addEventListener("click", () => editFraming("title"))
     frame.context.addEventListener("click", () => editFraming("sub"))
+    for (const t of [frame.title, frame.context]) tooltip(t, "Click to rewrite")
     for (const b of root.querySelectorAll<HTMLButtonElement>("[data-size]"))
       b.classList.toggle("on", b.dataset.size === size)
     showMode(mode)
+  }
+
+  // SVG text has no title attribute, and a <title> inside it would join its
+  // textContent, so the tooltip goes on a group around it
+  function tooltip(el: SVGElement, text: string) {
+    const ns = "http://www.w3.org/2000/svg"
+    const g = document.createElementNS(ns, "g")
+    const title = document.createElementNS(ns, "title")
+    title.textContent = text
+    el.before(g)
+    g.append(title, el)
   }
 
   function showMode(m: Mode) {
@@ -129,19 +142,34 @@ export async function mount<P extends Params, D>(
     const target = key === "title" ? frame.title : frame.context
     const r = target.getBoundingClientRect()
     const host = chartEl.parentElement!.getBoundingClientRect()
-    const input = document.createElement("input")
+    // the deck wraps, so it gets a textarea that wraps too
+    const input: HTMLInputElement | HTMLTextAreaElement =
+      document.createElement(key === "sub" ? "textarea" : "input")
     input.className = `framing-input framing-${key}`
     // the deck is wrapped into lines, so its text is kept whole on the element
     input.value = target.dataset.text ?? target.textContent ?? ""
     const cs = getComputedStyle(target)
+    // the text's own size, scaled as the SVG is: the box's height counts
+    // every line of a wrapped deck
+    const scale =
+      frame.svg.getBoundingClientRect().width / frame.svg.viewBox.baseVal.width
+    const fontSize = Number(target.getAttribute("font-size")) * scale
     Object.assign(input.style, {
       left: `${r.left - host.left - 4}px`,
       top: `${r.top - host.top - 4}px`,
       width: `${Math.max(r.width + 40, 300)}px`,
-      fontSize: `${r.height * 0.82}px`,
+      fontSize: `${fontSize}px`,
       fontWeight: cs.fontWeight,
     })
     chartEl.parentElement!.appendChild(input)
+    if (input instanceof HTMLTextAreaElement) {
+      const fit = () => {
+        input.style.height = "auto"
+        input.style.height = `${input.scrollHeight + 2}px`
+      }
+      input.addEventListener("input", fit)
+      fit()
+    }
     input.focus()
     input.select()
     const generated = () => {
@@ -159,8 +187,12 @@ export async function mount<P extends Params, D>(
       save()
       draw()
     }
-    input.addEventListener("keydown", e => {
-      if (e.key === "Enter") finish(true)
+    // HTMLElement's, as TypeScript can't type a listener on the union
+    ;(input as HTMLElement).addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        e.preventDefault()
+        finish(true)
+      }
       if (e.key === "Escape") finish(false)
     })
     input.addEventListener("blur", () => finish(true))
