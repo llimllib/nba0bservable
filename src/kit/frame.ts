@@ -10,7 +10,6 @@ import type { Body, Description, LegendItem } from "./tool"
 export const sizes = {
   auto: { width: 720, height: undefined, label: "Fit" },
   square: { width: 720, height: 720, label: "Square" },
-  wide: { width: 800, height: 450, label: "16:9" },
   tall: { width: 720, height: 900, label: "4:5" },
 } as const
 export type Size = keyof typeof sizes
@@ -193,9 +192,7 @@ export function buildFrame(
   // --- the band: headline and deck on the left, the logo box on the right
   const { band, text: onBand, team } = bandColors(desc.team)
   const bandRect = svg.append("rect").attr("fill", band).attr("width", width)
-  // short frames (16:9) get a smaller band, so the chart keeps its room
-  const compact = height !== undefined && height < 600
-  const deckSize = compact ? 15 : type.deck.size
+  const deckSize = type.deck.size
   const deckLine = deckSize * 1.3
   const titleTop = pad - 4
   const title = svg
@@ -210,10 +207,10 @@ export function buildFrame(
 
   // the logo box is a fixed width at the band's right end, as tall as the
   // band
-  const box = compact ? 92 : 116
+  const box = 116
   const textWidth = width - pad * 2 - box
   // the headline shrinks to fit on one line
-  let titleSize = compact ? 32 : type.title.size
+  let titleSize: number = type.title.size
   title.attr("font-size", titleSize)
   const tw = title.node()!.getComputedTextLength()
   if (tw > textWidth) {

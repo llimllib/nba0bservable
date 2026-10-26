@@ -76,4 +76,5 @@ Five, the most allowed:
 
 ## Not done
 
-- 16:9 is too short for 30 rows, and is left unreadable.
+- 16:9 was too short for 30 rows. It was dropped from the site on
+  2026-10-26.

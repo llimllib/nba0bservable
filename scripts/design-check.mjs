@@ -31,7 +31,7 @@ await p.evaluate(async () => {
   document.body.prepend(host)
   buildFrame(
     host,
-    "wide",
+    "square",
     {
       title: "League leaders",
       context:

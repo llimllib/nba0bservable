@@ -80,8 +80,10 @@ Every tool renders into one frame, which is what gets exported:
 
 How it looks is in `2026-10-25-newspaper-design.md`.
 
-Export sizes: square, 16:9, 4:5 portrait. PNG export in the browser
-(SVG → canvas, fonts and images inlined).
+Export sizes: square, 4:5 portrait. PNG export in the browser
+(SVG → canvas, fonts and images inlined). 16:9 was dropped on 2026-10-26:
+it was never used, and it was too short for team efficiency's 30 rows and
+for two teams' rotations.
 
 ## Visual design
 

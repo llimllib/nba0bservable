@@ -133,7 +133,7 @@ Each dot is one player's net points in one playoff game.    (serif)
 │                                           │ │ [Celtics   ▾]
 │                                           │ │ ═════════════
 │                                           │ │ SIZE · ANNOTATE
-│                                           │ │ [FIT][SQ][16:9][4:5]
+│                                           │ │ [FIT][SQ][4:5]
 │                                           │ │ [✎ NOTE][↗ ARROW]
 │                                           │ │ ═════════════
 │                                           │ │ [  EXPORT PNG  ]
