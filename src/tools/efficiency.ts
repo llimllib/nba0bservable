@@ -357,8 +357,14 @@ export const efficiency: Tool<P, D> = {
     const stripW = Math.round(W * 0.22)
     const gap = 18
     const colW = (W - teamW - stripW - gap) / 3
+    // in each column, its bars and then its number, close together; the
+    // space and a rule go between columns, so a number reads with its own
+    // bars and not the next column's
+    const inset = 12
     const numW = 40
-    const barW = colW - numW - 14
+    const numGap = 4
+    const barW = colW - inset - numGap - numW - 8
+    const numX = inset + barW + numGap + numW
     const maxAbs = Math.max(
       1,
       max(ts, t =>
@@ -366,10 +372,13 @@ export const efficiency: Tool<P, D> = {
       ) ?? 1,
     )
     // one scale for all three columns, so offense and defense add up to net
-    const bar = scaleLinear().domain([-maxAbs, maxAbs]).range([0, barW])
+    const bar = scaleLinear()
+      .domain([-maxAbs, maxAbs])
+      .range([inset, inset + barW])
     const colX = (i: number) => teamW + i * colW
 
-    // rules every five rows, as in a newspaper's standings
+    // rules every five rows, as in a newspaper's standings, and between
+    // the columns
     const rules = g.append("g").attr("stroke", color.grid)
     for (let i = 5; i < ts.length; i += 5)
       rules
@@ -377,13 +386,21 @@ export const efficiency: Tool<P, D> = {
         .attr("x2", teamW + colW * 3)
         .attr("y1", rowY(i))
         .attr("y2", rowY(i))
+    for (let j = 1; j < 3; j++)
+      rules
+        .append("line")
+        .attr("x1", colX(j))
+        .attr("x2", colX(j))
+        .attr("y1", head - 24)
+        .attr("y2", rowY(ts.length))
 
-    // headers; the sorted one gets ▼ and ink, and a click on one sorts by it
+    // headers, over their whole column; the sorted one gets ▼ and ink, and
+    // a click on one sorts by it
     columns.forEach((c, i) =>
       g
         .append("text")
         .attr("class", "frame-control")
-        .attr("x", colX(i) + bar(0))
+        .attr("x", colX(i) + (inset + numX) / 2)
         .attr("y", head - 10)
         .attr("text-anchor", "middle")
         .call(agate)
@@ -441,7 +458,7 @@ export const efficiency: Tool<P, D> = {
           .attr("fill", v >= 0 ? color.pos : color.neg)
         row
           .append("text")
-          .attr("x", x0 + barW + 8 + numW)
+          .attr("x", x0 + numX)
           .attr("y", cy + fs * 0.35)
           .attr("text-anchor", "end")
           .attr("font-size", fs)
