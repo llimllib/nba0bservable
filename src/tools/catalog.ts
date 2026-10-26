@@ -21,6 +21,13 @@ export const catalog = [
     takes: ["Seasons", "Playoffs", "Stat", "Players"],
   },
   {
+    href: "efficiency",
+    name: "Team efficiency",
+    blurb:
+      "Every team's offense and defense against the average, ranked, with the gaps to scale.",
+    takes: ["Season", "Source", "Playoffs", "Games", "Sort"],
+  },
+  {
     href: "rotations",
     name: "Rotations",
     blurb: "Who played when in a game, and the score margin in each stint.",

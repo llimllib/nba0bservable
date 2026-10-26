@@ -1,5 +1,5 @@
 // The question controls, as native elements where there's one that fits:
-// select, range and checkbox. Two have none and are built here: a two-handle
+// select, range (and steps, a range over a list) and checkbox. Two have none and are built here: a two-handle
 // slider over a span of values, and a search box that picks several players
 import type { Params } from "./state"
 import type { Control, Option } from "./tool"
@@ -36,6 +36,26 @@ export function controlElement(c: Control, p: Params, set: Set): HTMLElement {
     out.value = String(value)
     input.addEventListener("input", () => (out.value = input.value))
     label.append(input, out)
+  } else if (c.kind === "steps") {
+    // over the options' indices, so the steps needn't be evenly spaced
+    const steps = c.options
+    const range = document.createElement("input")
+    Object.assign(range, { type: "range", min: 0, max: steps.length - 1 })
+    range.value = String(
+      Math.max(
+        0,
+        steps.findIndex(o => o.value === value),
+      ),
+    )
+    const out = document.createElement("output")
+    const show = () => (out.value = steps[Number(range.value)]?.label ?? "")
+    range.addEventListener("input", show)
+    show()
+    label.append(range, out)
+    range.addEventListener("change", () =>
+      set({ [c.key]: steps[Number(range.value)].value }),
+    )
+    return label
   } else {
     input = document.createElement("input")
     input.type = "checkbox"

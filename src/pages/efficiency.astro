@@ -1,0 +1,19 @@
+---
+import Base from "../layouts/Base.astro"
+---
+
+<Base title="Team efficiency" description="Every team's offense and defense, ranked, with the gaps between them to scale">
+  <h1>Team efficiency</h1>
+  <p class="lede">
+    Every team's net, offensive and defensive rating against the average
+    team, ranked. The logos on the right sit at their real values, so you
+    can see which teams are close and which are alone.
+  </p>
+  <div id="tool"></div>
+</Base>
+
+<script>
+  import { mount } from "../kit/mount"
+  import { efficiency } from "../tools/efficiency"
+  mount(document.getElementById("tool")!, efficiency)
+</script>

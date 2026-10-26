@@ -21,6 +21,8 @@ export type Control =
       step: number
     }
   | { key: string; label: string; kind: "toggle" }
+  // a slider over a list of values, showing the label of the one picked
+  | { key: string; label: string; kind: "steps"; options: Option[] }
   // a two-handle slider over a list of values, writing two params
   | {
       key: string
