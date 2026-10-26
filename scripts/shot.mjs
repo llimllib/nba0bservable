@@ -19,7 +19,20 @@ const name = view.replace(/[^a-z0-9]+/gi, "-").replace(/-+$/, "")
 const out = path.resolve("shots", `${name}${dom ? "-dom" : ""}.png`)
 fs.mkdirSync(path.dirname(out), { recursive: true })
 
-const browser = await chromium.launch()
+// Chromium ignores proxy env vars on macOS and drops credentials in a proxy
+// URL, so pass them apart
+const proxy = process.env.HTTPS_PROXY && new URL(process.env.HTTPS_PROXY)
+const browser = await chromium.launch(
+  proxy
+    ? {
+        proxy: {
+          server: `${proxy.protocol}//${proxy.host}`,
+          username: decodeURIComponent(proxy.username),
+          password: decodeURIComponent(proxy.password),
+        },
+      }
+    : {},
+)
 const page = await browser.newPage({
   deviceScaleFactor: 2,
   viewport: { width: 1100, height: 1000 },
