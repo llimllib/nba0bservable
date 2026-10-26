@@ -15,7 +15,7 @@ import { SITE } from "./theme"
 import { controlElement } from "./controls"
 import type { Control, Tool } from "./tool"
 
-const framing = { title: "", sub: "", size: "auto" }
+const framing = { title: "", sub: "", who: "", size: "auto" }
 
 // the site root, for fetching fonts. BASE_URL has no trailing slash in dev,
 // and without one, relative URLs resolve against the parent directory
@@ -100,7 +100,10 @@ export async function mount<P extends Params, D>(
     if (data === undefined) return
     const desc = tool.describe(data, p)
     if (p.title) desc.title = p.title
+    if (desc.who !== undefined && p.who) desc.who = p.who
     if (p.sub) desc.context = p.sub
+    // a tool with a who edits that, not the whole deck
+    const deckKey = desc.who !== undefined && !p.sub ? "who" : "sub"
     // the printed URL names the tool, not the view: a reader types it in
     // from an image, and a query string is too long to type
     const url = `${SITE}/${tool.id}`
@@ -112,7 +115,7 @@ export async function mount<P extends Params, D>(
     root.querySelector<HTMLElement>(".hint-label")!.hidden =
       !frame.body.marks.some(m => m.label)
     frame.title.addEventListener("click", () => editFraming("title"))
-    frame.context.addEventListener("click", () => editFraming("sub"))
+    frame.context.addEventListener("click", () => editFraming(deckKey))
     for (const t of [frame.title, frame.context]) tooltip(t, "Click to rewrite")
     for (const b of root.querySelectorAll<HTMLButtonElement>("[data-size]"))
       b.classList.toggle("on", b.dataset.size === size)
@@ -136,18 +139,26 @@ export async function mount<P extends Params, D>(
       b.classList.toggle("on", b.dataset.mode === m)
   }
 
-  // Rewrite the title or subtitle in place. Empty restores the generated one
-  function editFraming(key: "title" | "sub") {
+  // Rewrite the title, the deck or the deck's who in place. Empty restores
+  // the generated one
+  function editFraming(key: "title" | "sub" | "who") {
     if (!frame || mode !== "select") return
     const target = key === "title" ? frame.title : frame.context
     const r = target.getBoundingClientRect()
     const host = chartEl.parentElement!.getBoundingClientRect()
     // the deck wraps, so it gets a textarea that wraps too
     const input: HTMLInputElement | HTMLTextAreaElement =
-      document.createElement(key === "sub" ? "textarea" : "input")
-    input.className = `framing-input framing-${key}`
+      document.createElement(key === "title" ? "input" : "textarea")
+    input.className = `framing-input framing-${key === "title" ? key : "sub"}`
+    const generated = () => {
+      const d = tool.describe(data!, p)
+      return key === "title" ? d.title : key === "sub" ? d.context : d.who!
+    }
     // the deck is wrapped into lines, so its text is kept whole on the element
-    input.value = target.dataset.text ?? target.textContent ?? ""
+    if (key === "who") {
+      input.value = p.who || generated()
+      input.placeholder = "Who's on the chart"
+    } else input.value = target.dataset.text ?? target.textContent ?? ""
     const cs = getComputedStyle(target)
     // the text's own size, scaled as the SVG is: the box's height counts
     // every line of a wrapped deck
@@ -172,10 +183,6 @@ export async function mount<P extends Params, D>(
     }
     input.focus()
     input.select()
-    const generated = () => {
-      const d = tool.describe(data!, p)
-      return key === "title" ? d.title : d.context
-    }
     let done = false
     const finish = (commit: boolean) => {
       if (done) return
@@ -234,7 +241,7 @@ export async function mount<P extends Params, D>(
     if (m) setMode(m as Mode)
   })
   root.querySelector(".clear")!.addEventListener("click", () => {
-    p = { ...p, title: "", sub: "" }
+    p = { ...p, title: "", sub: "", who: "" }
     saveAnnotations([])
     draw()
   })

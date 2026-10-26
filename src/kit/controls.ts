@@ -134,17 +134,26 @@ function players(
   const byValue = new Map(c.options.map(o => [String(o.value), o]))
   const write = (ids: string[]) => set({ [c.key]: ids.join(",") })
 
+  // with none picked, the fallback's chips stand in, muted. Removing one
+  // keeps the rest as picks; adding one replaces them
+  const fallback = picked.length ? undefined : c.fallback
+  const shown = fallback?.values ?? picked
   const chips = document.createElement("div")
   chips.className = "chips"
-  for (const id of picked) {
+  chips.classList.toggle("fallback", !!fallback)
+  for (const id of shown) {
     const chip = document.createElement("button")
     chip.type = "button"
     chip.className = "chip"
     chip.title = "Remove"
     chip.textContent = `${byValue.get(id)?.label ?? id} ×`
-    chip.addEventListener("click", () => write(picked.filter(v => v !== id)))
+    chip.addEventListener("click", () => write(shown.filter(v => v !== id)))
     chips.append(chip)
   }
+  const note = document.createElement("p")
+  note.className = "fallback-note"
+  note.hidden = !fallback
+  note.textContent = `${fallback?.label ?? ""}, until you add a player`
 
   const box = document.createElement("div")
   box.className = "search"
@@ -209,6 +218,6 @@ function players(
   input.addEventListener("blur", () => list.replaceChildren())
   input.addEventListener("focus", show)
 
-  div.append(box, chips)
+  div.append(box, note, chips)
   return div
 }

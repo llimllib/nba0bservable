@@ -15,7 +15,7 @@ export function readParams<P extends Params>(defaults: P): P {
     else out[k] = v
   }
   // free-form framing params that aren't tool-specific
-  for (const k of ["title", "sub", "size"]) {
+  for (const k of ["title", "sub", "who", "size"]) {
     const v = q.get(k)
     if (v !== null) out[k] = v
   }

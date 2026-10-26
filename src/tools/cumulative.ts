@@ -125,9 +125,30 @@ function picked(p: P) {
   return p.players.split(",").filter(Boolean)
 }
 
-// each picked player's running total, from zero before his first game
+// the players on the chart: the picked ones, or the leaders
+function shown(d: D, p: P) {
+  const ids = picked(p)
+  return ids.length ? ids : leaders(d, p)
+}
+
+// a stat's label inside a phrase: "offensive WPA"
+const statName = (stat: string) =>
+  stats[stat].label[0].toLowerCase() + stats[stat].label.slice(1)
+
+// "the five leaders in net points", or nothing when the players were picked,
+// as their names are on the chart
+function who(d: D, p: P) {
+  if (picked(p).length) return ""
+  const n = leaders(d, p).length
+  const what = statName(d.stat)
+  if (!n) return ""
+  if (n === 1) return `The leader in ${what}`
+  return `The ${["two", "three", "four", "five"][n - 2]} leaders in ${what}`
+}
+
+// each shown player's running total, from zero before his first game
 function series(d: D, p: P) {
-  return picked(p).map((id, i) => {
+  return shown(d, p).map((id, i) => {
     let v = 0
     const points: Point[] = [{ n: 0, v: 0 }]
     counted(d, p, id).forEach((game, j) => {
@@ -216,14 +237,15 @@ export const cumulative: Tool<P, D> = {
 
   normalize(d, p) {
     const p2 = { ...p, from: d.from, to: d.to, stat: d.stat }
-    // players with no games in the span drop out
+    // players with no games in the span drop out. None left means the
+    // leaders, which aren't written down, so they follow the stat and span
     const ids = picked(p)
       .filter(id => d.games.has(id))
       .slice(0, MAX_PLAYERS)
-    return { ...p2, players: (ids.length ? ids : leaders(d, p2)).join(",") }
+    return { ...p2, players: ids.join(",") }
   },
 
-  controls(d) {
+  controls(d, p) {
     return [
       {
         key: "from",
@@ -247,6 +269,10 @@ export const cumulative: Tool<P, D> = {
         label: "Players",
         kind: "players",
         max: MAX_PLAYERS,
+        fallback: {
+          label: `Leaders in ${statName(d.stat)}`,
+          values: leaders(d, p),
+        },
         options: [...d.games.keys()]
           .map(id => ({ value: id, label: d.names.get(id) ?? id }))
           .sort((a, b) => a.label.localeCompare(b.label)),
@@ -270,6 +296,7 @@ export const cumulative: Tool<P, D> = {
     const most = max(ss, s => s.points.length - 1) ?? 0
     return {
       title: stats[d.stat].label,
+      who: who(d, p),
       context: `Running total by games played ${span}${through}`,
       counts: `${ss.length} players · ${most} games`,
       source: "Data: ESPN Analytics",

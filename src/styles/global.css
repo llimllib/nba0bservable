@@ -178,7 +178,7 @@ h1 {
 }
 
 .tool label > :is(select, input),
-.tool .field > :is(.dual, .search, .chips),
+.tool .field > :is(.dual, .search, .chips, .fallback-note),
 .tool legend {
   grid-column: 1 / -1;
 }
@@ -405,6 +405,22 @@ select {
 .tool button.chip:hover {
   background: var(--ink);
   color: var(--paper);
+}
+
+/* stand-ins until someone picks: lighter, so they don't read as picks */
+.tool .chips.fallback button.chip {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.tool .chips.fallback button.chip:hover {
+  color: var(--paper);
+}
+
+.fallback-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .hint {

@@ -164,6 +164,10 @@ function drawLegend(g: G, items: LegendItem[], y: number) {
   return x - 18
 }
 
+// a phrase as a sentence: capitalized, with a period unless it ends in one
+const sentence = (s: string) =>
+  s[0].toUpperCase() + s.slice(1) + (/[.!?…]$/.test(s) ? "" : ".")
+
 export function buildFrame(
   container: HTMLElement,
   size: Size,
@@ -224,9 +228,10 @@ export function buildFrame(
     .attr("font-family", font.serif)
     .attr("font-size", deckSize)
     .attr("fill", onBand)
-  const lines = wrap(context.node()!, desc.context, textWidth)
+  const deck = desc.who ? `${sentence(desc.who)} ${desc.context}` : desc.context
+  const lines = wrap(context.node()!, deck, textWidth)
   const deckTop = titleTop + titleSize * 0.82 + 8 + deckSize
-  context.attr("data-text", desc.context)
+  context.attr("data-text", deck)
   lines.forEach((l, i) =>
     context
       .append("tspan")

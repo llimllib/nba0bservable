@@ -37,6 +37,9 @@ export type Control =
       options: Option[]
       // at most this many
       max: number
+      // shown, under the label, when none are picked; adding one replaces
+      // them
+      fallback?: { label: string; values: string[] }
     }
 
 // Something a label or arrow can attach to, in body coordinates
@@ -80,6 +83,10 @@ export interface Description {
   // the deck under it, written as a phrase ("Net points per game in the
   // 2025–26 playoffs, through June 13")
   context: string
+  // who's on the chart: a sentence before the deck ("The five leaders in
+  // net points"). A tool that sets it, even to "", gets it edited in place
+  // of the whole deck, so the rest stays generated
+  who?: string
   legend?: LegendItem[]
   // the right side of the legend strip ("7 games · 9 players")
   counts?: string
