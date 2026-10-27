@@ -5,7 +5,7 @@
 import {
   area,
   curveLinear,
-  curveMonotoneX,
+  curveStepAfter,
   line,
   max,
   min,
@@ -152,39 +152,6 @@ const fouls = (d: D, game: string) =>
 
 const ordinal = (n: number) =>
   `${n}${n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"}`
-
-// Ramer-Douglas-Peucker: the points of a line, kept where they stray more
-// than eps pixels from the line through their neighbors, plus the indices in
-// `must`
-function simplify<T>(
-  pts: T[],
-  at: (p: T) => [number, number],
-  eps: number,
-  must: number[] = [],
-) {
-  const xy = pts.map(at)
-  const keep = new Set([0, pts.length - 1, ...must])
-  const walk = (i: number, j: number) => {
-    const [x0, y0] = xy[i]
-    const [x1, y1] = xy[j]
-    const len = Math.hypot(x1 - x0, y1 - y0) || 1
-    let far = -1
-    let dist = eps
-    for (let k = i + 1; k < j; k++) {
-      const [x, y] = xy[k]
-      const d =
-        Math.abs((y1 - y0) * x - (x1 - x0) * y + x1 * y0 - y1 * x0) / len
-      if (d > dist) [far, dist] = [k, d]
-    }
-    if (far < 0) return
-    keep.add(far)
-    walk(i, far)
-    walk(far, j)
-  }
-  const fixed = [...keep].sort((a, b) => a - b)
-  for (let n = 1; n < fixed.length; n++) walk(fixed[n - 1], fixed[n])
-  return pts.filter((_, i) => keep.has(i))
-}
 
 // The margin, from team_id's side, after every scoring play
 function margins(d: D, game: Game, team_id: string) {
@@ -571,24 +538,11 @@ export const rotations: Tool<P, D> = {
         .attr("y", y0)
         .attr("width", size.width)
         .attr("height", y1 - y0)
-    // a basket is a point or three, a tooth at this scale, so the line
-    // after each scoring play is simplified: it keeps the plays more than 8px
-    // off the line through their neighbors, every lead change and each
-    // side's biggest lead, and curves through them. Every point drawn is a
-    // real score
-    const drawn = plays
-      ? simplify(ms, s => [x(s.t), y(s.m)], 8, [
-          ...ms.flatMap((s, i) =>
-            i > 0 && Math.sign(s.m) !== Math.sign(ms[i - 1].m)
-              ? [i - 1, i]
-              : [],
-          ),
-          ms.indexOf(ms.reduce((a, b) => (b.m > a.m ? b : a))),
-          ms.indexOf(ms.reduce((a, b) => (b.m < a.m ? b : a))),
-        ])
-      : ms
-    // monotone, so the curve never passes a point it joins
-    const curve = plays ? curveMonotoneX : curveLinear
+    // the score changes only at a basket, so after every scoring play the
+    // margin holds flat until the next one. Without them, the margin between
+    // subs is unknown, so its points are joined straight
+    const drawn = ms
+    const curve = plays ? curveStepAfter : curveLinear
     const fill = area<{ t: number; m: number }>()
       .x(s => x(s.t))
       .y0(zero)

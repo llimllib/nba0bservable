@@ -48,17 +48,15 @@ was on the floor.
   (a team technical that carries the player's id). In 2026-2027, 99.85% of
   player games match the box score's PF; in the misses checked, the
   play-by-play's own counts agree with the tool and the box score doesn't.
-- **The line is simplified, not smoothed.** Every basket is a tooth at
-  this scale (a point is about 5px at full height), so the line drawn after
-  every play was jagged. Ramer-Douglas-Peucker keeps the plays more than
-  8px off the line through their neighbors, plus every lead change and each
-  side's biggest lead, and a monotone curve joins them, so it never passes
-  a point it joins. Every point drawn is a real score, and the final margin
-  is exact. The tolerance is in pixels, so a small export smooths more
-  points away than a tall one. Rejected: steps (a spike wherever a basket
-  was answered seconds later), sampling once a minute (it lost Boston's
-  only lead in the test game), and a moving average (it shaved the peaks
-  and ended at −6 in a game lost by 9).
+- **The line is a step after every scoring play.** The score changes only
+  at a basket, so the margin holds flat until the next one, and every play
+  is drawn. A basket answered seconds later leaves a thin spike, which is a
+  real lead, however brief. This replaced a Ramer-Douglas-Peucker
+  simplification joined by a monotone curve, whose diagonals and loops
+  drew scores that never happened between the plays. Also rejected:
+  sampling once a minute (it lost Boston's only lead in the test game) and
+  a moving average (it shaved the peaks and ended at −6 in a game lost
+  by 9).
 - **The line is drawn in the fill's own blue and red**, as its edge,
   rather than in ink, which made every tooth stand out.
 - **Without `game_events`** (a season nba_data hasn't published yet; the
