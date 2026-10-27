@@ -150,6 +150,8 @@ const byPlay = (d: D, game: string) =>
 const fouls = (d: D, game: string) =>
   d.events?.game_id === game ? d.events.fouls : new Map<string, Foul[]>()
 
+const fouledOut = "#e69f00"
+
 const ordinal = (n: number) =>
   `${n}${n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"}`
 
@@ -798,14 +800,24 @@ export const rotations: Tool<P, D> = {
         prev = fx
         const at = clock(f.t)
         const foul = row.append("g")
+        // the sixth, fouling out, is orange (Okabe-Ito's) ringed in red,
+        // with a halo so the ring holds against a red bar
+        const out = f.n >= 6
+        if (out)
+          foul
+            .append("circle")
+            .attr("cx", fx)
+            .attr("cy", foulY)
+            .attr("r", foulR + 2.5)
+            .attr("fill", color.bg)
         foul
           .append("circle")
           .attr("cx", fx)
           .attr("cy", foulY)
           .attr("r", foulR)
-          .attr("fill", color.ink)
-          .attr("stroke", color.bg)
-          .attr("stroke-width", 1)
+          .attr("fill", out ? fouledOut : color.ink)
+          .attr("stroke", out ? color.neg : color.bg)
+          .attr("stroke-width", out ? 2 : 1)
         if (numbered)
           foul
             .append("text")
@@ -814,14 +826,15 @@ export const rotations: Tool<P, D> = {
             .attr("text-anchor", "middle")
             .attr("font-size", 10)
             .attr("font-weight", 700)
-            .attr("fill", color.bg)
+            .attr("fill", out ? color.ink : color.bg)
             .attr("pointer-events", "none")
             .text(f.n)
         foul
           .append("title")
           .text(
             `${r.name}: ${ordinal(f.n)} foul (${f.kind.toLowerCase()}), ` +
-              `${at.period} ${mmss(at.left)}`,
+              `${at.period} ${mmss(at.left)}` +
+              (out ? ", fouled out" : ""),
           )
       }
     }
