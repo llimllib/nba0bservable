@@ -41,7 +41,8 @@ export async function mount<P extends Params, D>(
   root.classList.add("tool")
   root.innerHTML = `
     <form class="controls"></form>
-    <div class="chart-host"><div class="chart"></div><div class="status"></div></div>
+    <div class="chart-host"><div class="chart"></div><div class="status"></div>
+      <div class="reloading">${loadingText()}</div></div>
     <div class="actions">
       <fieldset class="sizes"><legend>Size</legend>${Object.entries(sizes)
         .map(
@@ -213,7 +214,9 @@ export async function mount<P extends Params, D>(
   }
 
   async function update() {
-    statusEl.textContent = "Loading…"
+    statusEl.textContent = ""
+    // the first load has nothing to dim, so it holds the chart's place
+    if (!frame) placeholder(chartEl, "loading")
     root.classList.add("loading")
     try {
       const [loaded] = await Promise.all([tool.load(p), fontsReady()])
@@ -222,10 +225,11 @@ export async function mount<P extends Params, D>(
       renderControls(tool.controls(data, p))
       save()
       draw()
-      statusEl.textContent = ""
     } catch (e) {
       console.error(e)
-      statusEl.textContent = `Couldn't load data: ${e}`
+      // the old chart doesn't answer the question now asked, so it goes
+      data = frame = layer = undefined
+      placeholder(chartEl, "failed", update, e)
     } finally {
       root.classList.remove("loading")
     }
@@ -276,18 +280,73 @@ export async function mount<P extends Params, D>(
   await update()
 }
 
-// A tool's frame at preset params, without controls: for the front page
-export async function embed<P extends Params, D>(
+// "Loading…" a letter at a time, so a bold can sweep across it
+function loadingText() {
+  const letters = [..."Loading…"]
+    .map((c, i) => `<span aria-hidden="true" style="--i:${i}">${c}</span>`)
+    .join("")
+  return `<p class="loading-text" role="status" aria-label="Loading">${letters}</p>`
+}
+
+// What's in a chart's place until it's drawn: a note that it's loading, or
+// that it couldn't load, with a way to try again
+function placeholder(
+  el: HTMLElement,
+  state: "loading" | "failed",
+  retry?: () => void,
+  error?: unknown,
+) {
+  const box = document.createElement("div")
+  box.className = "chart-placeholder"
+  box.dataset.state = state
+  if (state === "loading") {
+    box.innerHTML = loadingText()
+  } else {
+    // the data is rewritten in place, so a read mid-update fails, and
+    // works again a minute later
+    box.innerHTML = `
+      <p><b>Couldn't load this chart.</b> The data may be updating; try
+      again in a minute.</p>
+      <p class="detail"></p>
+      <button type="button">Try again</button>`
+    box.querySelector(".detail")!.textContent = String(
+      error instanceof Error ? error.message : (error ?? ""),
+    )
+    box.querySelector("button")!.addEventListener("click", e => {
+      // on the front page the chart is inside a link
+      e.preventDefault()
+      e.stopPropagation()
+      retry?.()
+    })
+  }
+  el.replaceChildren(box)
+}
+
+// A tool's frame at preset params, without controls: for the front page. It
+// resolves once the chart is drawn, which after a failure is when a retry
+// works
+export function embed<P extends Params, D>(
   root: HTMLElement,
   tool: Tool<P, D>,
   params: Partial<P> = {},
-) {
-  let p = { ...tool.defaults, ...params }
-  const [data] = await Promise.all([tool.load(p), fontsReady()])
-  p = { ...p, ...tool.normalize?.(data, p) }
-  const url = `${SITE}/${tool.id}`
-  buildFrame(root, "auto", tool.describe(data, p), url, (g, s) =>
-    tool.render(g, data, p, s, () => {}),
-  )
-  return { data, p }
+): Promise<{ data: D; p: P }> {
+  return new Promise(resolve => {
+    const attempt = async () => {
+      placeholder(root, "loading")
+      try {
+        let p = { ...tool.defaults, ...params } as P
+        const [data] = await Promise.all([tool.load(p), fontsReady()])
+        p = { ...p, ...tool.normalize?.(data, p) }
+        const url = `${SITE}/${tool.id}`
+        buildFrame(root, "auto", tool.describe(data, p), url, (g, s) =>
+          tool.render(g, data, p, s, () => {}),
+        )
+        resolve({ data, p })
+      } catch (e) {
+        console.error(e)
+        placeholder(root, "failed", attempt, e)
+      }
+    }
+    attempt()
+  })
 }

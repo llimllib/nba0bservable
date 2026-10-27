@@ -476,6 +476,111 @@ select {
   transition: opacity 0.2s 0.2s;
 }
 
+/* a reload dims the chart; say why, on the chart, where it's seen. Delayed
+   as the dimming is, so a cached read doesn't flash it */
+.reloading {
+  display: none;
+}
+
+.tool.loading .chart-host:has(svg.frame) .reloading {
+  display: block;
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  translate: -50% 0;
+  padding: 0.3rem 0.6rem;
+  background: var(--paper);
+  border-top: 3px solid var(--ink);
+  font-family: var(--agate);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: appear 0s 0.2s forwards;
+}
+
+@keyframes appear {
+  to {
+    opacity: 1;
+  }
+}
+
+/* a bold that sweeps left to right across "Loading…". The agate face is
+   monospaced, so a heavier letter doesn't move its neighbors */
+.loading-text {
+  margin: 0;
+}
+
+.loading-text span {
+  animation: sweep 1.8s calc(var(--i) * 0.09s) infinite;
+}
+
+@keyframes sweep {
+  0%,
+  40%,
+  100% {
+    font-weight: 400;
+  }
+  15% {
+    font-weight: 800;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-text span {
+    animation: none;
+  }
+}
+
+/* in a chart's place until it's drawn: loading holds its space, so the page
+   doesn't jump; a failure is only as tall as what it says */
+.chart-placeholder {
+  display: grid;
+  place-content: center;
+  justify-items: start;
+  gap: 0.5rem;
+  padding: 1.5rem 0;
+  border-top: 3px solid var(--ink);
+  border-bottom: var(--rule);
+  font-family: var(--agate);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
+.chart-placeholder p {
+  margin: 0;
+}
+
+.chart-placeholder[data-state="loading"] {
+  aspect-ratio: 1;
+  justify-items: center;
+  border-top-width: 1px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.chart-placeholder[data-state="failed"] {
+  place-content: start;
+  padding-inline: 0;
+}
+
+.chart-placeholder .detail {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+/* as .tool button, which the front page isn't in */
+.chart-placeholder button {
+  padding: 0.4rem 0.6rem;
+  border: var(--rule);
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
 .status {
   min-height: 1.5em;
   margin-top: 0.4rem;
@@ -591,6 +696,9 @@ time {
 .lead .inset {
   grid-column: 2 / -1;
   grid-row: 1;
+  /* it holds a chart, or a note in its place, not link text */
+  text-decoration: none;
+  color: inherit;
 }
 
 .lead figcaption {
@@ -620,7 +728,7 @@ time {
 }
 
 /* hold the chart's space while it loads */
-#lead-chart:empty {
+#lead-chart .chart-placeholder[data-state="loading"] {
   aspect-ratio: 720 / 900;
 }
 
