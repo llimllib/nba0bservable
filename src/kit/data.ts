@@ -51,7 +51,7 @@ const opened = new Map<string, ReturnType<typeof open>>()
 async function open(url: string) {
   const file = cachedAsyncBuffer(await asyncBufferFromUrl({ url }))
   const metadata = await parquetMetadataAsync(file, {
-    initialFetchSize: 32_768,
+    initialFetchSize: 131_072,
   })
   return { file, metadata }
 }

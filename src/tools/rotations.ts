@@ -1,6 +1,7 @@
 // A team's rotation in one game, over its opponent's: one row per player, one
 // bar per stint on the game clock, colored and labeled by the score margin
-// while they were on, with the game's margin between the two
+// while they were on, with each personal foul on it and the game's margin
+// between the two
 import {
   area,
   curveLinear,
@@ -32,6 +33,14 @@ interface Stint {
   pm: number
 }
 
+interface Foul {
+  t: number
+  // the player's count after it: 6 is fouling out
+  n: number
+  // "Shooting", "Offensive Charge", ...
+  kind: string
+}
+
 interface Game {
   game_id: string
   date: Date
@@ -55,8 +64,9 @@ interface D {
   // stints by `${game_id}:${team_id}`
   stints: Map<string, Stint[]>
   names: Map<string, string>
-  // the shown game's scoring plays, in order, when its season has them
-  scoring?: { game_id: string; plays: DataRow[] }
+  // the shown game's scoring plays, in order, and its personal fouls by
+  // player, when its season has them
+  events?: { game_id: string; plays: DataRow[]; fouls: Map<string, Foul[]> }
 }
 
 interface Row {
@@ -125,7 +135,7 @@ function substitutions(stints: Stint[]) {
 
 // The team and game a view shows: the team asked for, or the first, and the
 // game asked for, or the team's latest
-function pick(d: Omit<D, "scoring">, p: P) {
+function pick(d: Omit<D, "events">, p: P) {
   const team = d.teams.has(p.team) ? p.team : [...d.teams.keys()][0]
   const games = d.games.get(d.teams.get(team)!.team_id)!
   const game = games.some(g => g.game_id === p.game)
@@ -135,7 +145,13 @@ function pick(d: Omit<D, "scoring">, p: P) {
 }
 
 const byPlay = (d: D, game: string) =>
-  d.scoring?.game_id === game && d.scoring.plays.length > 0
+  d.events?.game_id === game && d.events.plays.length > 0
+
+const fouls = (d: D, game: string) =>
+  d.events?.game_id === game ? d.events.fouls : new Map<string, Foul[]>()
+
+const ordinal = (n: number) =>
+  `${n}${n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"}`
 
 // Ramer-Douglas-Peucker: the points of a line, kept where they stray more
 // than eps pixels from the line through their neighbors, plus the indices in
@@ -173,7 +189,7 @@ function simplify<T>(
 // The margin, from team_id's side, after every scoring play
 function margins(d: D, game: Game, team_id: string) {
   if (byPlay(d, game.game_id)) {
-    const plays = d.scoring!.plays
+    const plays = d.events!.plays
     const sign = plays[0].home_team_id === team_id ? 1 : -1
     return [
       { t: 0, m: 0 },
@@ -317,18 +333,53 @@ export const rotations: Tool<P, D> = {
         .map(t => [t.nba_abbrev, { team_id: t.team_id, name: t.full_name }]),
     )
     const d = { season: p.season, teams, games, stints, names: lk.players }
-    // the shown game's scoring plays. A season without them (2025, or one
-    // nba_data hasn't published yet) falls back to the margin at each sub
+    // the shown game's play-by-play. A season without it (one nba_data
+    // hasn't published yet) has no fouls, and falls back to the margin at
+    // each sub
     const { game } = pick(d, p)
-    const plays = await readWhere(
+    const events = await readWhere(
       "stats",
-      "game_scoring",
+      "game_events",
       p.season,
-      ["action_id", "time", "home_team_id", "home_score", "away_score"],
+      [
+        "action_id",
+        "time",
+        "person_id",
+        "action_type",
+        "sub_type",
+        "pts",
+        "home_team_id",
+        "home_score",
+        "away_score",
+      ],
       { game_id: { $eq: game } },
     ).catch(() => [])
-    plays.sort((a, b) => a.action_id - b.action_id)
-    return { ...d, scoring: { game_id: game, plays } }
+    events.sort((a, b) => a.action_id - b.action_id)
+    // personal fouls, numbered in order. Technicals aren't, and defensive
+    // 3 seconds is a team technical with the player's id. The descriptions'
+    // own count ("P4.T2") is missing from some fouls and repeated on
+    // technicals, so it isn't used. Counted this way, 99.85% of player games
+    // in 2026-2027 match the box score's PF
+    const byPlayer = new Map<string, Foul[]>()
+    for (const e of events) {
+      if (
+        e.action_type !== "Foul" ||
+        !e.person_id ||
+        /Technical|Flopping|Bench|3 Second/.test(e.sub_type)
+      )
+        continue
+      if (!byPlayer.has(e.person_id)) byPlayer.set(e.person_id, [])
+      const fs = byPlayer.get(e.person_id)!
+      fs.push({ t: e.time, n: fs.length + 1, kind: e.sub_type })
+    }
+    return {
+      ...d,
+      events: {
+        game_id: game,
+        plays: events.filter(e => e.pts > 0),
+        fouls: byPlayer,
+      },
+    }
   },
 
   normalize(d, p) {
@@ -389,6 +440,15 @@ export const rotations: Tool<P, D> = {
               color: color.ink,
               text: "margin at each sub",
             },
+        ...(fouls(d, p.game).size > 0
+          ? [
+              {
+                symbol: "dot" as const,
+                color: color.ink,
+                text: "personal foul",
+              },
+            ]
+          : []),
       ],
       source: "Data: NBA.com play-by-play",
       team: p.team,
@@ -430,6 +490,13 @@ export const rotations: Tool<P, D> = {
     // with them, so the chart fits the frame
     const textSize = Math.min(type.label.size, rowH + 1)
     const barH = rowH >= 16 ? Math.min(rowH * 0.66, 24) : rowH * 0.75
+    // fouls hang from the bars' bottom edge, clear of their labels,
+    // numbered while the bars are tall enough for a digit, and plain dots
+    // below that
+    const numbered = barH >= 16
+    const foulR = numbered ? 6 : Math.max(2, barH * 0.25)
+    const foulY = barH / 2 + foulR / 3
+    const foulsBy = fouls(d, p.game)
 
     // from the top of the plot: a head, the team's rows, the margin, then
     // the opponent's head and rows
@@ -763,6 +830,41 @@ export const rotations: Tool<P, D> = {
           r: barH / 2,
           w: w / 2,
         })
+      }
+
+      // a foul right after another is nudged along so both read, which can
+      // put it a few seconds late
+      let prev = -Infinity
+      for (const f of foulsBy.get(r.player_id) ?? []) {
+        const fx = Math.max(x(f.t), prev + 2 * foulR + 1)
+        prev = fx
+        const at = clock(f.t)
+        const foul = row.append("g")
+        foul
+          .append("circle")
+          .attr("cx", fx)
+          .attr("cy", foulY)
+          .attr("r", foulR)
+          .attr("fill", color.ink)
+          .attr("stroke", color.bg)
+          .attr("stroke-width", 1)
+        if (numbered)
+          foul
+            .append("text")
+            .attr("x", fx)
+            .attr("y", foulY + 3.5)
+            .attr("text-anchor", "middle")
+            .attr("font-size", 10)
+            .attr("font-weight", 700)
+            .attr("fill", color.bg)
+            .attr("pointer-events", "none")
+            .text(f.n)
+        foul
+          .append("title")
+          .text(
+            `${r.name}: ${ordinal(f.n)} foul (${f.kind.toLowerCase()}), ` +
+              `${at.period} ${mmss(at.left)}`,
+          )
       }
     }
 

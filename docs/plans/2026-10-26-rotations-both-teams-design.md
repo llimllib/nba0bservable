@@ -27,9 +27,27 @@ was on the floor.
   led and lighter red (`#f4a582`) where it trailed, and the sides are
   labeled "BOS ahead" and "PHI ahead", so position reads without color. The
   final margin is printed signed at the line's end.
-- **The margin comes from `game_scoring`**, one row per scoring play, read
-  one game at a time (`readWhere` in `kit/data.ts`, about 50KB a game). The
-  last score holds to the end of the game. The legend says "score margin".
+- **The margin comes from `game_events`**, nba_data's play-by-play, read
+  one game at a time (`readWhere` in `kit/data.ts`; its footer is about
+  106KB, so the first read is 128KB). Its scoring plays (`pts > 0`) give the
+  margin. The last score holds to the end of the game. The legend says
+  "score margin". It replaced `game_scoring`.
+- **Personal fouls are ink discs** hanging from the bottom edge of the
+  player's bar, at the moment of the foul, numbered with the player's count
+  (6 is fouling out). Ink keeps them apart from the blue and red values,
+  and the digit means they don't rely on color. When bars are too short for
+  a digit (under 16px, as in the square export), they're plain dots, so the
+  legend is a plain dot, "personal foul", true at every size. A foul right
+  after another is nudged along so both read. Foul trouble is the point:
+  a starter benched with two early, or a stint cut short by a fifth.
+- **Fouls are counted, not read from the description.** The description's
+  count (`P4.T2`) is missing from some fouls (the NBA leaves the
+  description as just "Shooting") and is repeated on technicals, which
+  carry it without adding to it. The tool counts every `Foul` with a
+  `person_id` except technicals, flopping, bench and defensive 3 seconds
+  (a team technical that carries the player's id). In 2026-2027, 99.85% of
+  player games match the box score's PF; in the misses checked, the
+  play-by-play's own counts agree with the tool and the box score doesn't.
 - **The line is simplified, not smoothed.** Every basket is a tooth at
   this scale (a point is about 5px at full height), so the line drawn after
   every play was jagged. Ramer-Douglas-Peucker keeps the plays more than
@@ -43,8 +61,9 @@ was on the floor.
   and ended at −6 in a game lost by 9).
 - **The line is drawn in the fill's own blue and red**, as its edge,
   rather than in ink, which made every tooth stand out.
-- **Without `game_scoring`** (2025, or a season nba_data hasn't published
-  yet; the read fails and the tool falls back), the margin comes from the
+- **Without `game_events`** (a season nba_data hasn't published yet; the
+  read fails and the tool falls back), there are no fouls and the legend
+  leaves them out, and the margin comes from the
   stints. A stint's plus-minus is the change in margin across it, so from
   0–0 the stints give the exact margin at every substitution, and nothing
   between. That line draws a dot at each point, and the legend says
