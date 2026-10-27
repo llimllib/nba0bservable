@@ -30,8 +30,9 @@ was on the floor.
 - **The margin comes from `game_events`**, nba_data's play-by-play, read
   one game at a time (`readWhere` in `kit/data.ts`; its footer is about
   106KB, so the first read is 128KB). Its scoring plays (`pts > 0`) give the
-  margin. The last score holds to the end of the game. The legend says
-  "score margin". It replaced `game_scoring`.
+  margin. The last score holds to the end of the game. It replaced
+  `game_scoring`. The margin has no legend entry: its sides are labeled
+  and its final margin is printed at its end, so it reads without one.
 - **Personal fouls are ink discs** hanging from the bottom edge of the
   player's bar, at the moment of the foul, numbered with the player's count
   (6 is fouling out). Ink keeps them apart from the blue and red values,

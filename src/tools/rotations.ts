@@ -400,13 +400,17 @@ export const rotations: Tool<P, D> = {
           label: "−1",
           text: "lost the stint",
         },
-        byPlay(d, p.game)
-          ? { symbol: "line", color: color.ink, text: "score margin" }
-          : {
-              symbol: "dotline",
-              color: color.ink,
-              text: "margin at each sub",
-            },
+        // the margin labels its own sides, so it's only in the legend when
+        // it's known just at the subs, which the dots need explaining
+        ...(byPlay(d, p.game)
+          ? []
+          : [
+              {
+                symbol: "dotline" as const,
+                color: color.ink,
+                text: "margin at each sub",
+              },
+            ]),
         ...(fouls(d, p.game).size > 0
           ? [
               {
