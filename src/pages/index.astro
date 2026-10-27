@@ -3,7 +3,10 @@ import Base from "../layouts/Base.astro"
 import { catalog } from "../tools/catalog"
 const base = import.meta.env.BASE_URL.replace(/\/?$/, "/")
 const lead = catalog.find(t => t.href === "shooting")!
-const rest = catalog.filter(t => t !== lead)
+// playoff net points joins them, as the lead, once there are playoffs
+const briefs = ["efficiency", "cumulative", "rotations"].map(
+  href => catalog.find(t => t.href === href)!,
+)
 ---
 
 <Base title="Now">
@@ -20,27 +23,37 @@ const rest = catalog.filter(t => t !== lead)
           The dashed lines are league average.
         </p>
         <a class="more" href={`${base}${lead.href}`}>Make your own →</a>
+        <aside class="about">
+          <span class="kicker">About</span>
+          <p>
+            Every chart here is a tool: change the season or the team, label
+            it, and export it as an image to post.
+          </p>
+        </aside>
       </figcaption>
     </figure>
-    {rest.map(t => (
-      <article>
-        <h2><a href={`${base}${t.href}`}>{t.name}</a></h2>
-        <p>{t.blurb}</p>
-      </article>
-    ))}
-    <aside class="about">
-      <h2>About</h2>
-      <p>
-        Every chart here is a tool: change the season or the team, label it,
-        and export it as an image to post.
-      </p>
-    </aside>
+    <section class="briefs" aria-label="More tools">
+      {briefs.map(t => (
+        <article>
+          <span class="kicker">{t.name}</span>
+          <h2><a id={`brief-${t.href}`} href={`${base}${t.href}`}>{t.hook}</a></h2>
+          <p>{t.pitch}</p>
+          <a class="more" href={`${base}${t.href}`}>{t.takes.join(" · ")} →</a>
+        </article>
+      ))}
+    </section>
   </div>
 </Base>
 
 <script>
   import { embed } from "../kit/mount"
   import { leaders, shooting } from "../tools/shooting"
+  import {
+    cumulativeBrief,
+    efficiencyBrief,
+    rotationsBrief,
+    type Brief,
+  } from "../tools/briefs"
 
   const pct = (v: number) => `${(v * 100).toFixed(1)}%`
   const { data, p } = await embed(document.getElementById("lead-chart")!, shooting)
@@ -53,4 +66,21 @@ const rest = catalog.filter(t => t !== lead)
       `league. Of the players carrying more than an average load, ` +
       `${efficient.name} (${efficient.team}) is scoring most efficiently, ` +
       `at ${pct(efficient.ts)} true shooting.`
+
+  // then each brief's headline, after the lead so it doesn't slow the chart.
+  // One that fails keeps its standing headline
+  const briefs: [string, () => Promise<Brief | undefined>][] = [
+    ["efficiency", efficiencyBrief],
+    ["cumulative", cumulativeBrief],
+    ["rotations", rotationsBrief],
+  ]
+  for (const [id, brief] of briefs)
+    brief()
+      .then(b => {
+        const a = document.getElementById(`brief-${id}`) as HTMLAnchorElement
+        if (!b || !a) return
+        a.textContent = b.headline
+        if (b.query) a.search = b.query
+      })
+      .catch(e => console.error(e))
 </script>

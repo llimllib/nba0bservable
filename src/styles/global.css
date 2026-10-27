@@ -638,33 +638,64 @@ time {
   text-transform: uppercase;
 }
 
-.front > :is(article, aside) {
-  padding: 0.9rem 1.25rem;
+/* the briefs: one row on the same grid, its rules drawn by the row, so
+   they run the full width whatever's in it */
+.briefs {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
   border-top: 3px solid var(--ink);
+}
+
+.briefs article {
+  padding: 0.9rem 1.25rem 1.25rem;
   border-left: var(--rule);
 }
 
-.front > article:first-of-type {
+.briefs article:nth-child(3n + 1) {
   padding-left: 0;
   border-left: 0;
 }
 
-.front h2 {
-  margin: 0 0 0.25rem;
-  font-size: 1.9rem;
+.kicker {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-family: var(--agate);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
-.front h2 a {
-  text-decoration: none;
+.briefs h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
 }
 
-.front p {
-  margin: 0 0 0.25rem;
+/* headlines are links, so they're underlined; thin, below the letters */
+.briefs h2 a {
+  text-decoration-thickness: 0.05em;
+  text-underline-offset: 0.12em;
+}
+
+.briefs h2 a:hover {
+  text-decoration-thickness: 0.12em;
+}
+
+.briefs p {
+  margin: 0 0 0.6rem;
+}
+
+.about {
+  margin-top: 1.5rem;
+  padding-top: 0.75rem;
+  border-top: var(--rule);
 }
 
 .about p {
+  margin: 0;
   color: var(--muted);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 /* narrow: one column, the chart above its caption */
@@ -693,9 +724,13 @@ time {
     display: inline;
   }
 
-  .front > :is(article, aside) {
-    padding-left: 0;
+  .briefs article,
+  .briefs article:nth-child(3n + 1) {
+    padding: 0.9rem 0 1.25rem;
     border-left: 0;
-    border-top-width: 1px;
+  }
+
+  .briefs article + article {
+    border-top: var(--rule);
   }
 }
