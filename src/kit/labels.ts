@@ -123,11 +123,14 @@ export interface LogoPoint {
 // the nearest clear spot, toward the open side of its Voronoi cell first.
 // Unlike a label, a logo is never skipped: one with nowhere clear stays on
 // its point. Logos that fit where they are go first, so the ones that move
-// are the crowded ones. Returns each logo's center
+// are the crowded ones. `overlap` is how much of its width a logo may lose
+// to its neighbors before it moves: moving costs a leader and a dot, so some
+// overlap reads better. Returns each logo's center
 export function placeLogos(
   points: LogoPoint[],
   bounds: { width: number; height: number },
   size: number,
+  overlap = 0.4,
 ): Map<string, [number, number]> {
   const at = new Map<string, [number, number]>()
   if (!points.length) return at
@@ -137,8 +140,7 @@ export function placeLogos(
     p => p.y,
   ).voronoi([0, 0, bounds.width, bounds.height])
   const h = size / 2
-  // logos may touch at their corners: a logo's art rarely fills its square
-  const pad = size * 0.08
+  const pad = (size * overlap) / 2
   const box = (cx: number, cy: number): Box => ({
     x0: cx - h + pad,
     y0: cy - h + pad,
