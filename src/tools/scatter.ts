@@ -3,19 +3,10 @@
 // that ranks players for "Top %", and its reference lines and quadrant names.
 // A chart that needs a new kind of mark is a new tool. See issue #29 and the
 // "Player scatter" milestone
-import {
-  extent,
-  format,
-  max,
-  min,
-  quantile,
-  scaleLinear,
-  select,
-  sum,
-} from "d3"
+import { format, max, min, quantile, sum } from "d3"
 import { lookups, metadata, read, type Row } from "../kit/data"
-import { agate } from "../kit/frame"
-import { placeLabels, type Box } from "../kit/labels"
+import { placeLabels } from "../kit/labels"
+import { scatterPlot } from "../kit/scatter"
 import { teams } from "../kit/teams"
 import { color, type } from "../kit/theme"
 import type { Body, LegendItem, Mark, Tool } from "../kit/tool"
@@ -80,7 +71,6 @@ interface Stat {
   tip(v: number): string
 }
 
-const pct = (v: number) => `${Math.round(v * 100)}%`
 const pct1 = (v: number) => `${(v * 100).toFixed(1)}%`
 const num = format(",")
 const num1 = (v: number) => v.toFixed(1)
@@ -410,14 +400,6 @@ const fmtDate = (d: Date) =>
     day: "numeric",
     timeZone: "UTC",
   })
-// a ratio as y:x, in whole numbers: 2 is 2:1 and 0.25 is 1:4
-const fmtRatio = (k: number) =>
-  k >= 1 ? `${+k.toFixed(1)}:1` : `1:${+(1 / k).toFixed(1)}`
-
-// two points on an axis are one, within rounding
-const near = (u: number, v: number, span: number) =>
-  Math.abs(u - v) < span * 1e-9
-
 // a team's primary and secondary colors, for a dot's fill and outline
 function teamColors(abbrev: string): [string, string] {
   const c = teams.get(abbrev)?.colors ?? []
@@ -741,192 +723,25 @@ export const scatter: Tool<P, D> = {
     const pair = pairOf(d.pair)
     const [sx, sy] = [stats[pair.x], stats[pair.y]]
     const ps = shown(d, p)
-    const g = select(node)
-    const left = 46
-    const bottom = 48
-    const top = 20
-    // a pair with lines across the plot names them in a gutter on the right
-    const right = pair.ratios || pair.total ? 30 : 0
-    const plotW = size.width - left - right
-    const height = size.height ?? Math.round(plotW * 0.82) + top + bottom
-    const plotH = height - top - bottom
     const r = 5
-
-    // a ratio pair starts at zero, where its lines meet, and a total pair
-    // shows zero, its average; an average pair shows its averages
-    const ratio = pair.ratios ? d.league.y / d.league.x : 0
-    const atZero = pair.ratios || pair.total
-    const xs = ps.map(pl => pl.x)
-    const ys = ps.map(pl => pl.y)
-    const [x0, x1] = extent([...xs, atZero ? 0 : d.league.x])
-    const [y0, y1] = extent([...ys, atZero ? 0 : d.league.y])
-    const x = scaleLinear()
-      .domain([x0 ?? 0, x1 ?? 1])
-      .nice()
-      .range([r + 2, plotW - r - 2])
-    const y = scaleLinear()
-      .domain([y0 ?? 0, y1 ?? 1])
-      .nice()
-      .range([plotH - r - 2, r + 2])
-    const plot = g.append("g").attr("transform", `translate(${left},${top})`)
-
-    // grid
-    const grid = plot.append("g").attr("stroke", color.grid)
-    for (const t of x.ticks(6))
-      grid.append("line").attr("x1", x(t)).attr("x2", x(t)).attr("y2", plotH)
-    for (const t of y.ticks(6))
-      grid.append("line").attr("y1", y(t)).attr("y2", y(t)).attr("x2", plotW)
-
-    // names keep off the reference lines
-    const avoid: Box[] = []
-    const guides = plot.append("g")
-    const ref = plot
-      .append("g")
-      .attr("stroke", color.muted)
-      .attr("stroke-width", 1.25)
-      .attr("stroke-dasharray", "5 4")
-    const zero = plot
-      .append("g")
-      .attr("stroke", color.zero)
-      .attr("stroke-width", 1.5)
-    const [[X0, X1], [Y0, Y1]] = [x.domain(), y.domain()]
-
-    // the y axis's title, which a name above the plot keeps clear of
-    const yTitle = plot
-      .append("text")
-      .attr("x", -left)
-      .attr("y", -8)
-      .call(agate)
-      .text(`↑ ${sy.label}`)
-    const yTitleEnd = -left + yTitle.node()!.getComputedTextLength()
-
-    // A faint line across the plot, named outside it where it leaves by the
-    // right or the top, so no dot covers its name
-    const guide = (a: [number, number], b: [number, number], name: string) => {
-      guides
-        .append("line")
-        .attr("x1", x(a[0]))
-        .attr("y1", y(a[1]))
-        .attr("x2", x(b[0]))
-        .attr("y2", y(b[1]))
-        .attr("stroke", color.grid)
-        .attr("stroke-width", 1.5)
-      const atRight = [a, b].find(e => near(e[0], X1, X1 - X0))
-      const atTop = [a, b].find(e => near(e[1], Y1, Y1 - Y0))
-      const text = guides
-        .append("text")
-        .call(agate)
-        .attr("fill", color.faint)
-        .text(name)
-      if (atRight) text.attr("x", plotW + 4).attr("y", y(atRight[1]) + 4)
-      else if (atTop && x(atTop[0]) - 16 > yTitleEnd + 8)
-        text.attr("x", x(atTop[0])).attr("y", -6).attr("text-anchor", "middle")
-      else text.remove()
-    }
-    // where a line through zero with slope k leaves the plot
-    const end = (k: number): [number, number] =>
-      k * X1 > Y1 ? [Y1 / k, Y1] : [X1, k * X1]
-
-    if (pair.ratios) {
-      // lines of constant ratio from zero; the league's is dashed, like an
-      // average
-      for (const k of pair.ratios) guide([0, 0], end(k), fmtRatio(k))
-      const [ex, ey] = end(ratio)
-      ref
-        .append("line")
-        .attr("x1", x(0))
-        .attr("y1", y(0))
-        .attr("x2", x(ex))
-        .attr("y2", y(ey))
-    } else if (pair.total) {
-      // lines of constant total, x + y, a step apart
-      for (const c of scaleLinear()
-        .domain([X0 + Y0, X1 + Y1])
-        .ticks(6)) {
-        const xa = Math.max(X0, c - Y1)
-        const xb = Math.min(X1, c - Y0)
-        if (xb - xa < (X1 - X0) / 20) continue
-        guide([xa, c - xa], [xb, c - xb], `${sign(c)}${Math.abs(c)}`)
-      }
-    } else {
-      ref
-        .append("line")
-        .attr("y1", y(d.league.y))
-        .attr("y2", y(d.league.y))
-        .attr("x2", plotW)
-      ref
-        .append("line")
-        .attr("x1", x(d.league.x))
-        .attr("x2", x(d.league.x))
-        .attr("y2", plotH)
-      avoid.push(
-        { x0: x(d.league.x) - 1, x1: x(d.league.x) + 1, y0: 0, y1: plotH },
-        { x0: 0, x1: plotW, y0: y(d.league.y) - 1, y1: y(d.league.y) + 1 },
-      )
-    }
-    // zero is the strongest line on a signed axis
-    if (sx.signed && X0 < 0 && X1 > 0) {
-      zero.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y2", plotH)
-      avoid.push({ x0: x(0) - 1, x1: x(0) + 1, y0: 0, y1: plotH })
-    }
-    if (sy.signed && Y0 < 0 && Y1 > 0) {
-      zero.append("line").attr("y1", y(0)).attr("y2", y(0)).attr("x2", plotW)
-      avoid.push({ x0: 0, x1: plotW, y0: y(0) - 1, y1: y(0) + 1 })
-    }
-
-    // the quadrants, named in their corners. These are guideposts: drawn
-    // first and faint, so dots and names write over them when they need to
-    if (pair.corners) {
-      const [tl, tr, bl, br] = pair.corners
-      const corners: [string, number, number, "start" | "end"][] = [
-        [tl, 6, 14, "start"],
-        [tr, plotW - 6, 14, "end"],
-        [bl, 6, plotH - 8, "start"],
-        [br, plotW - 6, plotH - 8, "end"],
-      ]
-      for (const [text, cx, cy, anchor] of corners)
-        plot
-          .append("text")
-          .attr("x", cx)
-          .attr("y", cy)
-          .attr("text-anchor", anchor)
-          .call(agate)
-          .attr("fill", color.faint)
-          .text(text)
-    }
-
-    // axes: ticks, and titles beside them
-    const tickFmt = (st: Stat, sc: typeof x) => {
-      if (st.pct) return pct
-      const f = sc.tickFormat(6, ",~f")
-      return st.signed ? (v: number) => `${sign(v)}${f(Math.abs(v))}` : f
-    }
-    const [xFmt, yFmt] = [tickFmt(sx, x), tickFmt(sy, y)]
-    const axis = plot
-      .append("g")
-      .attr("font-size", type.tick.size)
-      .attr("fill", color.muted)
-    for (const t of x.ticks(6))
-      axis
-        .append("text")
-        .attr("x", x(t))
-        .attr("y", plotH + 18)
-        .attr("text-anchor", "middle")
-        .text(xFmt(t))
-    for (const t of y.ticks(6))
-      axis
-        .append("text")
-        .attr("x", -8)
-        .attr("y", y(t) + 4.5)
-        .attr("text-anchor", "end")
-        .text(yFmt(t))
-    plot
-      .append("text")
-      .attr("x", plotW / 2)
-      .attr("y", plotH + 40)
-      .attr("text-anchor", "middle")
-      .call(agate)
-      .text(`${sx.label} →`)
+    const { plot, x, y, plotW, plotH, left, top, avoid, body } = scatterPlot(
+      node,
+      {
+        size,
+        x: { title: sx.label, pct: sx.pct, signed: sx.signed },
+        y: { title: sy.label, pct: sy.pct, signed: sy.signed },
+        xs: ps.map(pl => pl.x),
+        ys: ps.map(pl => pl.y),
+        league: d.league,
+        guide: pair.ratios
+          ? { kind: "ratios", ratios: pair.ratios }
+          : pair.total
+            ? { kind: "sum" }
+            : { kind: "average" },
+        corners: pair.corners,
+        inset: r + 2,
+      },
+    )
 
     // dots in team colors, or a team's players over a faded league. The color
     // is identity, not value: names and position carry the reading
@@ -997,22 +812,6 @@ export const scatter: Tool<P, D> = {
         .attr("fill", color.muted)
         .text("No players yet")
 
-    return {
-      height,
-      marks,
-      // a note's position: the pair's two stats
-      invert(px, py) {
-        const [u, v] = [px - left, py - top]
-        if (u < 0 || u > plotW || v < 0 || v > plotH) return undefined
-        return {
-          x: +x.invert(u).toPrecision(5),
-          y: +y.invert(v).toPrecision(5),
-        }
-      },
-      project(pos) {
-        const { x: u, y: v } = pos as { x: number; y: number }
-        return [x(u) + left, y(v) + top]
-      },
-    }
+    return body(marks)
   },
 }
