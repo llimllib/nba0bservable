@@ -367,7 +367,11 @@ interface Player {
   player_id: string
   season: number
   name: string
+  // their last team, whose colors they wear
   team: string
+  // every team they played for, in order: more than one for a player
+  // traded during the season. Only filled in when a team is highlighted
+  teams: string[]
   gp: number
   volume: number
   x: number
@@ -447,7 +451,7 @@ export const scatter: Tool<P, D> = {
         new Set(["player_id", ...(sources[s].kinds ? ["season_type"] : [])]),
       ]),
     )
-    for (const c of ["team_id", "gp", "min", pair.volume])
+    for (const c of ["team_id", "team_count", "gp", "min", pair.volume])
       cols.get("stats")!.add(c)
     for (const st of [sx, sy])
       for (const c of st.cols) cols.get(srcOf(st))!.add(c)
@@ -474,8 +478,41 @@ export const scatter: Tool<P, D> = {
     const byPlayer = (s: Src) => new Map(rowsOf(s).map(r => [r.player_id, r]))
     const [rx, ry] = [byPlayer(srcOf(sx)), byPlayer(srcOf(sy))]
 
+    // with a team highlighted, every team each traded player played for,
+    // so the team's highlight includes the players it traded away
+    const base_ = rowsOf("stats")
+    const moved = p.team && base_.some(r => r.team_count > 1)
+    const teamsOf = new Map<string, string[]>()
+    if (moved) {
+      const logs = await read("stats", "player_game_logs", season, [
+        "player_id",
+        "team_id",
+        "game_id",
+      ])
+      const traded = new Set(
+        base_.filter(r => r.team_count > 1).map(r => r.player_id),
+      )
+      const games = logs
+        .filter(
+          g =>
+            traded.has(g.player_id) &&
+            lk.games.get(g.game_id)?.game_type === kind,
+        )
+        .sort(
+          (a, b) =>
+            +lk.games.get(a.game_id)!.game_date -
+            +lk.games.get(b.game_id)!.game_date,
+        )
+      for (const g of games) {
+        const abbrev = lk.teams.get(g.team_id)?.nba_abbrev ?? ""
+        const ts = teamsOf.get(g.player_id) ?? []
+        if (ts.at(-1) !== abbrev) ts.push(abbrev)
+        teamsOf.set(g.player_id, ts)
+      }
+    }
+
     const players: Player[] = []
-    for (const r of rowsOf("stats")) {
+    for (const r of base_) {
       const [ox, oy] = [rx.get(r.player_id), ry.get(r.player_id)]
       const x = ox && sx.get(ox)
       const y = oy && sy.get(oy)
@@ -486,6 +523,9 @@ export const scatter: Tool<P, D> = {
         season,
         name: lk.players.get(r.player_id) ?? r.player_id,
         team: lk.teams.get(r.team_id)?.nba_abbrev ?? "",
+        teams: teamsOf.get(r.player_id) ?? [
+          lk.teams.get(r.team_id)?.nba_abbrev ?? "",
+        ],
         gp: r.gp,
         volume: r[pair.volume] ?? 0,
         x,
@@ -592,6 +632,10 @@ export const scatter: Tool<P, D> = {
     const [sx, sy] = [stats[pair.x], stats[pair.y]]
     const ps = shown(d, p)
     const team = d.teams.get(p.team)
+    // a highlighted player who was traded wears another team's colors
+    const traded = ps.some(
+      pl => pl.teams.length > 1 && pl.teams.includes(p.team),
+    )
     const games = max(d.players, pl => pl.gp) ?? 0
     const through = d.lastDate ? `, through ${fmtDate(d.lastDate)}` : ""
     const reference: LegendItem = pair.ratios
@@ -622,7 +666,11 @@ export const scatter: Tool<P, D> = {
         {
           symbol: "dot",
           color: team ? teamColors(p.team)[0] : color.ink,
-          text: team ? `${p.team} player` : "one player, in team colors",
+          text: !team
+            ? "one player, in team colors"
+            : traded
+              ? `played for ${p.team}`
+              : `${p.team} player`,
         },
         ...(team
           ? [
@@ -836,7 +884,11 @@ export const scatter: Tool<P, D> = {
 
     // dots in team colors, or a team's players over a faded league. The color
     // is identity, not value: names and position carry the reading
-    const mine = (pl: Player) => !p.team || pl.team === p.team
+    const mine = (pl: Player) => !p.team || pl.teams.includes(p.team)
+    // a traded player's name says so, as their numbers include their time
+    // with other teams
+    const named = (pl: Player) =>
+      pl.teams.length > 1 ? `${pl.name} (${pl.teams.join("→")})` : pl.name
     const order = [...ps].sort((a, b) => Number(mine(a)) - Number(mine(b)))
     for (const pl of order) {
       plot
@@ -850,7 +902,7 @@ export const scatter: Tool<P, D> = {
         .attr("stroke-width", mine(pl) ? 1.5 : 0.75)
         .append("title")
         .text(
-          `${pl.name} (${pl.team})\n${sx.tip(pl.x)} ${sx.short} · ${sy.tip(pl.y)} ${sy.short} · ${pl.gp} games`,
+          `${pl.name} (${pl.teams.join("→")})\n${sx.tip(pl.x)} ${sx.short} · ${sy.tip(pl.y)} ${sy.short} · ${pl.gp} games`,
         )
     }
 
@@ -864,7 +916,7 @@ export const scatter: Tool<P, D> = {
           x: x(pl.x),
           y: y(pl.y),
           r,
-          text: pl.name,
+          text: named(pl),
           priority: (mine(pl) ? 1e9 : 0) + pl.volume,
           always: Boolean(p.team) && mine(pl),
           key: pl.key,
@@ -878,7 +930,7 @@ export const scatter: Tool<P, D> = {
       x: x(pl.x) + left,
       y: y(pl.y) + top,
       r,
-      label: pl.name,
+      label: named(pl),
       labeled: labeled.has(pl.key),
       labelSize,
     }))
