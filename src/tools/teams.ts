@@ -166,6 +166,18 @@ const stats: Record<string, Stat> = {
   ft_rate: ftRate(""),
   opp_ft_rate: ftRate("opp_"),
   fga100: per100("fga", "Shot attempts", "FGA"),
+  // a shot from the field or a trip to the line. By the formula, a
+  // possession is FGA + 0.44 FTA + TOV − OREB, so this is about 100 plus
+  // offensive rebounds less turnovers per 100. The NBA counts possessions
+  // from the play-by-play, 1-3% fewer than the formula, so only about
+  // its axes name the stats; "for" and "against" fit the legend
+  chances100: { ...per100("chances", "Shot chances", ""), short: "for" },
+  opp_chances100: {
+    ...per100("opp_chances", "Opponents' shot chances", ""),
+    label: "Opponents' shot chances per 100 possessions (fewer is better)",
+    short: "against",
+    lower: true,
+  },
   pts_per_fga: {
     label: "Points per shot attempt",
     short: "Pts/FGA",
@@ -188,6 +200,12 @@ const stats: Record<string, Stat> = {
   },
   ast100: per100("ast", "Assists", "AST"),
   tov100: per100("tov", "Turnovers", "TOV"),
+  tov100_low: {
+    ...per100("tov", "Turnovers", "TOV"),
+    label: "Turnovers per 100 possessions (fewer is better)",
+    lower: true,
+  },
+  oreb100: per100("oreb", "Offensive rebounds", "OREB"),
   oreb_pct: {
     label: "Offensive rebound %",
     short: "OREB%",
@@ -295,6 +313,33 @@ const pairs: Record<string, Pair> = {
       "Easy schedule · bad",
       "Hard schedule · bad",
     ],
+  },
+  chances: {
+    name: "Shot chances, both ends",
+    group: "Offense and defense",
+    src: "logs",
+    x: "chances100",
+    y: "opp_chances100",
+    deck: "Opponents' shots and trips to the line per 100 possessions by the team's",
+    corners: ["Limits theirs", "Both", "Neither", "Gets its own"],
+    diff: c => `${sign(c)}${Math.abs(c)}`,
+  },
+  // where a team's own shot chances come from: OREB − TOV is roughly its
+  // chances per 100 less 100
+  "oreb-tov": {
+    name: "Offensive rebounds and turnovers",
+    group: "Offense and defense",
+    src: "logs",
+    x: "oreb100",
+    y: "tov100_low",
+    deck: "Turnovers by offensive rebounds per 100 possessions",
+    corners: [
+      "Protects the ball",
+      "Both",
+      "Neither",
+      "Crashes the glass",
+    ],
+    diff: c => `${sign(c)}${Math.abs(c)}`,
   },
   threes: {
     name: "Three-point shooting",
@@ -565,6 +610,7 @@ async function loadLogs(season: number, p: P) {
     for (const s of ["", "opp_"]) {
       t[`${s}fg2m`] = t[`${s}fgm`] - t[`${s}fg3m`]
       t[`${s}fg2a`] = t[`${s}fga`] - t[`${s}fg3a`]
+      t[`${s}chances`] = t[`${s}fga`] + 0.44 * t[`${s}fta`]
     }
     totals.set(team_id, t)
   }
