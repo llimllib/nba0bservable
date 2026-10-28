@@ -20,10 +20,11 @@ import { teams } from "../kit/teams"
 import { color, type } from "../kit/theme"
 import type { Body, LegendItem, Mark, Tool } from "../kit/tool"
 
-// season 0 is the latest season the data has; load resolves it
+// seasons 0 are the latest season the data has; load resolves them
 const defaults = {
   pair: "ast-tov",
-  season: 0,
+  from: 0,
+  to: 0,
   kind: "regular_season",
   team: "",
   top: 25,
@@ -380,8 +381,11 @@ interface Player {
 
 interface D {
   pair: string
-  season: number
+  from: number
+  to: number
+  // every season the pair's data has, oldest first
   seasons: number[]
+  latest: number
   kind: string
   // empty for a pair whose data doesn't split the regular season from the
   // playoffs
@@ -435,13 +439,18 @@ export const scatter: Tool<P, D> = {
     const pair = pairs[id]
     const [sx, sy] = [stats[pair.x], stats[pair.y]]
     const srcs = [...new Set<Src>(["stats", srcOf(sx), srcOf(sy)])]
-    // the seasons every dataset the pair reads has, and the one nearest
-    // the season asked for
+    // the seasons every dataset the pair reads has, and the span nearest
+    // the one asked for
     const meta = await metadata()
     const info = srcs.map(s => meta[sources[s].dataset])
     const first = max(info, m => m.first_season)!
     const last = min(info, m => m.last_season)!
-    const season = p.season ? Math.min(last, Math.max(first, p.season)) : last
+    const clamp = (s: number) => Math.min(last, Math.max(first, s))
+    const to = clamp(p.to || last)
+    const from = clamp(p.from || to)
+    const [lo, hi] = from <= to ? [from, to] : [to, from]
+    const span: number[] = []
+    for (let s = lo; s <= hi; s++) span.push(s)
     const split = srcs.every(s => sources[s].kinds)
 
     // each dataset's columns: its stats', and the stats dataset's own
@@ -455,107 +464,133 @@ export const scatter: Tool<P, D> = {
       cols.get("stats")!.add(c)
     for (const st of [sx, sy])
       for (const c of st.cols) cols.get(srcOf(st))!.add(c)
-    const [lk, ...tables] = await Promise.all([
-      lookups(season),
-      ...srcs.map(s =>
-        read(sources[s].source, sources[s].dataset, season, [...cols.get(s)!]),
+    const tables = await Promise.all(
+      span.map(season =>
+        Promise.all([
+          lookups(season),
+          ...srcs.map(s =>
+            read(sources[s].source, sources[s].dataset, season, [
+              ...cols.get(s)!,
+            ]),
+          ),
+        ]),
       ),
-    ])
-    const data = new Map(srcs.map((s, i) => [s, tables[i]]))
-    const base = data.get("stats")!
+    )
+    const lkTo = tables.at(-1)![0]
     const kinds = split
-      ? [...new Set(base.map(r => r.season_type as string))].sort()
+      ? [
+          ...new Set(
+            tables.flatMap(([, own]) =>
+              own.map((r: Row) => r.season_type as string),
+            ),
+          ),
+        ].sort()
       : []
     // a pair that doesn't split them takes its teams and minutes from the
     // regular season
     const kind = kinds.includes(p.kind)
       ? p.kind
       : (kinds[0] ?? "regular_season")
-    const rowsOf = (s: Src) =>
-      sources[s].kinds
-        ? data.get(s)!.filter(r => r.season_type === kind)
-        : data.get(s)!
-    const byPlayer = (s: Src) => new Map(rowsOf(s).map(r => [r.player_id, r]))
-    const [rx, ry] = [byPlayer(srcOf(sx)), byPlayer(srcOf(sy))]
 
-    // with a team highlighted, every team each traded player played for,
-    // so the team's highlight includes the players it traded away
-    const base_ = rowsOf("stats")
-    const moved = p.team && base_.some(r => r.team_count > 1)
-    const teamsOf = new Map<string, string[]>()
-    if (moved) {
-      const logs = await read("stats", "player_game_logs", season, [
-        "player_id",
-        "team_id",
-        "game_id",
-      ])
-      const traded = new Set(
-        base_.filter(r => r.team_count > 1).map(r => r.player_id),
-      )
-      const games = logs
-        .filter(
-          g =>
-            traded.has(g.player_id) &&
-            lk.games.get(g.game_id)?.game_type === kind,
-        )
-        .sort(
-          (a, b) =>
-            +lk.games.get(a.game_id)!.game_date -
-            +lk.games.get(b.game_id)!.game_date,
-        )
-      for (const g of games) {
-        const abbrev = lk.teams.get(g.team_id)?.nba_abbrev ?? ""
-        const ts = teamsOf.get(g.player_id) ?? []
-        if (ts.at(-1) !== abbrev) ts.push(abbrev)
-        teamsOf.set(g.player_id, ts)
-      }
-    }
+    const seasons = await Promise.all(
+      span.map(async (season, i) => {
+        const [lk, ...ts] = tables[i]
+        const data = new Map(srcs.map((s, j) => [s, ts[j]]))
+        // a franchise is one team across the span, under its latest
+        // abbreviation
+        const abbrev = (teamId: string) =>
+          lkTo.teams.get(teamId)?.nba_abbrev ??
+          lk.teams.get(teamId)?.nba_abbrev ??
+          ""
+        const rowsOf = (s: Src) =>
+          sources[s].kinds
+            ? data.get(s)!.filter(r => r.season_type === kind)
+            : data.get(s)!
+        const byPlayer = (s: Src) =>
+          new Map(rowsOf(s).map(r => [r.player_id, r]))
+        const [rx, ry] = [byPlayer(srcOf(sx)), byPlayer(srcOf(sy))]
 
-    const players: Player[] = []
-    for (const r of base_) {
-      const [ox, oy] = [rx.get(r.player_id), ry.get(r.player_id)]
-      const x = ox && sx.get(ox)
-      const y = oy && sy.get(oy)
-      if (x == null || y == null || !isFinite(x) || !isFinite(y)) continue
-      players.push({
-        key: `${r.player_id}:${season}`,
-        player_id: r.player_id,
-        season,
-        name: lk.players.get(r.player_id) ?? r.player_id,
-        team: lk.teams.get(r.team_id)?.nba_abbrev ?? "",
-        teams: teamsOf.get(r.player_id) ?? [
-          lk.teams.get(r.team_id)?.nba_abbrev ?? "",
-        ],
-        gp: r.gp,
-        volume: r[pair.volume] ?? 0,
-        x,
-        y,
-      })
-    }
+        // with a team highlighted, every team each traded player played
+        // for, so the team's highlight includes the players it traded away
+        const own = rowsOf("stats")
+        const teamsOf = new Map<string, string[]>()
+        if (p.team && own.some(r => r.team_count > 1)) {
+          const logs = await read("stats", "player_game_logs", season, [
+            "player_id",
+            "team_id",
+            "game_id",
+          ])
+          const traded = new Set(
+            own.filter(r => r.team_count > 1).map(r => r.player_id),
+          )
+          const games = logs
+            .filter(
+              g =>
+                traded.has(g.player_id) &&
+                lk.games.get(g.game_id)?.game_type === kind,
+            )
+            .sort(
+              (a, b) =>
+                +lk.games.get(a.game_id)!.game_date -
+                +lk.games.get(b.game_id)!.game_date,
+            )
+          for (const g of games) {
+            const ts = teamsOf.get(g.player_id) ?? []
+            if (ts.at(-1) !== abbrev(g.team_id)) ts.push(abbrev(g.team_id))
+            teamsOf.set(g.player_id, ts)
+          }
+        }
+
+        const players: Player[] = []
+        for (const r of own) {
+          const [ox, oy] = [rx.get(r.player_id), ry.get(r.player_id)]
+          const x = ox && sx.get(ox)
+          const y = oy && sy.get(oy)
+          if (x == null || y == null || !isFinite(x) || !isFinite(y)) continue
+          players.push({
+            key: `${r.player_id}:${season}`,
+            player_id: r.player_id,
+            season,
+            name: lk.players.get(r.player_id) ?? r.player_id,
+            team: abbrev(r.team_id),
+            teams: teamsOf.get(r.player_id) ?? [abbrev(r.team_id)],
+            gp: r.gp,
+            volume: r[pair.volume] ?? 0,
+            x,
+            y,
+          })
+        }
+        return { players, xs: rowsOf(srcOf(sx)), ys: rowsOf(srcOf(sy)) }
+      }),
+    )
+
     const names = new Map(
-      [...lk.teams.values()]
+      [...lkTo.teams.values()]
         .filter(t => t.is_nba)
         .sort((a, b) => a.full_name.localeCompare(b.full_name))
         .map(t => [t.nba_abbrev as string, t.full_name as string]),
     )
     const lastDate = max(
-      [...lk.games.values()].filter(g =>
+      [...lkTo.games.values()].filter(g =>
         split ? g.game_type === kind : g.game_type !== "preseason",
       ),
       g => g.game_date as Date,
     )
-    const seasons = []
-    for (let s = last; s >= first; s--) seasons.push(s)
+    const all = []
+    for (let s = first; s <= last; s++) all.push(s)
     return {
       pair: id,
-      season,
-      seasons,
+      from: lo,
+      to: hi,
+      seasons: all,
+      latest: last,
       kind,
       kinds,
-      players,
+      players: seasons.flatMap(s => s.players),
+      // the league's, over every season in the span
       league: {
-        x: sx.league(rowsOf(srcOf(sx))),
-        y: sy.league(rowsOf(srcOf(sy))),
+        x: sx.league(seasons.flatMap(s => s.xs)),
+        y: sy.league(seasons.flatMap(s => s.ys)),
       },
       teams: names,
       lastDate,
@@ -567,7 +602,8 @@ export const scatter: Tool<P, D> = {
     return {
       ...p,
       pair: d.pair,
-      season: d.season,
+      from: d.from,
+      to: d.to,
       kind: d.kind,
       team: d.teams.has(p.team) ? p.team : "",
     }
@@ -586,9 +622,10 @@ export const scatter: Tool<P, D> = {
         })),
       },
       {
-        key: "season",
-        label: "Season",
-        kind: "select",
+        key: "from",
+        keyTo: "to",
+        label: "Seasons",
+        kind: "span",
         options: d.seasons.map(s => ({ value: s, label: fmtSeason(s) })),
       },
       ...(d.kinds.length
@@ -636,8 +673,10 @@ export const scatter: Tool<P, D> = {
     const traded = ps.some(
       pl => pl.teams.length > 1 && pl.teams.includes(p.team),
     )
+    const one = d.from === d.to
     const games = max(d.players, pl => pl.gp) ?? 0
-    const through = d.lastDate ? `, through ${fmtDate(d.lastDate)}` : ""
+    const through =
+      d.to === d.latest && d.lastDate ? `, through ${fmtDate(d.lastDate)}` : ""
     const reference: LegendItem = pair.ratios
       ? {
           symbol: "dash",
@@ -656,12 +695,15 @@ export const scatter: Tool<P, D> = {
             text: `league avg: ${sx.tip(d.league.x)} ${sx.short}, ${sy.tip(d.league.y)} ${sy.short}`,
           }
     // a pair that doesn't split the season covers all of it
-    const games_ = d.kinds.length
+    const kind = d.kinds.length
       ? (kindNames[d.kind] ?? d.kind)
       : "regular season and playoffs"
+    const when = one
+      ? `in the ${fmtSeason(d.to)} ${kind}`
+      : `over the ${fmtSeason(d.from)} to ${fmtSeason(d.to)} ${kind.replace("season", "seasons")}`
     return {
       title: team ?? pair.name,
-      context: `${pair.deck} in the ${fmtSeason(d.season)} ${games_}${through}. The top ${p.top}% of players by ${pair.volumeName}`,
+      context: `${pair.deck} ${when}${through}. The top ${p.top}% of ${one ? "players" : "player-seasons"} by ${pair.volumeName}`,
       legend: [
         {
           symbol: "dot",
@@ -683,7 +725,9 @@ export const scatter: Tool<P, D> = {
           : []),
         reference,
       ],
-      counts: `${games} games · ${ps.length} players`,
+      counts: one
+        ? `${games} games · ${ps.length} players`
+        : `${d.to - d.from + 1} seasons · ${ps.length} player-seasons`,
       source: `Data: ${d.credit}`,
       team: p.team || undefined,
     }
@@ -887,8 +931,12 @@ export const scatter: Tool<P, D> = {
     const mine = (pl: Player) => !p.team || pl.teams.includes(p.team)
     // a traded player's name says so, as their numbers include their time
     // with other teams
+    // over a span of seasons, a name says which season
     const named = (pl: Player) =>
-      pl.teams.length > 1 ? `${pl.name} (${pl.teams.join("→")})` : pl.name
+      (d.from === d.to
+        ? pl.name
+        : `${pl.name} ’${String(pl.season).slice(2)}`) +
+      (pl.teams.length > 1 ? ` (${pl.teams.join("→")})` : "")
     const order = [...ps].sort((a, b) => Number(mine(a)) - Number(mine(b)))
     for (const pl of order) {
       plot
@@ -902,13 +950,16 @@ export const scatter: Tool<P, D> = {
         .attr("stroke-width", mine(pl) ? 1.5 : 0.75)
         .append("title")
         .text(
-          `${pl.name} (${pl.teams.join("→")})\n${sx.tip(pl.x)} ${sx.short} · ${sy.tip(pl.y)} ${sy.short} · ${pl.gp} games`,
+          `${pl.name}, ${fmtSeason(pl.season)} (${pl.teams.join("→")})\n${sx.tip(pl.x)} ${sx.short} · ${sy.tip(pl.y)} ${sy.short} · ${pl.gp} games`,
         )
     }
 
     // names: the players with the most volume first, and all of a
     // highlighted team's. A click on a dot toggles its name
     const labelSize = 12.5
+    // a team's few players are all named, overlapping if they must; a team
+    // over many seasons is named where there's room
+    const few = Boolean(p.team) && ps.filter(mine).length <= 20
     const labeled = placeLabels(
       plot.append("g").attr("font-weight", type.label.weight).node()!,
       ps
@@ -918,10 +969,10 @@ export const scatter: Tool<P, D> = {
           r,
           text: named(pl),
           priority: (mine(pl) ? 1e9 : 0) + pl.volume,
-          always: Boolean(p.team) && mine(pl),
+          always: few && mine(pl),
           key: pl.key,
         }))
-        .filter(lp => !p.team || lp.always),
+        .filter((_, i) => !p.team || mine(ps[i])),
       { width: plotW, height: plotH },
       { size: labelSize, minCell: 1800, avoid },
     )
