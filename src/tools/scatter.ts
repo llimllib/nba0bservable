@@ -414,6 +414,10 @@ const fmtDate = (d: Date) =>
 const fmtRatio = (k: number) =>
   k >= 1 ? `${+k.toFixed(1)}:1` : `1:${+(1 / k).toFixed(1)}`
 
+// two points on an axis are one, within rounding
+const near = (u: number, v: number, span: number) =>
+  Math.abs(u - v) < span * 1e-9
+
 // a team's primary and secondary colors, for a dot's fill and outline
 function teamColors(abbrev: string): [string, string] {
   const c = teams.get(abbrev)?.colors ?? []
@@ -535,9 +539,9 @@ export const scatter: Tool<P, D> = {
                 +lk.games.get(b.game_id)!.game_date,
             )
           for (const g of games) {
-            const ts = teamsOf.get(g.player_id) ?? []
-            if (ts.at(-1) !== abbrev(g.team_id)) ts.push(abbrev(g.team_id))
-            teamsOf.set(g.player_id, ts)
+            const list = teamsOf.get(g.player_id) ?? []
+            if (list.at(-1) !== abbrev(g.team_id)) list.push(abbrev(g.team_id))
+            teamsOf.set(g.player_id, list)
           }
         }
 
@@ -798,8 +802,6 @@ export const scatter: Tool<P, D> = {
 
     // A faint line across the plot, named outside it where it leaves by the
     // right or the top, so no dot covers its name
-    const near = (u: number, v: number, span: number) =>
-      Math.abs(u - v) < span * 1e-9
     const guide = (a: [number, number], b: [number, number], name: string) => {
       guides
         .append("line")
@@ -809,16 +811,16 @@ export const scatter: Tool<P, D> = {
         .attr("y2", y(b[1]))
         .attr("stroke", color.grid)
         .attr("stroke-width", 1.5)
-      const right = [a, b].find(e => near(e[0], X1, X1 - X0))
-      const top = [a, b].find(e => near(e[1], Y1, Y1 - Y0))
+      const atRight = [a, b].find(e => near(e[0], X1, X1 - X0))
+      const atTop = [a, b].find(e => near(e[1], Y1, Y1 - Y0))
       const text = guides
         .append("text")
         .call(agate)
         .attr("fill", color.faint)
         .text(name)
-      if (right) text.attr("x", plotW + 4).attr("y", y(right[1]) + 4)
-      else if (top && x(top[0]) - 16 > yTitleEnd + 8)
-        text.attr("x", x(top[0])).attr("y", -6).attr("text-anchor", "middle")
+      if (atRight) text.attr("x", plotW + 4).attr("y", y(atRight[1]) + 4)
+      else if (atTop && x(atTop[0]) - 16 > yTitleEnd + 8)
+        text.attr("x", x(atTop[0])).attr("y", -6).attr("text-anchor", "middle")
       else text.remove()
     }
     // where a line through zero with slope k leaves the plot
