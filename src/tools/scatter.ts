@@ -165,6 +165,7 @@ const stats: Record<string, Stat> = {
   tov: total("tov", "Turnovers", "TOV"),
   fga: total("fga", "Field goal attempts", "FGA"),
   fta: total("fta", "Free throw attempts", "FTA"),
+  fga36: per36("fga", "Shot attempts", "FGA"),
   oreb_pct: rate("oreb_pct", "Offensive rebound %", "OREB%"),
   dreb_pct: rate("dreb_pct", "Defensive rebound %", "DREB%"),
   stl36: per36("stl", "Steals", "STL"),
@@ -183,6 +184,18 @@ const stats: Record<string, Stat> = {
     league: rows =>
       sum(rows, r => r.pts) /
       (2 * (sum(rows, r => r.fga) + 0.44 * sum(rows, r => r.fta))),
+    pct: true,
+    tip: pct1,
+  },
+  // a three counts one and a half makes
+  efg_pct: {
+    label: "Effective field goal %",
+    short: "eFG%",
+    cols: ["efg_pct", "fgm", "fg3m", "fga"],
+    get: r => (r.fga > 0 ? r.efg_pct : null),
+    league: rows =>
+      (sum(rows, r => r.fgm) + 0.5 * sum(rows, r => r.fg3m)) /
+      sum(rows, r => r.fga),
     pct: true,
     tip: pct1,
   },
@@ -238,6 +251,21 @@ const pairs: Record<string, Pair> = {
       "High usage · efficient",
       "Low usage · inefficient",
       "High usage · inefficient",
+    ],
+  },
+  shots: {
+    name: "Shot volume and shotmaking",
+    group: "Shooting",
+    x: "fga36",
+    y: "efg_pct",
+    volume: "fga",
+    volumeName: "shot attempts",
+    deck: "Effective field goal % by shot attempts per 36 minutes",
+    corners: [
+      "Few shots · makes them",
+      "Many shots · makes them",
+      "Few shots · misses",
+      "Many shots · misses",
     ],
   },
   threes: {
