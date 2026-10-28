@@ -3,7 +3,16 @@
 // that ranks players for "Top %", and its reference lines and quadrant names.
 // A chart that needs a new kind of mark is a new tool. See issue #29 and the
 // "Player scatter" milestone
-import { extent, format, max, quantile, scaleLinear, select, sum } from "d3"
+import {
+  extent,
+  format,
+  max,
+  min,
+  quantile,
+  scaleLinear,
+  select,
+  sum,
+} from "d3"
 import { lookups, metadata, read, type Row } from "../kit/data"
 import { agate } from "../kit/frame"
 import { placeLabels, type Box } from "../kit/labels"
@@ -21,17 +30,52 @@ const defaults = {
 }
 type P = typeof defaults
 
-// A stat, read from player_season_stats. `get` is a player's value and
-// `league` the league's, computed from totals rather than as a mean of the
-// players' rates. `pct` ticks are percentages, and others take the scale's
-// format; `tip` writes the value in a tooltip and the legend
+// The datasets a stat can come from, whether they split the regular season
+// from the playoffs, and who to credit. Every pair also reads
+// player_season_stats, for teams, games and the volume behind Top %
+const sources = {
+  stats: {
+    source: "stats",
+    dataset: "player_season_stats",
+    kinds: true,
+    credit: "NBA.com",
+  },
+  net: {
+    source: "espn",
+    dataset: "net_pts_season",
+    kinds: true,
+    credit: "ESPN",
+  },
+  // fitted on the regular season and playoffs together
+  rapm: {
+    source: "openrapm",
+    dataset: "openrapm",
+    kinds: false,
+    credit: "OpenRAPM",
+  },
+  epm: {
+    source: "dunksandthrees",
+    dataset: "epm",
+    kinds: true,
+    credit: "dunksandthrees.com",
+  },
+}
+type Src = keyof typeof sources
+
+// A stat: `get` is a player's value, from their row in the stat's dataset,
+// and `league` the league's, computed from totals rather than as a mean of
+// the players' rates. `pct` ticks are percentages, `signed` ones carry a
+// sign, and others take the scale's format; `tip` writes the value in a
+// tooltip and the legend
 interface Stat {
+  src?: Src
   label: string
   short: string
   cols: string[]
   get(r: Row): number | null
   league(rows: Row[]): number
   pct?: boolean
+  signed?: boolean
   tip(v: number): string
 }
 
@@ -39,6 +83,8 @@ const pct = (v: number) => `${Math.round(v * 100)}%`
 const pct1 = (v: number) => `${(v * 100).toFixed(1)}%`
 const num = format(",")
 const num1 = (v: number) => v.toFixed(1)
+const sign = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "")
+const signed1 = (v: number) => `${sign(v)}${Math.abs(v).toFixed(1)}`
 const minutes = (rows: Row[]) => sum(rows, r => r.min)
 
 // a season total, as counted
@@ -92,6 +138,37 @@ const shooting = (
   tip: pct1,
 })
 
+// a rating in points per 100 possessions, where zero is average
+const rating = (src: Src, col: string, label: string, short: string): Stat => ({
+  src,
+  label,
+  short,
+  cols: [col],
+  get: r => r[col],
+  league: () => 0,
+  signed: true,
+  tip: signed1,
+})
+
+// ESPN's net points per 100 of the team's possessions on one side of the
+// ball, as ESPN computes it
+const netPer100 = (side: "o" | "d", label: string, short: string): Stat => ({
+  src: "net",
+  label,
+  short,
+  cols: [`${side}_net_pts`, `${side}_team_poss`],
+  get: r =>
+    r[`${side}_team_poss`] > 0
+      ? (r[`${side}_net_pts`] / r[`${side}_team_poss`]) * 100
+      : null,
+  league: rows =>
+    (sum(rows, r => r[`${side}_net_pts`]) /
+      sum(rows, r => r[`${side}_team_poss`])) *
+    100,
+  signed: true,
+  tip: signed1,
+})
+
 const stats: Record<string, Stat> = {
   ast: total("ast", "Assists", "AST"),
   tov: total("tov", "Turnovers", "TOV"),
@@ -118,11 +195,20 @@ const stats: Record<string, Stat> = {
     pct: true,
     tip: pct1,
   },
+  o_net: netPer100("o", "Offensive net points per 100", "O-NET"),
+  d_net: netPer100("d", "Defensive net points per 100", "D-NET"),
+  o_rapm: rating("rapm", "o_rating", "Offensive RAPM", "O-RAPM"),
+  d_rapm: rating("rapm", "d_rating", "Defensive RAPM", "D-RAPM"),
+  o_epm: rating("epm", "o_epm", "Offensive EPM", "O-EPM"),
+  d_epm: rating("epm", "d_epm", "Defensive EPM", "D-EPM"),
 }
+const srcOf = (s: Stat): Src => s.src ?? "stats"
 
 // Corners name the quadrants the league averages make: top left, top right,
 // bottom left, bottom right. A pair with `ratios` instead draws lines of
-// constant y:x through zero, and the league's ratio, dashed
+// constant y:x through zero, and the league's ratio, dashed. A `total` pair,
+// offense against defense, quarters at zero (the league's average) and
+// draws lines of constant x + y
 interface Pair {
   name: string
   group: string
@@ -137,7 +223,15 @@ interface Pair {
   ratios?: number[]
   // the league's ratio, in words, for the legend
   ratioText?: (k: number) => string
+  total?: boolean
 }
+
+const ends: [string, string, string, string] = [
+  "Defense only",
+  "Both ends",
+  "Neither end",
+  "Offense only",
+]
 
 const pairs: Record<string, Pair> = {
   "usg-ts": {
@@ -232,6 +326,39 @@ const pairs: Record<string, Pair> = {
     deck: "Blocks by steals per 36 minutes",
     corners: ["Blocks", "Steals and blocks", "Neither", "Steals"],
   },
+  net: {
+    name: "Net points",
+    group: "Offense and defense",
+    x: "o_net",
+    y: "d_net",
+    volume: "min",
+    volumeName: "minutes",
+    deck: "Defensive by offensive net points per 100 possessions",
+    corners: ends,
+    total: true,
+  },
+  rapm: {
+    name: "RAPM",
+    group: "Offense and defense",
+    x: "o_rapm",
+    y: "d_rapm",
+    volume: "min",
+    volumeName: "regular season minutes",
+    deck: "Defensive by offensive RAPM, points per 100 possessions,",
+    corners: ends,
+    total: true,
+  },
+  epm: {
+    name: "EPM",
+    group: "Offense and defense",
+    x: "o_epm",
+    y: "d_epm",
+    volume: "min",
+    volumeName: "minutes",
+    deck: "Defensive by offensive EPM, points per 100 possessions,",
+    corners: ends,
+    total: true,
+  },
 }
 
 interface Player {
@@ -252,12 +379,16 @@ interface D {
   season: number
   seasons: number[]
   kind: string
+  // empty for a pair whose data doesn't split the regular season from the
+  // playoffs
   kinds: string[]
   players: Player[]
   // the league's x and y, from every player's totals
   league: { x: number; y: number }
   teams: Map<string, string>
   lastDate?: Date
+  // the data's sources, for the footer
+  credit: string
 }
 
 const kindNames: Record<string, string> = {
@@ -296,32 +427,58 @@ export const scatter: Tool<P, D> = {
   defaults,
 
   async load(p) {
-    const meta = await metadata()
-    const { first_season, last_season } = meta.player_season_stats
-    const season = p.season || last_season
     const id = pairs[p.pair] ? p.pair : defaults.pair
     const pair = pairs[id]
     const [sx, sy] = [stats[pair.x], stats[pair.y]]
-    const cols = new Set([
-      "player_id",
-      "team_id",
-      "season_type",
-      "gp",
-      "min",
-      pair.volume,
-      ...sx.cols,
-      ...sy.cols,
-    ])
-    const [all, lk] = await Promise.all([
-      read("stats", "player_season_stats", season, [...cols]),
+    const srcs = [...new Set<Src>(["stats", srcOf(sx), srcOf(sy)])]
+    // the seasons every dataset the pair reads has, and the one nearest
+    // the season asked for
+    const meta = await metadata()
+    const info = srcs.map(s => meta[sources[s].dataset])
+    const first = max(info, m => m.first_season)!
+    const last = min(info, m => m.last_season)!
+    const season = p.season ? Math.min(last, Math.max(first, p.season)) : last
+    const split = srcs.every(s => sources[s].kinds)
+
+    // each dataset's columns: its stats', and the stats dataset's own
+    const cols = new Map<Src, Set<string>>(
+      srcs.map(s => [
+        s,
+        new Set(["player_id", ...(sources[s].kinds ? ["season_type"] : [])]),
+      ]),
+    )
+    for (const c of ["team_id", "gp", "min", pair.volume])
+      cols.get("stats")!.add(c)
+    for (const st of [sx, sy])
+      for (const c of st.cols) cols.get(srcOf(st))!.add(c)
+    const [lk, ...tables] = await Promise.all([
       lookups(season),
+      ...srcs.map(s =>
+        read(sources[s].source, sources[s].dataset, season, [...cols.get(s)!]),
+      ),
     ])
-    const kinds = [...new Set(all.map(s => s.season_type as string))].sort()
-    const kind = kinds.includes(p.kind) ? p.kind : kinds[0]
-    const rows = all.filter(s => s.season_type === kind)
+    const data = new Map(srcs.map((s, i) => [s, tables[i]]))
+    const base = data.get("stats")!
+    const kinds = split
+      ? [...new Set(base.map(r => r.season_type as string))].sort()
+      : []
+    // a pair that doesn't split them takes its teams and minutes from the
+    // regular season
+    const kind = kinds.includes(p.kind)
+      ? p.kind
+      : (kinds[0] ?? "regular_season")
+    const rowsOf = (s: Src) =>
+      sources[s].kinds
+        ? data.get(s)!.filter(r => r.season_type === kind)
+        : data.get(s)!
+    const byPlayer = (s: Src) => new Map(rowsOf(s).map(r => [r.player_id, r]))
+    const [rx, ry] = [byPlayer(srcOf(sx)), byPlayer(srcOf(sy))]
+
     const players: Player[] = []
-    for (const r of rows) {
-      const [x, y] = [sx.get(r), sy.get(r)]
+    for (const r of rowsOf("stats")) {
+      const [ox, oy] = [rx.get(r.player_id), ry.get(r.player_id)]
+      const x = ox && sx.get(ox)
+      const y = oy && sy.get(oy)
       if (x == null || y == null || !isFinite(x) || !isFinite(y)) continue
       players.push({
         key: `${r.player_id}:${season}`,
@@ -342,11 +499,13 @@ export const scatter: Tool<P, D> = {
         .map(t => [t.nba_abbrev as string, t.full_name as string]),
     )
     const lastDate = max(
-      [...lk.games.values()].filter(g => g.game_type === kind),
+      [...lk.games.values()].filter(g =>
+        split ? g.game_type === kind : g.game_type !== "preseason",
+      ),
       g => g.game_date as Date,
     )
     const seasons = []
-    for (let s = last_season; s >= first_season; s--) seasons.push(s)
+    for (let s = last; s >= first; s--) seasons.push(s)
     return {
       pair: id,
       season,
@@ -354,9 +513,13 @@ export const scatter: Tool<P, D> = {
       kind,
       kinds,
       players,
-      league: { x: sx.league(rows), y: sy.league(rows) },
+      league: {
+        x: sx.league(rowsOf(srcOf(sx))),
+        y: sy.league(rowsOf(srcOf(sy))),
+      },
       teams: names,
       lastDate,
+      credit: srcs.map(s => sources[s].credit).join(", "),
     }
   },
 
@@ -388,12 +551,19 @@ export const scatter: Tool<P, D> = {
         kind: "select",
         options: d.seasons.map(s => ({ value: s, label: fmtSeason(s) })),
       },
-      {
-        key: "kind",
-        label: "Games",
-        kind: "select",
-        options: d.kinds.map(k => ({ value: k, label: kindNames[k] ?? k })),
-      },
+      ...(d.kinds.length
+        ? [
+            {
+              key: "kind",
+              label: "Games",
+              kind: "select" as const,
+              options: d.kinds.map(k => ({
+                value: k,
+                label: kindNames[k] ?? k,
+              })),
+            },
+          ]
+        : []),
       {
         key: "team",
         label: "Team",
@@ -430,14 +600,24 @@ export const scatter: Tool<P, D> = {
           color: color.muted,
           text: pair.ratioText!(d.league.y / d.league.x),
         }
-      : {
-          symbol: "dash",
-          color: color.muted,
-          text: `league avg: ${sx.tip(d.league.x)} ${sx.short}, ${sy.tip(d.league.y)} ${sy.short}`,
-        }
+      : pair.total
+        ? {
+            symbol: "line",
+            color: color.faint,
+            text: `diagonals: ${sx.short} + ${sy.short}`,
+          }
+        : {
+            symbol: "dash",
+            color: color.muted,
+            text: `league avg: ${sx.tip(d.league.x)} ${sx.short}, ${sy.tip(d.league.y)} ${sy.short}`,
+          }
+    // a pair that doesn't split the season covers all of it
+    const games_ = d.kinds.length
+      ? (kindNames[d.kind] ?? d.kind)
+      : "regular season and playoffs"
     return {
       title: team ?? pair.name,
-      context: `${pair.deck} in the ${fmtSeason(d.season)} ${kindNames[d.kind] ?? d.kind}${through}. The top ${p.top}% of players by ${pair.volumeName}`,
+      context: `${pair.deck} in the ${fmtSeason(d.season)} ${games_}${through}. The top ${p.top}% of players by ${pair.volumeName}`,
       legend: [
         {
           symbol: "dot",
@@ -456,7 +636,7 @@ export const scatter: Tool<P, D> = {
         reference,
       ],
       counts: `${games} games · ${ps.length} players`,
-      source: "Data: NBA.com",
+      source: `Data: ${d.credit}`,
       team: p.team || undefined,
     }
   },
@@ -469,20 +649,21 @@ export const scatter: Tool<P, D> = {
     const left = 46
     const bottom = 48
     const top = 20
-    // a ratio pair names its lines in a gutter on the right
-    const right = pair.ratios ? 30 : 0
+    // a pair with lines across the plot names them in a gutter on the right
+    const right = pair.ratios || pair.total ? 30 : 0
     const plotW = size.width - left - right
     const height = size.height ?? Math.round(plotW * 0.82) + top + bottom
     const plotH = height - top - bottom
     const r = 5
 
-    // a ratio pair starts at zero, where its lines meet; an average pair
-    // shows its averages
+    // a ratio pair starts at zero, where its lines meet, and a total pair
+    // shows zero, its average; an average pair shows its averages
     const ratio = pair.ratios ? d.league.y / d.league.x : 0
+    const atZero = pair.ratios || pair.total
     const xs = ps.map(pl => pl.x)
     const ys = ps.map(pl => pl.y)
-    const [x0, x1] = extent(pair.ratios ? [0, ...xs] : [...xs, d.league.x])
-    const [y0, y1] = extent(pair.ratios ? [0, ...ys] : [...ys, d.league.y])
+    const [x0, x1] = extent([...xs, atZero ? 0 : d.league.x])
+    const [y0, y1] = extent([...ys, atZero ? 0 : d.league.y])
     const x = scaleLinear()
       .domain([x0 ?? 0, x1 ?? 1])
       .nice()
@@ -508,33 +689,54 @@ export const scatter: Tool<P, D> = {
       .attr("stroke", color.muted)
       .attr("stroke-width", 1.25)
       .attr("stroke-dasharray", "5 4")
+    const zero = plot
+      .append("g")
+      .attr("stroke", color.zero)
+      .attr("stroke-width", 1.5)
+    const [[X0, X1], [Y0, Y1]] = [x.domain(), y.domain()]
+
+    // the y axis's title, which a name above the plot keeps clear of
+    const yTitle = plot
+      .append("text")
+      .attr("x", -left)
+      .attr("y", -8)
+      .call(agate)
+      .text(`↑ ${sy.label}`)
+    const yTitleEnd = -left + yTitle.node()!.getComputedTextLength()
+
+    // A faint line across the plot, named outside it where it leaves by the
+    // right or the top, so no dot covers its name
+    const near = (u: number, v: number, span: number) =>
+      Math.abs(u - v) < span * 1e-9
+    const guide = (a: [number, number], b: [number, number], name: string) => {
+      guides
+        .append("line")
+        .attr("x1", x(a[0]))
+        .attr("y1", y(a[1]))
+        .attr("x2", x(b[0]))
+        .attr("y2", y(b[1]))
+        .attr("stroke", color.grid)
+        .attr("stroke-width", 1.5)
+      const right = [a, b].find(e => near(e[0], X1, X1 - X0))
+      const top = [a, b].find(e => near(e[1], Y1, Y1 - Y0))
+      const text = guides
+        .append("text")
+        .call(agate)
+        .attr("fill", color.faint)
+        .text(name)
+      if (right) text.attr("x", plotW + 4).attr("y", y(right[1]) + 4)
+      else if (top && x(top[0]) - 16 > yTitleEnd + 8)
+        text.attr("x", x(top[0])).attr("y", -6).attr("text-anchor", "middle")
+      else text.remove()
+    }
+    // where a line through zero with slope k leaves the plot
+    const end = (k: number): [number, number] =>
+      k * X1 > Y1 ? [Y1 / k, Y1] : [X1, k * X1]
+
     if (pair.ratios) {
-      // lines of constant ratio from zero to the plot's edge, faint and
-      // named outside it, where they leave it, so no dot covers a name. The
-      // league's is dashed, like an average
-      const [dx, dy] = [x.domain()[1], y.domain()[1]]
-      const end = (k: number): [number, number] =>
-        k * dx > dy ? [dy / k, dy] : [dx, k * dx]
-      for (const k of pair.ratios) {
-        const [ex, ey] = end(k)
-        guides
-          .append("line")
-          .attr("x1", x(0))
-          .attr("y1", y(0))
-          .attr("x2", x(ex))
-          .attr("y2", y(ey))
-          .attr("stroke", color.grid)
-          .attr("stroke-width", 1.5)
-        const atTop = k * dx > dy
-        guides
-          .append("text")
-          .attr("x", atTop ? x(ex) : plotW + 4)
-          .attr("y", atTop ? -6 : y(ey) + 4)
-          .attr("text-anchor", atTop ? "middle" : "start")
-          .call(agate)
-          .attr("fill", color.faint)
-          .text(fmtRatio(k))
-      }
+      // lines of constant ratio from zero; the league's is dashed, like an
+      // average
+      for (const k of pair.ratios) guide([0, 0], end(k), fmtRatio(k))
       const [ex, ey] = end(ratio)
       ref
         .append("line")
@@ -542,6 +744,16 @@ export const scatter: Tool<P, D> = {
         .attr("y1", y(0))
         .attr("x2", x(ex))
         .attr("y2", y(ey))
+    } else if (pair.total) {
+      // lines of constant total, x + y, a step apart
+      for (const c of scaleLinear()
+        .domain([X0 + Y0, X1 + Y1])
+        .ticks(6)) {
+        const xa = Math.max(X0, c - Y1)
+        const xb = Math.min(X1, c - Y0)
+        if (xb - xa < (X1 - X0) / 20) continue
+        guide([xa, c - xa], [xb, c - xb], `${sign(c)}${Math.abs(c)}`)
+      }
     } else {
       ref
         .append("line")
@@ -557,6 +769,15 @@ export const scatter: Tool<P, D> = {
         { x0: x(d.league.x) - 1, x1: x(d.league.x) + 1, y0: 0, y1: plotH },
         { x0: 0, x1: plotW, y0: y(d.league.y) - 1, y1: y(d.league.y) + 1 },
       )
+    }
+    // zero is the strongest line on a signed axis
+    if (sx.signed && X0 < 0 && X1 > 0) {
+      zero.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y2", plotH)
+      avoid.push({ x0: x(0) - 1, x1: x(0) + 1, y0: 0, y1: plotH })
+    }
+    if (sy.signed && Y0 < 0 && Y1 > 0) {
+      zero.append("line").attr("y1", y(0)).attr("y2", y(0)).attr("x2", plotW)
+      avoid.push({ x0: 0, x1: plotW, y0: y(0) - 1, y1: y(0) + 1 })
     }
 
     // the quadrants, named in their corners. These are guideposts: drawn
@@ -581,8 +802,12 @@ export const scatter: Tool<P, D> = {
     }
 
     // axes: ticks, and titles beside them
-    const xFmt = sx.pct ? pct : x.tickFormat(6, ",~f")
-    const yFmt = sy.pct ? pct : y.tickFormat(6, ",~f")
+    const tickFmt = (st: Stat, sc: typeof x) => {
+      if (st.pct) return pct
+      const f = sc.tickFormat(6, ",~f")
+      return st.signed ? (v: number) => `${sign(v)}${f(Math.abs(v))}` : f
+    }
+    const [xFmt, yFmt] = [tickFmt(sx, x), tickFmt(sy, y)]
     const axis = plot
       .append("g")
       .attr("font-size", type.tick.size)
@@ -608,12 +833,6 @@ export const scatter: Tool<P, D> = {
       .attr("text-anchor", "middle")
       .call(agate)
       .text(`${sx.label} →`)
-    plot
-      .append("text")
-      .attr("x", -left)
-      .attr("y", -8)
-      .call(agate)
-      .text(`↑ ${sy.label}`)
 
     // dots in team colors, or a team's players over a faded league. The color
     // is identity, not value: names and position carry the reading
