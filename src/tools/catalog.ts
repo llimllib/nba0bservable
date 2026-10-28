@@ -10,6 +10,13 @@ export const catalog = [
     takes: ["Season", "Games", "Team", "Top %"],
   },
   {
+    href: "scatter",
+    name: "Player scatter",
+    blurb:
+      "One player stat against another: assists and turnovers, rebounding, shooting, steals and blocks.",
+    takes: ["Stats", "Season", "Games", "Team", "Top %"],
+  },
+  {
     href: "playoffs",
     name: "Playoff net points",
     blurb: "Every player's net points in every playoff game, by team.",

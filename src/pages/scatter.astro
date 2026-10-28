@@ -1,0 +1,18 @@
+---
+import Base from "../layouts/Base.astro"
+---
+
+<Base title="Player scatter" description="One player stat against another: assists and turnovers, rebounding, shooting, steals and blocks">
+  <h1>Player scatter</h1>
+  <p class="lede">
+    Each dot is a player, placed by two stats. Pick the pair; the dashed
+    lines are the league's average.
+  </p>
+  <div id="tool"></div>
+</Base>
+
+<script>
+  import { mount } from "../kit/mount"
+  import { scatter } from "../tools/scatter"
+  mount(document.getElementById("tool")!, scatter)
+</script>

@@ -6,6 +6,8 @@ import type { Params, ParamValue } from "./state"
 export interface Option {
   value: ParamValue
   label: string
+  // a select shows options with a group under its heading
+  group?: string
 }
 
 // Question controls only: season, team, metric, filter. Five at most; framing

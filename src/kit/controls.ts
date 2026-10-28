@@ -17,11 +17,23 @@ export function controlElement(c: Control, p: Params, set: Set): HTMLElement {
   const value = p[c.key]
   let input: HTMLInputElement | HTMLSelectElement
   if (c.kind === "select") {
-    input = document.createElement("select")
+    const select = (input = document.createElement("select"))
+    const groups = new Map<string, HTMLOptGroupElement>()
     for (const o of c.options) {
       const opt = new Option(o.label, String(o.value))
       opt.selected = o.value === value
-      input.add(opt)
+      if (o.group === undefined) {
+        select.add(opt)
+        continue
+      }
+      let group = groups.get(o.group)
+      if (!group) {
+        group = document.createElement("optgroup")
+        group.label = o.group
+        groups.set(o.group, group)
+        select.append(group)
+      }
+      group.append(opt)
     }
   } else if (c.kind === "range") {
     input = document.createElement("input")
