@@ -27,14 +27,15 @@ export interface Axis {
 // The reference lines:
 // - average: dashed lines at the league's x and y
 // - ratios: lines of constant y:x through zero, and the league's ratio,
-//   dashed
+//   dashed. The axes start at zero, where the lines meet, unless `zero` is
+//   false, for values far from it
 // - sum: lines of constant x + y, for offense against defense in numbers
 //   where zero is average
 // - diff: the average lines, and lines of constant x − y, for a side of the
 //   ball against its opposite: the net
 export type Guide =
   | { kind: "average" }
-  | { kind: "ratios"; ratios: number[] }
+  | { kind: "ratios"; ratios: number[]; zero?: boolean }
   | { kind: "sum" }
   | { kind: "diff"; name: (c: number) => string }
 
@@ -89,7 +90,8 @@ export function scatterPlot(
 
   // ratios start at zero, where their lines meet, and a sum shows zero, its
   // average; the rest show their averages
-  const atZero = guide.kind === "ratios" || guide.kind === "sum"
+  const atZero =
+    (guide.kind === "ratios" && guide.zero !== false) || guide.kind === "sum"
   const [x0, x1] = extent([...o.xs, atZero ? 0 : o.league.x])
   const [y0, y1] = extent([...o.ys, atZero ? 0 : o.league.y])
   const xr = [o.inset, plotW - o.inset]
@@ -178,18 +180,30 @@ export function scatterPlot(
   }
 
   if (guide.kind === "ratios") {
-    // where a line through zero with slope k leaves the plot
-    const end = (k: number): [number, number] =>
-      k * X1 > Y1 ? [Y1 / k, Y1] : [X1, k * X1]
-    for (const k of guide.ratios) line([0, 0], end(k), fmtRatio(k))
+    // the part of the line through zero with slope k inside the plot
+    const clip = (k: number): [[number, number], [number, number]] | null => {
+      const xa = Math.max(X0, Y0 / k)
+      const xb = Math.min(X1, Y1 / k)
+      return xb > xa
+        ? [
+            [xa, k * xa],
+            [xb, k * xb],
+          ]
+        : null
+    }
+    for (const k of guide.ratios) {
+      const ends = clip(k)
+      if (ends) line(...ends, fmtRatio(k))
+    }
     // the league's ratio is dashed, like an average
-    const [ex, ey] = end(o.league.y / o.league.x)
-    ref
-      .append("line")
-      .attr("x1", x(0))
-      .attr("y1", y(0))
-      .attr("x2", x(ex))
-      .attr("y2", y(ey))
+    const ends = clip(o.league.y / o.league.x)
+    if (ends)
+      ref
+        .append("line")
+        .attr("x1", x(ends[0][0]))
+        .attr("y1", y(ends[0][1]))
+        .attr("x2", x(ends[1][0]))
+        .attr("y2", y(ends[1][1]))
   } else if (guide.kind === "sum") {
     // lines of constant x + y, a step apart
     for (const c of scaleLinear()
