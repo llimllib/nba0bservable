@@ -17,6 +17,13 @@ export const catalog = [
     takes: ["Stats", "Seasons", "Games", "Team", "Top %"],
   },
   {
+    href: "teams",
+    name: "Team charts",
+    blurb:
+      "One team stat against another: efficiency, pace, luck, shooting at both ends, playmaking, rebounding and defense.",
+    takes: ["Stats", "Season", "Playoffs", "Games"],
+  },
+  {
     href: "playoffs",
     name: "Playoff net points",
     blurb: "Every player's net points in every playoff game, by team.",

@@ -1,0 +1,20 @@
+---
+import Base from "../layouts/Base.astro"
+---
+
+<Base title="Team charts" description="One team stat against another: efficiency, pace, luck, shooting at both ends, playmaking, rebounding and defense">
+  <h1>Team charts</h1>
+  <p class="lede">
+    Each logo is a team, placed by two stats; where logos crowd, a line
+    joins a logo to the dot at its value. Pick the pair; the dashed lines
+    are the league's average. On a reversed axis lower is better, so up and
+    right are always better.
+  </p>
+  <div id="tool"></div>
+</Base>
+
+<script>
+  import { mount } from "../kit/mount"
+  import { teamCharts } from "../tools/teams"
+  mount(document.getElementById("tool")!, teamCharts)
+</script>
