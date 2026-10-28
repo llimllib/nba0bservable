@@ -1,4 +1,4 @@
-// Player scatter: one stat against another, one dot per player, for a
+// Player charts: one stat against another, one dot per player, for a
 // curated list of pairs. A pair is data, not code: two stats, the volume stat
 // that ranks players for "Top %", and its reference lines and quadrant names.
 // A chart that needs a new kind of mark is a new tool. See issue #29 and the
@@ -435,7 +435,7 @@ function shown(d: D, p: P) {
 
 export const scatter: Tool<P, D> = {
   id: "scatter",
-  name: "Player scatter",
+  name: "Player charts",
   defaults,
 
   async load(p) {

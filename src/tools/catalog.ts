@@ -11,7 +11,7 @@ export const catalog = [
   },
   {
     href: "scatter",
-    name: "Player scatter",
+    name: "Player charts",
     blurb:
       "One player stat against another: shooting, playmaking, rebounding, steals and blocks, and offense against defense.",
     takes: ["Stats", "Seasons", "Games", "Team", "Top %"],
