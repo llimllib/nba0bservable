@@ -1,6 +1,7 @@
 // The scores page's game blocks: a score line, the four factors for both
 // teams, and the net points line saying how the winner won. Plain DOM; the
 // data is load.ts's
+import { logoUrl } from "../kit/frame"
 import { roundToSum, type Factors, type Game, type TeamLine } from "./load"
 
 const pct = (v: number) => (v * 100).toFixed(1)
@@ -39,10 +40,23 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return e
 }
 
+// A team's logo, beside its abbreviation, so it's decoration: no alt text.
+// Teams ESPN has no logo for (international preseason opponents) go without
+function logo(t: TeamLine) {
+  const img = el("img", {
+    className: "logo",
+    src: logoUrl(t.abbrev),
+    alt: "",
+    loading: "lazy",
+  })
+  img.onerror = () => img.remove()
+  return img
+}
+
 export function gameBlock(g: Game, base: string) {
   const [w, l] = g.teams
   const score = (t: TeamLine) =>
-    el("abbr", { title: t.name }, `${t.abbrev} ${t.pts}`)
+    el("abbr", { title: t.name }, logo(t), `${t.abbrev} ${t.pts}`)
 
   const head = el(
     "tr",
@@ -54,7 +68,11 @@ export function gameBlock(g: Game, base: string) {
     el(
       "tr",
       {},
-      el("th", { scope: "row" }, el("abbr", { title: t.name }, t.abbrev)),
+      el(
+        "th",
+        { scope: "row" },
+        el("abbr", { title: t.name }, logo(t), t.abbrev),
+      ),
       ...columns.map(c => {
         const [v, ov] = [t[c.key] as number, o[c.key] as number]
         // the better of the two is bold, so it reads without color. Compare

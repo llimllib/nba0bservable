@@ -936,6 +936,26 @@ time {
   text-decoration: none;
 }
 
+/* logos sit on the text's line, about as tall as its capitals */
+.game .logo {
+  height: 1.15em;
+  width: 1.15em;
+  margin-right: 0.3em;
+  vertical-align: -0.2em;
+  object-fit: contain;
+}
+
+.game .score abbr {
+  display: inline-flex;
+  align-items: center;
+}
+
+.game .score .logo {
+  height: 1.1em;
+  width: 1.1em;
+  margin-right: 0.2em;
+}
+
 .box {
   width: 100%;
   border-collapse: collapse;
