@@ -67,7 +67,7 @@ const shooting = (
   short: string,
   lower = false,
 ): Stat => ({
-  label: lower ? `${label} (lower is better)` : label,
+  label,
   short,
   get: t => t[made] / t[att],
   pct: true,
@@ -82,7 +82,7 @@ const ortg: Stat = {
   tip: num1,
 }
 const drtg: Stat = {
-  label: "Defensive rating (lower is better)",
+  label: "Defensive rating",
   short: "DRtg",
   get: t => (100 * t.opp_pts) / t.opp_poss,
   lower: true,
@@ -96,7 +96,7 @@ const net: Stat = {
   tip: signed1,
 }
 const efg = (side: "" | "opp_"): Stat => ({
-  label: side ? "Opponents' effective FG% (lower is better)" : "Effective FG%",
+  label: side ? "Opponents' effective FG%" : "Effective FG%",
   short: side ? "Opp eFG%" : "eFG%",
   get: t => (t[`${side}fgm`] + 0.5 * t[`${side}fg3m`]) / t[`${side}fga`],
   pct: true,
@@ -104,9 +104,7 @@ const efg = (side: "" | "opp_"): Stat => ({
   tip: pct1,
 })
 const ftRate = (side: "" | "opp_"): Stat => ({
-  label: side
-    ? "Opponents' free throw rate (lower is better)"
-    : "Free throw rate",
+  label: side ? "Opponents' free throw rate" : "Free throw rate",
   short: side ? "Opp FTr" : "FTr",
   get: t => t[`${side}fta`] / t[`${side}fga`],
   lower: Boolean(side),
@@ -174,7 +172,6 @@ const stats: Record<string, Stat> = {
   chances100: { ...per100("chances", "Shot chances", ""), short: "for" },
   opp_chances100: {
     ...per100("opp_chances", "Opponents' shot chances", ""),
-    label: "Opponents' shot chances per 100 possessions (fewer is better)",
     short: "against",
     lower: true,
   },
@@ -202,7 +199,6 @@ const stats: Record<string, Stat> = {
   tov100: per100("tov", "Turnovers", "TOV"),
   tov100_low: {
     ...per100("tov", "Turnovers", "TOV"),
-    label: "Turnovers per 100 possessions (fewer is better)",
     lower: true,
   },
   oreb100: per100("oreb", "Offensive rebounds", "OREB"),

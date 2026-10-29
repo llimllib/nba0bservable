@@ -20,9 +20,15 @@ export interface Axis {
   pct?: boolean
   // ticks carry a sign, and zero is the strongest line
   signed?: boolean
-  // lower is better: the axis runs backwards, so up and right are better
+  // lower is better: the axis runs backwards, so up and right are better,
+  // and its title says so
   reverse?: boolean
 }
+
+// "lower is better" would be read as a position on a reversed axis, so a
+// reversed axis's title names the direction that's better instead
+const titleOf = (a: Axis, better: "up" | "right") =>
+  a.reverse ? `${a.title} (reversed: ${better} is better)` : a.title
 
 // The reference lines:
 // - average: dashed lines at the league's x and y
@@ -134,7 +140,7 @@ export function scatterPlot(
     .attr("x", -left)
     .attr("y", -8)
     .call(agate)
-    .text(`↑ ${o.y.title}`)
+    .text(`↑ ${titleOf(o.y, "up")}`)
   const yTitleEnd = -left + yTitle.node()!.getComputedTextLength()
 
   // A faint line across the plot, named outside it where it leaves by the
@@ -289,7 +295,7 @@ export function scatterPlot(
     .attr("y", plotH + 40)
     .attr("text-anchor", "middle")
     .call(agate)
-    .text(`${o.x.title} →`)
+    .text(`${titleOf(o.x, "right")} →`)
 
   return {
     plot,
