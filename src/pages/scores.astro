@@ -25,6 +25,7 @@ import Base from "../layouts/Base.astro"
   import {
     factorsFor,
     gamesOn,
+    latestNight,
     nearestGameDay,
     seasonRange,
     addDays,
@@ -88,15 +89,14 @@ import Base from "../layouts/Base.astro"
 
     let games: Game[]
     try {
-      games = await gamesOn(date)
-      if (games.length === 0 && !asked) {
-        const latest = await nearestGameDay(yesterday, -1)
+      if (asked) games = await gamesOn(date)
+      else {
+        const night = await latestNight()
         if (id !== current) return
-        if (latest) {
-          say(`No games in for ${short(yesterday)} yet; showing ${short(latest)}.`)
-          date = latest
+        ;({ date, games } = night)
+        if (date !== yesterday) {
+          say(`No games in for ${short(yesterday)} yet; showing ${short(date)}.`)
           heading(date)
-          games = await gamesOn(date)
         }
       }
     } catch (e) {

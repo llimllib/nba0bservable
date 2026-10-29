@@ -50,6 +50,13 @@ elsewhere: each game links to its rotations, and later to a full box score.
   rounded to integers that keep ESPN's rounded total, so rounding doesn't
   add to the gap, and the page says they add up to "about" the margin. The
   line is signed from the winner's side; the biggest factor is underlined.
+- **On the front page**, under About in the lead caption's column, which
+  had a block's worth of space: last night's scores in two columns of
+  agate, winner first and bold, scores padded so the columns align, with
+  overtime marked. Kicker "Scores · Last night" (or the date, when it falls
+  back), a one-line blurb and `BOX SCORES →`. If the games can't load, only
+  the blurb and link show. It shares the default night with the page
+  (`latestNight` in `load.ts`).
 - **A newspaper grid**: one column on phones, two or three on desktop, rules
   between games.
 

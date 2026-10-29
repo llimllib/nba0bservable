@@ -30,6 +30,12 @@ const briefs = ["efficiency", "cumulative", "rotations"].map(
             it, and export it as an image to post.
           </p>
         </aside>
+        <aside class="about board">
+          <span class="kicker" id="board-day">Scores</span>
+          <ul id="board" hidden></ul>
+          <p>Every game of the night, with the four factors and how the winner won.</p>
+          <a class="more" href={`${base}scores`}>Box scores →</a>
+        </aside>
       </figcaption>
     </figure>
     <section class="briefs" aria-label="More tools">
@@ -54,6 +60,7 @@ const briefs = ["efficiency", "cumulative", "rotations"].map(
     rotationsBrief,
     type Brief,
   } from "../tools/briefs"
+  import { latestNight } from "../scores/load"
 
   const pct = (v: number) => `${(v * 100).toFixed(1)}%`
   const { data, p } = await embed(document.getElementById("lead-chart")!, shooting)
@@ -74,6 +81,42 @@ const briefs = ["efficiency", "cumulative", "rotations"].map(
     ["cumulative", cumulativeBrief],
     ["rotations", rotationsBrief],
   ]
+  // last night's scores, under the caption
+  latestNight()
+    .then(({ yesterday, date, games }) => {
+      if (games.length === 0) return
+      const day =
+        date === yesterday
+          ? "Last night"
+          : new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", {
+              timeZone: "UTC",
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+            })
+      document.getElementById("board-day")!.textContent = `Scores · ${day}`
+      const board = document.getElementById("board")!
+      board.replaceChildren(
+        ...games.map(g => {
+          const [w, l] = g.teams
+          // padded, so the columns of the monospaced lines align
+          const pts = (n: number) => String(n).padStart(3)
+          const li = document.createElement("li")
+          const b = document.createElement("b")
+          b.textContent = `${w.abbrev} ${pts(w.pts)}`
+          li.append(b, ` ${l.abbrev} ${pts(l.pts)}`)
+          if (g.status !== "Final") {
+            const ot = document.createElement("span")
+            ot.textContent = ` ${g.status.replace("Final/", "")}`
+            li.append(ot)
+          }
+          return li
+        }),
+      )
+      board.hidden = false
+    })
+    .catch(e => console.error(e))
+
   for (const [id, brief] of briefs)
     brief()
       .then(b => {

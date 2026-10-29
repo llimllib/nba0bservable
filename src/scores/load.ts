@@ -110,6 +110,17 @@ export async function nearestGameDay(date: string, dir: -1 | 1) {
   return undefined
 }
 
+// The night a page shows by default: yesterday, or, when it has no games
+// (not in yet, or an off day), the latest day before it that does
+export async function latestNight() {
+  const yesterday = addDays(today(), -1)
+  const games = await gamesOn(yesterday)
+  if (games.length > 0) return { yesterday, date: yesterday, games }
+  const latest = await nearestGameDay(yesterday, -1)
+  if (!latest) return { yesterday, date: yesterday, games }
+  return { yesterday, date: latest, games: await gamesOn(latest) }
+}
+
 const rounds = ["", "Round 1", "Round 2", "Conf. finals", "Finals"]
 
 function kindOf(g: Record<string, any>) {
