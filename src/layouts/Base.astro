@@ -11,6 +11,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, "/")
 const path = Astro.url.pathname
 const nav = [
   { href: base, label: "Now" },
+  { href: `${base}scores`, label: "Scores" },
   { href: `${base}tools`, label: "Tools" },
   { href: `${base}notes`, label: "Notes" },
 ]

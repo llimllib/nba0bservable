@@ -30,6 +30,9 @@ or the frame.
   from the URL hash, and exports `shots/annotated.png`
 - `node scripts/design-check.mjs`: checks every team's header band passes
   WCAG contrast, and renders an ink-band frame to `shots/ink-band.png`
+- `node scripts/scores-check.mjs [date]`: checks the scores page at desktop
+  and phone widths, its no-games days, and ESPN's or the NBA's data
+  missing; saves `shots/scores-<width>.png`
 - `npx astro check`: type check
 - `npm run build`: static site in `dist/`, one `<page>.html` per page
   (`build.format: "file"`), which is the layout the server expects
@@ -64,6 +67,7 @@ shared code was in `docs/lib/`. Don't restore it into the tree.
   - `data.ts`: hyparquet reads of `nba/<source>/<dataset>/season=<n>/data.parquet`
   - `theme.ts`: colors, type scale, fonts
 - `src/tools/`: one module per tool
+- `src/scores/`: the scores page, which is plain HTML, not a tool
 - `src/pages/`: one page per tool, plus Now / Tools / Notes
 - `docs/plans/`: design docs, dated; the newest decision wins
 - `transcripts/`: AI coding session transcripts from the old site

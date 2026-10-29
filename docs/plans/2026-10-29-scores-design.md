@@ -34,15 +34,19 @@ elsewhere: each game links to its rotations, and later to a full box score.
   rotations tool.
 - **Four factors from the NBA's `team_game_logs`**: eFG%, TOV% (turnovers
   per possession), OREB% (against the opponent's defensive rebounds) and
-  FT rate (FTA/FGA). The better value in each column is bold, so it reads
-  without color.
+  FT rate (FTM/FGA, as Oliver and ESPN have it). The better value in each
+  column is bold, so it reads without color.
 - **Why the winner won, from ESPN's `team_box`.** Each team's factor net
   points (`shooting_net_pts`, `turnover_net_pts`, `rebound_net_pts`,
   `freethrow_net_pts`) mean little alone (turnover net points are always
-  negative), but the winner's minus the loser's, factor by factor, sums to
-  the final margin exactly: MIA 129, ATL 117 is shooting +2.7, turnovers 0,
-  rebounding +7.0, free throws +2.4. The line is signed from the winner's
-  side; the biggest factor is underlined.
+  negative), but the winner's minus the loser's, factor by factor, nearly
+  sums to the final margin: MIA 129, ATL 117 is shooting +2.7, turnovers 0,
+  rebounding +7.0, free throws +2.4. Not exactly: in 2025–26, 92% of games
+  are within half a point and the worst is off by 3.1; early 2026–27 days,
+  which ESPN may still revise, are looser (up to 4.6). The values are
+  rounded to integers that keep ESPN's rounded total, so rounding doesn't
+  add to the gap, and the page says they add up to "about" the margin. The
+  line is signed from the winner's side; the biggest factor is underlined.
 - **A newspaper grid**: one column on phones, two or three on desktop, rules
   between games.
 
@@ -73,7 +77,8 @@ and its messages say only what it knows.
 | Loading | The date heading, and "Loading…" under it |
 
 ESPN is read apart from the NBA logs, so a slow or missing ESPN file never
-holds up the scores.
+holds up the scores. Each season's files are one row group, so a day's rows
+can't be read alone; the page reads the season's few columns and filters.
 
 ## Code
 
@@ -86,10 +91,8 @@ holds up the scores.
 
 ## Testing
 
-- `npm run shot -- "scores?date=2026-10-28" --dom` at 1100px and 390px: the
-  grid folds, and nothing scrolls sideways on a phone.
-- An off day, a future date, a season the bucket doesn't have, the default,
-  and ESPN missing.
-- For every game on Oct 28, the factor differences sum to the margin; one
-  game's four factors match DuckDB.
-- `npx astro check`, `npm run build`.
+`node scripts/with-dev.mjs node scripts/scores-check.mjs [date]` checks a
+night at 1100px and 390px (no sideways scroll; shots in `shots/`), the
+default date and prev, the offseason, a season the bucket doesn't have,
+ESPN's file blocked and the NBA's logs blocked. It reports games whose
+factors don't sum to the margin, without failing.

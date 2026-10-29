@@ -842,3 +842,180 @@ time {
     border-top: var(--rule);
   }
 }
+
+/* --- scores: a day's games, a few lines of agate each, on a grid whose
+   rules are drawn by the games, as the front page's briefs are */
+
+.days {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.days input {
+  font: 1rem var(--head);
+  font-weight: 600;
+  padding: 0.25rem;
+  border: var(--rule);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.days [hidden] {
+  display: none;
+}
+
+.note {
+  font-family: var(--agate);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.note button {
+  padding: 0.3rem 0.5rem;
+  border: var(--rule);
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.games {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 3px solid var(--ink);
+}
+
+.game {
+  padding: 0.6rem 1.25rem 0.9rem;
+  border-left: var(--rule);
+  border-bottom: var(--rule);
+  font-family: var(--agate);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.game:nth-child(3n + 1) {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.game:nth-child(3n) {
+  padding-right: 0;
+}
+
+.game p {
+  margin: 0;
+}
+
+.game .status {
+  margin: 0;
+  min-height: 0;
+  color: var(--muted);
+}
+
+.game .score {
+  display: flex;
+  gap: 1rem;
+  margin: 0.15rem 0 0.35rem;
+  font-size: 1.6rem;
+}
+
+.game .score span {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.game abbr {
+  text-decoration: none;
+}
+
+.box {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.box th,
+.box td {
+  padding: 0.1rem 0;
+  text-align: right;
+  font-weight: 400;
+}
+
+.box th[scope="row"] {
+  text-align: left;
+  font-weight: 700;
+}
+
+.box thead th {
+  color: var(--muted);
+  border-bottom: var(--rule);
+  cursor: help;
+}
+
+.box td b {
+  font-weight: 800;
+}
+
+.why {
+  margin-top: 0.35rem !important;
+  padding-top: 0.3rem;
+  border-top: 1px solid #dcd7ca;
+  text-transform: uppercase;
+}
+
+.why u {
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+}
+
+.why.missing {
+  color: var(--muted);
+}
+
+.game .more {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 900px) {
+  .games {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .game,
+  .game:nth-child(3n),
+  .game:nth-child(3n + 1) {
+    padding: 0.6rem 1.25rem 0.9rem;
+    border-left: var(--rule);
+  }
+
+  .game:nth-child(2n + 1) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .game:nth-child(2n) {
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .games {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .game,
+  .game:nth-child(n) {
+    padding: 0.6rem 0 0.9rem;
+    border-left: 0;
+  }
+}

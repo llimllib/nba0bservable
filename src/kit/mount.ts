@@ -281,7 +281,7 @@ export async function mount<P extends Params, D>(
 }
 
 // "Loading…" a letter at a time, so a bold can sweep across it
-function loadingText() {
+export function loadingText() {
   const letters = [..."Loading…"]
     .map((c, i) => `<span aria-hidden="true" style="--i:${i}">${c}</span>`)
     .join("")

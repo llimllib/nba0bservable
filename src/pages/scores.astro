@@ -1,0 +1,207 @@
+---
+import Base from "../layouts/Base.astro"
+---
+
+<Base title="Scores" description="Every game of the day, with the four factors and how the winner won">
+  <span class="kicker">Scores</span>
+  <h1 id="day">&nbsp;</h1>
+  <div class="days">
+    <a id="prev" class="more" hidden>← Prev</a>
+    <input id="date" type="date" aria-label="Date" />
+    <a id="next" class="more" hidden>Next →</a>
+  </div>
+  <p class="lede">
+    The four factors for each team, the better of each in bold. The last
+    line is ESPN's net points: how much shooting, turnovers, rebounding and
+    free throws each added to the winner's margin. They add up to about the
+    margin, not always exactly.
+  </p>
+  <p id="note" class="note" hidden></p>
+  <div id="games" class="games"></div>
+</Base>
+
+<script>
+  import { loadingText } from "../kit/mount"
+  import {
+    factorsFor,
+    gamesOn,
+    nearestGameDay,
+    seasonRange,
+    addDays,
+    today,
+    type Game,
+  } from "../scores/load"
+  import { gameBlock, setFactors } from "../scores/render"
+
+  const base = import.meta.env.BASE_URL.replace(/\/?$/, "/")
+  const $ = (id: string) => document.getElementById(id)!
+  const [day, input, prev, next, note, grid] = [
+    $("day"),
+    $("date") as HTMLInputElement,
+    $("prev") as HTMLAnchorElement,
+    $("next") as HTMLAnchorElement,
+    $("note"),
+    $("games"),
+  ]
+
+  const long = (date: string) =>
+    new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", {
+      timeZone: "UTC",
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+  // the year only when it isn't this one
+  const short = (date: string) =>
+    new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", {
+      timeZone: "UTC",
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: date.slice(0, 4) === today().slice(0, 4) ? undefined : "numeric",
+    })
+  const href = (date: string) => `?date=${date}`
+  const valid = (d: string | null) =>
+    d && /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(Date.parse(d)) ? d : null
+
+  input.max = today()
+  seasonRange().then(
+    r => (input.min = `${r.first - 1}-10-01`),
+    () => {},
+  )
+
+  // The newest render wins: a slow read for a date left behind is dropped
+  let current = 0
+
+  // Show a date: the one in the URL, or yesterday. Yesterday may not be in
+  // yet, so the default falls back to the latest day with games
+  async function show() {
+    const id = ++current
+    const asked = valid(new URLSearchParams(location.search).get("date"))
+    const yesterday = addDays(today(), -1)
+    let date = asked ?? yesterday
+    heading(date)
+    note.hidden = true
+    grid.innerHTML = loadingText()
+    grid.dataset.state = "loading"
+
+    let games: Game[]
+    try {
+      games = await gamesOn(date)
+      if (games.length === 0 && !asked) {
+        const latest = await nearestGameDay(yesterday, -1)
+        if (id !== current) return
+        if (latest) {
+          say(`No games in for ${short(yesterday)} yet; showing ${short(latest)}.`)
+          date = latest
+          heading(date)
+          games = await gamesOn(date)
+        }
+      }
+    } catch (e) {
+      if (id !== current) return
+      console.error(e)
+      grid.replaceChildren()
+      say(`Couldn't load games for ${short(date)}. `, retry())
+      grid.dataset.state = "failed"
+      return
+    }
+    if (id !== current) return
+    neighbors(date, id)
+
+    if (games.length === 0) {
+      grid.replaceChildren()
+      const [before, after] = await Promise.all([
+        nearestGameDay(date, -1).catch(() => undefined),
+        nearestGameDay(date, 1).catch(() => undefined),
+      ])
+      if (id !== current) return
+      const links = [
+        before && link(`← ${short(before)}`, before),
+        after && link(`${short(after)} →`, after),
+      ].filter((l): l is HTMLAnchorElement => Boolean(l))
+      say(
+        `No games on ${short(date)}. `,
+        ...links.flatMap((l, i) => (i ? [" · ", l] : [l])),
+      )
+      grid.dataset.state = "empty"
+      return
+    }
+
+    const blocks = games.map(g => gameBlock(g, base))
+    grid.replaceChildren(...blocks)
+    // ESPN's numbers come apart from the NBA's, so they never hold up the
+    // scores; a game ESPN hasn't published says so
+    const factors = await factorsFor(games).catch(e => {
+      console.error(e)
+      return new Map()
+    })
+    if (id !== current) return
+    games.forEach((g, i) => setFactors(blocks[i], g, factors.get(g.game_id)))
+    grid.dataset.state = "done"
+  }
+
+  function heading(date: string) {
+    day.textContent = long(date)
+    input.value = date
+    prev.hidden = next.hidden = true
+  }
+
+  // prev and next skip to the nearest days with games
+  async function neighbors(date: string, id: number) {
+    const [before, after] = await Promise.all([
+      nearestGameDay(date, -1).catch(() => undefined),
+      nearestGameDay(date, 1).catch(() => undefined),
+    ])
+    if (id !== current) return
+    for (const [a, d] of [
+      [prev, before],
+      [next, after],
+    ] as const) {
+      a.hidden = !d
+      if (d) a.href = href(d)
+    }
+  }
+
+  function say(...parts: (Node | string)[]) {
+    note.replaceChildren(...parts)
+    note.hidden = false
+  }
+
+  function link(text: string, date: string) {
+    return Object.assign(document.createElement("a"), {
+      textContent: text,
+      href: href(date),
+    })
+  }
+
+  function retry() {
+    const b = Object.assign(document.createElement("button"), {
+      textContent: "Try again",
+    })
+    b.onclick = show
+    return b
+  }
+
+  function go(date: string) {
+    history.pushState(null, "", href(date))
+    show()
+  }
+
+  // date links change the page in place
+  document.addEventListener("click", e => {
+    const a = (e.target as Element).closest?.("a")
+    if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return
+    const d = valid(new URL(a.href, location.href).searchParams.get("date"))
+    if (d && a.pathname === location.pathname) {
+      e.preventDefault()
+      go(d)
+    }
+  })
+  input.addEventListener("change", () => {
+    if (valid(input.value)) go(input.value)
+  })
+  addEventListener("popstate", show)
+  show()
+</script>
