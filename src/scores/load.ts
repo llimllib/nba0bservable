@@ -31,8 +31,11 @@ export interface Game {
   status: string
   // "Preseason", "Round 1 G3", ... empty for the regular season
   kind: string
-  // winner first
+  // away, then home, as American box scores list them. A neutral-site game
+  // has no home team, and lists the winner first
   teams: [TeamLine, TeamLine]
+  // which of the two won
+  winner: 0 | 1
 }
 
 // Seasons are named for the year they end, and start in October; August on
@@ -160,6 +163,7 @@ export async function gamesOn(date: string): Promise<Game[]> {
       "dreb",
       "tov",
       "poss",
+      "home",
     ]),
     read("stats", "team_seasons", season, [
       "team_id",
@@ -198,9 +202,11 @@ export async function gamesOn(date: string): Promise<Game[]> {
       // Oliver's free throw factor: made, not attempted
       ftr: r.ftm / r.fga,
     })
-    const [a, b] = rows
-    const lines: [TeamLine, TeamLine] =
-      a.pts >= b.pts ? [line(a, b), line(b, a)] : [line(b, a), line(a, b)]
+    // home is NULL at a neutral site, so the home team is the one marked
+    // true; with neither, the winner goes first
+    const away =
+      rows[0].home === true || (rows[1].home !== true && rows[1].pts > rows[0].pts)
+    const [a, b] = away ? [rows[1], rows[0]] : rows
     // 48 minutes, and 5 for each overtime
     const ot = Math.max(0, Math.round((a.min - 48) / 5))
     out.push({
@@ -208,7 +214,8 @@ export async function gamesOn(date: string): Promise<Game[]> {
       season,
       status: ot === 0 ? "Final" : ot === 1 ? "Final/OT" : `Final/${ot}OT`,
       kind: kinds.get(id) ?? "",
-      teams: lines,
+      teams: [line(a, b), line(b, a)],
+      winner: a.pts > b.pts ? 0 : 1,
     })
   }
   return out
@@ -234,8 +241,9 @@ export async function factorsFor(gs: Game[]) {
   for (const r of rows)
     if (want.has(r.game_id)) byTeam.set(`${r.game_id}:${r.team_id}`, r)
   for (const g of gs) {
-    const w = byTeam.get(`${g.game_id}:${g.teams[0].team_id}`)
-    const l = byTeam.get(`${g.game_id}:${g.teams[1].team_id}`)
+    const [winner, loser] = sides(g)
+    const w = byTeam.get(`${g.game_id}:${winner.team_id}`)
+    const l = byTeam.get(`${g.game_id}:${loser.team_id}`)
     if (!w || !l) continue
     out.set(g.game_id, {
       shooting: w.shooting_net_pts - l.shooting_net_pts,
@@ -245,6 +253,12 @@ export async function factorsFor(gs: Game[]) {
     })
   }
   return out
+}
+
+// A game's winner and loser
+export function sides(g: Game): [TeamLine, TeamLine] {
+  const [a, b] = g.teams
+  return g.winner === 0 ? [a, b] : [b, a]
 }
 
 // Round values to integers that keep their rounded sum, the largest

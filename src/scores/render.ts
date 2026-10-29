@@ -2,7 +2,7 @@
 // teams, and the net points line saying how the winner won. Plain DOM; the
 // data is load.ts's
 import { logoUrl } from "../kit/frame"
-import { roundToSum, type Factors, type Game, type TeamLine } from "./load"
+import { roundToSum, sides, type Factors, type Game, type TeamLine } from "./load"
 
 const pct = (v: number) => (v * 100).toFixed(1)
 // a rate under 1, as box scores print it: .17
@@ -54,9 +54,15 @@ function logo(t: TeamLine) {
 }
 
 export function gameBlock(g: Game, base: string) {
-  const [w, l] = g.teams
+  const [a, h] = g.teams
+  const w = sides(g)[0]
+  // the winner's bold, the loser's muted
   const score = (t: TeamLine) =>
-    el("abbr", { title: t.name }, logo(t), `${t.abbrev} ${t.pts}`)
+    el(
+      t === w ? "b" : "span",
+      {},
+      el("abbr", { title: t.name }, logo(t), `${t.abbrev} ${t.pts}`),
+    )
 
   const head = el(
     "tr",
@@ -91,14 +97,14 @@ export function gameBlock(g: Game, base: string) {
     el(
       "h2",
       { className: "score" },
-      el("b", {}, score(w)),
-      el("span", {}, score(l)),
+      score(a),
+      score(h),
     ),
     el(
       "table",
       { className: "box" },
       el("thead", {}, head),
-      el("tbody", {}, row(w, l), row(l, w)),
+      el("tbody", {}, row(a, h), row(h, a)),
     ),
     el("p", { className: "why" }, "Net points…"),
     el("a", { className: "more", href: rotations }, "Rotations →"),
@@ -117,10 +123,11 @@ export function setFactors(block: Element, g: Game, f: Factors | undefined) {
   }
   const values = roundToSum(factorNames.map(([k]) => f[k]))
   const top = values.indexOf(Math.max(...values))
-  const margin = g.teams[0].pts - g.teams[1].pts
+  const w = sides(g)[0]
   why.classList.remove("missing")
   why.replaceChildren(
-    `By ${margin}: `,
+    // whose side it's from: the winner isn't always listed first
+    `${w.abbrev}: `,
     ...factorNames.flatMap(([, name], i) => {
       const text = `${name} ${signed(values[i])}`
       return [i ? " · " : "", i === top ? el("u", {}, text) : text]

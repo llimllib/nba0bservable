@@ -27,10 +27,11 @@ elsewhere: each game links to its rotations, and later to a full box score.
          EFG%   TOV%  OREB%   FTR
   MIA    58.9   15.0   31.6   .17
   ATL    56.3   14.3   19.6   .09
-  BY 12: SHOOT +3 · TOV 0 · REB +7 · FT +2
+  MIA: SHOOT +3 · TOV 0 · REB +7 · FT +2
   ```
 
-  The winner comes first and in bold. `ROTATIONS →` opens the game in the
+  The away team comes first, the American order (home first at a neutral
+  site would be arbitrary, so there the winner does); the winner is bold. `ROTATIONS →` opens the game in the
   rotations tool. Each abbreviation in the headline has the team's ESPN
   logo before it (`logoUrl` in `kit/frame.ts`), as decoration with no alt
   text; a team ESPN has no logo for goes without. Not in the table too:
@@ -49,10 +50,12 @@ elsewhere: each game links to its rotations, and later to a full box score.
   which ESPN may still revise, are looser (up to 4.6). The values are
   rounded to integers that keep ESPN's rounded total, so rounding doesn't
   add to the gap, and the page says they add up to "about" the margin. The
-  line is signed from the winner's side; the biggest factor is underlined.
+  line is signed from the winner's side, and starts with its abbreviation,
+  since the winner isn't always listed first; the biggest factor is
+  underlined. It said "by 12" too, until that made it wrap.
 - **On the front page**, under About in the lead caption's column, which
   had a block's worth of space: last night's scores in two columns of
-  agate, winner first and bold, scores padded so the columns align, with
+  agate, away team first, winner bold, scores padded so the columns align, with
   overtime marked. Kicker "Scores · Last night" (or the date, when it falls
   back), a one-line blurb and `BOX SCORES →`. If the games can't load, only
   the blurb and link show. It shares the default night with the page

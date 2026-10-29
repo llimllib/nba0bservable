@@ -63,13 +63,12 @@ for (const width of [1100, 390]) {
   )
   check(wide <= 0, `${width}px doesn't scroll sideways (${wide}px over)`)
   // ESPN's factors only nearly sum to the margin, so this reports, not fails
-  const sums = await page.$$eval(".why:not(.missing)", ws =>
-    ws.map(w => {
-      const t = w.textContent.replace(/−/g, "-")
-      const margin = +t.match(/BY (\d+)/i)[1]
-      const parts = [...t.matchAll(/[A-Z]+ ([+-]?\d+)/gi)]
-        .slice(1)
-        .map(m => +m[1])
+  const sums = await page.$$eval(".game:has(.why:not(.missing))", gs =>
+    gs.map(g => {
+      const t = g.querySelector(".why").textContent.replace(/−/g, "-")
+      const [a, h] = [...g.querySelector(".score").textContent.matchAll(/\d+/g)]
+      const margin = Math.abs(a - h)
+      const parts = [...t.matchAll(/[A-Z]+ ([+-]?\d+)/gi)].map(m => +m[1])
       return [margin, parts.reduce((a, b) => a + b, 0), t]
     }),
   )

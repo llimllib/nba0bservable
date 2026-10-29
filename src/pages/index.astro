@@ -98,15 +98,18 @@ const briefs = ["efficiency", "cumulative", "rotations"].map(
       const board = document.getElementById("board")!
       board.replaceChildren(
         ...games.map(g => {
-          const [w, l] = g.teams
-          // padded, so the columns of the monospaced lines align
-          const pts = (n: number) => String(n).padStart(3)
+          // away first, the winner bold; scores padded, so the columns of
+          // the monospaced lines align
           const li = document.createElement("li")
-          const b = document.createElement("b")
-          b.textContent = `${w.abbrev} ${pts(w.pts)}`
-          li.append(b, ` ${l.abbrev} ${pts(l.pts)}`)
+          g.teams.forEach((t, i) => {
+            const text = `${t.abbrev} ${String(t.pts).padStart(3)}`
+            const e = document.createElement(i === g.winner ? "b" : "span")
+            e.textContent = text
+            li.append(i ? " " : "", e)
+          })
           if (g.status !== "Final") {
             const ot = document.createElement("span")
+            ot.className = "ot"
             ot.textContent = ` ${g.status.replace("Final/", "")}`
             li.append(ot)
           }
