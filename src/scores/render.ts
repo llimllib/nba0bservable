@@ -40,7 +40,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return e
 }
 
-// A team's logo, beside its abbreviation, so it's decoration: no alt text.
+// A team's logo, beside its abbreviation in the headline, so it's decoration: no alt text.
 // Teams ESPN has no logo for (international preseason opponents) go without
 function logo(t: TeamLine) {
   const img = el("img", {
@@ -68,11 +68,7 @@ export function gameBlock(g: Game, base: string) {
     el(
       "tr",
       {},
-      el(
-        "th",
-        { scope: "row" },
-        el("abbr", { title: t.name }, logo(t), t.abbrev),
-      ),
+      el("th", { scope: "row" }, el("abbr", { title: t.name }, t.abbrev)),
       ...columns.map(c => {
         const [v, ov] = [t[c.key] as number, o[c.key] as number]
         // the better of the two is bold, so it reads without color. Compare

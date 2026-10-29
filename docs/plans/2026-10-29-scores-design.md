@@ -31,9 +31,10 @@ elsewhere: each game links to its rotations, and later to a full box score.
   ```
 
   The winner comes first and in bold. `ROTATIONS →` opens the game in the
-  rotations tool. Each abbreviation, in the score line and the table, has
-  the team's ESPN logo before it (`logoUrl` in `kit/frame.ts`), as
-  decoration with no alt text; a team ESPN has no logo for goes without.
+  rotations tool. Each abbreviation in the headline has the team's ESPN
+  logo before it (`logoUrl` in `kit/frame.ts`), as decoration with no alt
+  text; a team ESPN has no logo for goes without. Not in the table too:
+  two logos per team read as doubling.
 - **Four factors from the NBA's `team_game_logs`**: eFG%, TOV% (turnovers
   per possession), OREB% (against the opponent's defensive rebounds) and
   FT rate (FTM/FGA, as Oliver and ESPN have it). The better value in each
