@@ -117,13 +117,17 @@ export function placeLabels(
     !points.some((q, j) => j !== i && hits(b, q.x, q.y, q.r))
   const clear = (b: Box, i: number) =>
     clearOfLabels(b, i) && !dots.some(q => hits(b, q.x, q.y, q.r))
-  // for a label that must show, the side in bounds over the fewest labels
-  // and dots: overlapping beats a highlighted player with no name
+  // for a label that must show, the side in bounds that covers the least:
+  // overlapping beats a highlighted player with no name. A labeled dot
+  // covered hides where that player is, worse than two labels crossing,
+  // which are worse than an unlabeled dot covered
   const least = (b: Box, i: number, bs: Box[]) => {
     const cost = (c: Box) =>
       inBounds(c)
-        ? placed.filter(o => overlaps(c, o)).length * 100 +
-          points.filter((q, j) => j !== i && hits(c, q.x, q.y, q.r)).length
+        ? points.filter((q, j) => j !== i && hits(c, q.x, q.y, q.r)).length *
+            1e4 +
+          placed.filter(o => overlaps(c, o)).length * 100 +
+          dots.filter(q => hits(c, q.x, q.y, q.r)).length
         : Infinity
     return b === bs.reduce((m, c) => (cost(c) < cost(m) ? c : m))
   }

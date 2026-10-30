@@ -325,6 +325,9 @@ export const shooting: Tool<P, D> = {
     // dots in team colors, or a team's players over a faded league. The color
     // is identity, not value: names and position carry the reading
     const mine = (pl: Player) => !p.team || pl.team === p.team
+    // behind a team, the rest of the league is smaller, so the team's dots
+    // and names stand out by size as well as color
+    const rOf = (pl: Player) => (mine(pl) || !p.team ? r : 3.5)
     const order = [...ps].sort((a, b) => Number(mine(a)) - Number(mine(b)))
     for (const pl of order) {
       const cx = x(pl.usg)
@@ -333,9 +336,9 @@ export const shooting: Tool<P, D> = {
         .append("circle")
         .attr("cx", cx)
         .attr("cy", cy)
-        .attr("r", r)
+        .attr("r", rOf(pl))
         .attr("fill", mine(pl) ? teamColors(pl.team)[0] : color.faint)
-        .attr("fill-opacity", mine(pl) ? 1 : 0.45)
+        .attr("fill-opacity", mine(pl) ? 1 : p.team ? 0.35 : 0.45)
         .attr("stroke", mine(pl) ? teamColors(pl.team)[1] : color.bg)
         .attr("stroke-width", mine(pl) ? 1.5 : 0.75)
         .append("title")
@@ -345,8 +348,8 @@ export const shooting: Tool<P, D> = {
     }
 
     // names: the busiest shooters first, and all of a highlighted team's.
-    // A click on a dot toggles its name
-    const labelSize = 12.5
+    // A click on a dot toggles its name. A team's few names can be bigger
+    const labelSize = p.team ? 14 : 12.5
     const labeled = placeLabels(
       plot.append("g").attr("font-weight", type.label.weight).node()!,
       ps
@@ -361,13 +364,20 @@ export const shooting: Tool<P, D> = {
         }))
         .filter(lp => !p.team || lp.always),
       { width: plotW, height: plotH },
-      { size: labelSize, minCell: 1800, avoid },
+      {
+        size: labelSize,
+        minCell: 1800,
+        avoid,
+        dots: ps
+          .filter(pl => !mine(pl))
+          .map(pl => ({ x: x(pl.usg), y: y(pl.ts), r: rOf(pl) })),
+      },
     )
     const marks: Mark[] = ps.map(pl => ({
       key: pl.player_id,
       x: x(pl.usg) + left,
       y: y(pl.ts) + top,
-      r,
+      r: rOf(pl),
       label: pl.name,
       labeled: labeled.has(pl.player_id),
       labelSize,
