@@ -11,6 +11,10 @@ export interface TeamLine {
   abbrev: string
   name: string
   pts: number
+  // the team's record after this game, in games of its kind: the regular
+  // season's in the regular season, the playoffs' in the playoffs
+  wins: number
+  losses: number
   efg: number
   tov: number
   oreb: number
@@ -162,6 +166,7 @@ export async function gamesOn(date: string): Promise<Game[]> {
       "tov",
       "poss",
       "home",
+      "plus_minus",
     ]),
     read("stats", "team_seasons", season, [
       "team_id",
@@ -170,6 +175,7 @@ export async function gamesOn(date: string): Promise<Game[]> {
     ]),
     read("stats", "games", season, [
       "game_id",
+      "game_date",
       "game_type",
       "playoff_round",
       "series_game",
@@ -184,6 +190,19 @@ export async function gamesOn(date: string): Promise<Game[]> {
   }
   const team = new Map(teams.map(t => [t.team_id, t]))
   const kinds = new Map(info.map(g => [g.game_id, kindOf(g)]))
+  const gameInfo = new Map(info.map(g => [g.game_id, g]))
+  // a team's wins and losses in games of a type, through a date
+  const record = (team_id: string, type: string) => {
+    let [wins, losses] = [0, 0]
+    for (const r of logs) {
+      const g = gameInfo.get(r.game_id)
+      if (r.team_id !== team_id || g?.game_type !== type) continue
+      if (iso(g.game_date) > date) continue
+      if (r.plus_minus > 0) wins++
+      else losses++
+    }
+    return { wins, losses }
+  }
 
   const out: Game[] = []
   for (const id of [...ids].sort()) {
@@ -194,6 +213,7 @@ export async function gamesOn(date: string): Promise<Game[]> {
       abbrev: team.get(r.team_id)?.nba_abbrev ?? "",
       name: team.get(r.team_id)?.full_name ?? "",
       pts: r.pts,
+      ...record(r.team_id, gameInfo.get(id)?.game_type),
       efg: (r.fgm + 0.5 * r.fg3m) / r.fga,
       tov: r.tov / r.poss,
       oreb: r.oreb / (r.oreb + o.dreb),

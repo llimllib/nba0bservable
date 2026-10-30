@@ -104,7 +104,13 @@ export function gameBlock(g: Game, base: string) {
     el(
       "tr",
       {},
-      el("th", { scope: "row" }, el("abbr", { title: t.name }, t.abbrev)),
+      el(
+        "th",
+        { scope: "row" },
+        el("abbr", { title: t.name }, t.abbrev),
+        " ",
+        el("span", { className: "record" }, `${t.wins}-${t.losses}`),
+      ),
       ...columns.map(c => {
         const [v, ov] = [t[c.key] as number, o[c.key] as number]
         // the better of the two is bold, so it reads without color. Compare
