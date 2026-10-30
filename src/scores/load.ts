@@ -105,9 +105,7 @@ export async function nearestGameDay(date: string, dir: -1 | 1) {
   for (let s = season; s >= first && s <= last; s += dir) {
     const days = [...(await gamesBySeason(s)).keys()].sort()
     const day =
-      dir < 0
-        ? days.filter(d => d < date).at(-1)
-        : days.find(d => d > date)
+      dir < 0 ? days.filter(d => d < date).at(-1) : days.find(d => d > date)
     if (day) return day
   }
   return undefined
@@ -205,7 +203,8 @@ export async function gamesOn(date: string): Promise<Game[]> {
     // home is NULL at a neutral site, so the home team is the one marked
     // true; with neither, the winner goes first
     const away =
-      rows[0].home === true || (rows[1].home !== true && rows[1].pts > rows[0].pts)
+      rows[0].home === true ||
+      (rows[1].home !== true && rows[1].pts > rows[0].pts)
     const [a, b] = away ? [rows[1], rows[0]] : rows
     // 48 minutes, and 5 for each overtime
     const ot = Math.max(0, Math.round((a.min - 48) / 5))

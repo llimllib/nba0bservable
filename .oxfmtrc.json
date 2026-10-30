@@ -3,5 +3,11 @@
   "arrowParens": "avoid",
   "printWidth": 80,
   "sortPackageJson": false,
-  "ignorePatterns": ["dist/", ".astro/", "shots/", "package-lock.json"]
+  "ignorePatterns": [
+    "dist/",
+    ".astro/",
+    "shots/",
+    "transcripts/",
+    "package-lock.json"
+  ]
 }

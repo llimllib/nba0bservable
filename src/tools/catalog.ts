@@ -59,4 +59,4 @@ export const catalog = [
       "Every stint on the game clock for both teams: who sat during the run that decided it, and how the margin moved with each lineup.",
     takes: ["Season", "Team", "Game"],
   },
-];
+]

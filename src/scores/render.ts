@@ -2,7 +2,13 @@
 // teams, and the net points line saying how the winner won. Plain DOM; the
 // data is load.ts's
 import { logoUrl } from "../kit/frame"
-import { roundToSum, sides, type Factors, type Game, type TeamLine } from "./load"
+import {
+  roundToSum,
+  sides,
+  type Factors,
+  type Game,
+  type TeamLine,
+} from "./load"
 
 const pct = (v: number) => (v * 100).toFixed(1)
 // a rate under 1, as box scores print it: .17
@@ -17,10 +23,34 @@ const columns: {
   fmt: (v: number) => string
   higher: boolean
 }[] = [
-  { head: "eFG%", title: "Effective field goal percentage", key: "efg", fmt: pct, higher: true },
-  { head: "TOV%", title: "Turnovers per 100 possessions", key: "tov", fmt: pct, higher: false },
-  { head: "OREB%", title: "Offensive rebound percentage", key: "oreb", fmt: pct, higher: true },
-  { head: "FTR", title: "Free throw rate: free throws made per shot", key: "ftr", fmt: rate, higher: true },
+  {
+    head: "eFG%",
+    title: "Effective field goal percentage",
+    key: "efg",
+    fmt: pct,
+    higher: true,
+  },
+  {
+    head: "TOV%",
+    title: "Turnovers per 100 possessions",
+    key: "tov",
+    fmt: pct,
+    higher: false,
+  },
+  {
+    head: "OREB%",
+    title: "Offensive rebound percentage",
+    key: "oreb",
+    fmt: pct,
+    higher: true,
+  },
+  {
+    head: "FTR",
+    title: "Free throw rate: free throws made per shot",
+    key: "ftr",
+    fmt: rate,
+    higher: true,
+  },
 ]
 
 const factorNames: [keyof Factors, string][] = [
@@ -94,12 +124,7 @@ export function gameBlock(g: Game, base: string) {
       { className: "status" },
       [g.status, g.kind].filter(Boolean).join(" · "),
     ),
-    el(
-      "h2",
-      { className: "score" },
-      score(a),
-      score(h),
-    ),
+    el("h2", { className: "score" }, score(a), score(h)),
     el(
       "table",
       { className: "box" },

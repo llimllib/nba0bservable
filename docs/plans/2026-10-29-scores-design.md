@@ -36,6 +36,7 @@ elsewhere: each game links to its rotations, and later to a full box score.
   logo before it (`logoUrl` in `kit/frame.ts`), as decoration with no alt
   text; a team ESPN has no logo for goes without. Not in the table too:
   two logos per team read as doubling.
+
 - **Four factors from the NBA's `team_game_logs`**: eFG%, TOV% (turnovers
   per possession), OREB% (against the opponent's defensive rebounds) and
   FT rate (FTM/FGA, as Oliver and ESPN have it). The better value in each
@@ -80,14 +81,14 @@ elsewhere: each game links to its rotations, and later to a full box score.
 schedule. So the page can't tell an off day from a night not loaded yet,
 and its messages say only what it knows.
 
-| Case | The page shows |
-|---|---|
+| Case                              | The page shows                                                                     |
+| --------------------------------- | ---------------------------------------------------------------------------------- |
 | The default date has no games yet | The latest day with games: "No games in for Wed, Oct 29 yet; showing Tue, Oct 28." |
-| A picked date has no games | "No games on Thu, Oct 30," with links to the nearest game days before and after |
-| A season the bucket doesn't have | The same "no games", not an error |
-| NBA logs, but no ESPN yet | The games, with the last line `NET POINTS NOT IN YET` |
-| A read fails | "Couldn't load games for Oct 28," with a retry link; the date controls still work |
-| Loading | The date heading, and "Loading…" under it |
+| A picked date has no games        | "No games on Thu, Oct 30," with links to the nearest game days before and after    |
+| A season the bucket doesn't have  | The same "no games", not an error                                                  |
+| NBA logs, but no ESPN yet         | The games, with the last line `NET POINTS NOT IN YET`                              |
+| A read fails                      | "Couldn't load games for Oct 28," with a retry link; the date controls still work  |
+| Loading                           | The date heading, and "Loading…" under it                                          |
 
 ESPN is read apart from the NBA logs, so a slow or missing ESPN file never
 holds up the scores. Each season's files are one row group, so a day's rows

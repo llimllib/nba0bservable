@@ -338,12 +338,7 @@ const pairs: Record<string, Pair> = {
     y: "tov100_low",
     deck: "Turnovers by offensive rebounds per 100 possessions",
     first: 2023,
-    corners: [
-      "Protects the ball",
-      "Both",
-      "Neither",
-      "Crashes the glass",
-    ],
+    corners: ["Protects the ball", "Both", "Neither", "Crashes the glass"],
     diff: c => `${sign(c)}${Math.abs(c)}`,
   },
   threes: {

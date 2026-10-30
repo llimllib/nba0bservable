@@ -27,11 +27,11 @@ header of the "poster" look.
 
 ## Type: three voices
 
-| Voice | Face | Used for |
-|---|---|---|
-| Headline | Barlow Condensed 700, caps, tight | page and chart titles, the wordmark, tool names |
-| Agate | JetBrains Mono, caps, small, tracked | datelines, nav, labels, controls, legends, sources |
-| Reading | Source Serif 4 | ledes, chart decks, Notes, tool blurbs |
+| Voice    | Face                                 | Used for                                           |
+| -------- | ------------------------------------ | -------------------------------------------------- |
+| Headline | Barlow Condensed 700, caps, tight    | page and chart titles, the wordmark, tool names    |
+| Agate    | JetBrains Mono, caps, small, tracked | datelines, nav, labels, controls, legends, sources |
+| Reading  | Source Serif 4                       | ledes, chart decks, Notes, tool blurbs             |
 
 Barlow Condensed 500/600 also sets data text inside charts (names, ticks),
 where condensed width buys plot area. Caveat stays for annotations.

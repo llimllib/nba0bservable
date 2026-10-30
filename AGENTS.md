@@ -34,6 +34,9 @@ or the frame.
   and phone widths, its no-games days, and ESPN's or the NBA's data
   missing; saves `shots/scores-<width>.png`
 - `npx astro check`: type check
+- `mise run lint`: formatting (oxfmt), lints (oxlint) and types. Run it
+  before every commit; `mise run fmt` fixes the formatting. Nothing else
+  checks it
 - `npm run build`: static site in `dist/`, one `<page>.html` per page
   (`build.format: "file"`), which is the layout the server expects
 

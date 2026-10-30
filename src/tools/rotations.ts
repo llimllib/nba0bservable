@@ -138,9 +138,7 @@ function substitutions(stints: Stint[]) {
 function pick(d: Omit<D, "events">, p: P) {
   const team = d.teams.has(p.team) ? p.team : [...d.teams.keys()][0]
   const games = d.games.get(d.teams.get(team)!.team_id)!
-  const game = games.some(g => g.game_id === p.game)
-    ? p.game
-    : games[0].game_id
+  const game = games.some(g => g.game_id === p.game) ? p.game : games[0].game_id
   return { team, game }
 }
 
@@ -190,9 +188,7 @@ function subMargins(d: D, game: Game, team_id: string) {
       if (m !== undefined && !at.has(s.out)) at.set(s.out, m + sign * s.pm)
     }
   }
-  return [...at]
-    .map(([t, m]) => ({ t, m }))
-    .sort((a, b) => a.t - b.t)
+  return [...at].map(([t, m]) => ({ t, m })).sort((a, b) => a.t - b.t)
 }
 
 function rows(d: D, game: string, team_id: string): Row[] {
@@ -512,15 +508,20 @@ export const rotations: Tool<P, D> = {
 
     // the margin, from the team's side: above zero is a lead. Each side
     // gets some room, so its label fits even if that team never led
-    const lo = Math.min(min(ms, s => s.m)!, -4)
-    const hi = Math.max(max(ms, s => s.m)!, 4)
+    const lo = Math.min(
+      min(ms, s => s.m)!,
+      -4,
+    )
+    const hi = Math.max(
+      max(ms, s => s.m)!,
+      4,
+    )
     const y = scaleLinear()
       .domain([lo - 1, hi + 1])
       .range([marginTop + marginH, marginTop])
     const zero = y(0)
     // gridlines far enough apart for their numbers
-    const step =
-      [5, 10, 20].find(s => y(0) - y(s) >= 20) ?? 40
+    const step = [5, 10, 20].find(s => y(0) - y(s) >= 20) ?? 40
     const ticks = [
       ...range(-step, lo - 0.5, -step),
       ...range(step, hi + 0.5, step),
@@ -859,7 +860,12 @@ export const rotations: Tool<P, D> = {
         return undefined
       },
       project(pos) {
-        const { x: t, p: id, f, m } = pos as {
+        const {
+          x: t,
+          p: id,
+          f,
+          m,
+        } = pos as {
           x: number
           p?: string
           f?: number
