@@ -116,7 +116,7 @@ export const shooting: Tool<P, D> = {
     const leagueTs =
       sum(rows, s => s.pts) /
       (2 * (sum(rows, s => s.fga) + 0.44 * sum(rows, s => s.fta)))
-    const teams = new Map(
+    const names = new Map(
       [...lk.teams.values()]
         .filter(t => t.is_nba)
         .sort((a, b) => a.full_name.localeCompare(b.full_name))
@@ -128,7 +128,16 @@ export const shooting: Tool<P, D> = {
     )
     const seasons = []
     for (let s = last_season; s >= first_season; s--) seasons.push(s)
-    return { season, seasons, kind, kinds, players, leagueTs, teams, lastDate }
+    return {
+      season,
+      seasons,
+      kind,
+      kinds,
+      players,
+      leagueTs,
+      teams: names,
+      lastDate,
+    }
   },
 
   normalize(d, p) {

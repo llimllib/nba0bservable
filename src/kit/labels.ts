@@ -149,7 +149,7 @@ export function placeLabels(
     for (const i of order) {
       if (at.has(i)) continue
       const bs = beside.get(i)!
-      const b = bs.find(b => ok(b, i, bs))
+      const b = bs.find(c => ok(c, i, bs))
       if (!b) continue
       placed.push(b)
       at.set(i, b)

@@ -50,10 +50,10 @@ const opened = new Map<string, ReturnType<typeof open>>()
 // file's last 512KB, which for a table read a game at a time is most of it
 async function open(url: string) {
   const file = cachedAsyncBuffer(await asyncBufferFromUrl({ url }))
-  const metadata = await parquetMetadataAsync(file, {
+  const footer = await parquetMetadataAsync(file, {
     initialFetchSize: 131_072,
   })
-  return { file, metadata }
+  return { file, metadata: footer }
 }
 
 // Read the rows of one season of a dataset that match a filter, such as one

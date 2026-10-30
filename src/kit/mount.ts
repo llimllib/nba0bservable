@@ -22,6 +22,17 @@ const framing = { title: "", sub: "", who: "", size: "auto" }
 const base = () =>
   new URL(import.meta.env.BASE_URL.replace(/\/?$/, "/"), location.href).href
 
+// SVG text has no title attribute, and a <title> inside it would join its
+// textContent, so the tooltip goes on a group around it
+function tooltip(el: SVGElement, text: string) {
+  const ns = "http://www.w3.org/2000/svg"
+  const g = document.createElementNS(ns, "g")
+  const title = document.createElementNS(ns, "title")
+  title.textContent = text
+  el.before(g)
+  g.append(title, el)
+}
+
 export async function mount<P extends Params, D>(
   root: HTMLElement,
   tool: Tool<P, D>,
@@ -128,17 +139,6 @@ export async function mount<P extends Params, D>(
     for (const b of root.querySelectorAll<HTMLButtonElement>("[data-size]"))
       b.classList.toggle("on", b.dataset.size === size)
     showMode(mode)
-  }
-
-  // SVG text has no title attribute, and a <title> inside it would join its
-  // textContent, so the tooltip goes on a group around it
-  function tooltip(el: SVGElement, text: string) {
-    const ns = "http://www.w3.org/2000/svg"
-    const g = document.createElementNS(ns, "g")
-    const title = document.createElementNS(ns, "title")
-    title.textContent = text
-    el.before(g)
-    g.append(title, el)
   }
 
   function showMode(m: Mode) {

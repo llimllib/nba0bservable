@@ -174,7 +174,7 @@ import Base from "../layouts/Base.astro"
     const b = Object.assign(document.createElement("button"), {
       textContent: "Try again",
     })
-    b.onclick = show
+    b.addEventListener("click", show)
     return b
   }
 

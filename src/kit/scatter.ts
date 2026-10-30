@@ -65,6 +65,8 @@ export const sign = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "")
 // a ratio as y:x, in whole numbers: 2 is 2:1 and 0.25 is 1:4
 const fmtRatio = (k: number) =>
   k >= 1 ? `${+k.toFixed(1)}:1` : `1:${+(1 / k).toFixed(1)}`
+// whether a pixel position is on a plot's edge
+const atEdge = (u: number, edge: number) => Math.abs(u - edge) < 0.5
 
 export function scatterPlot(
   node: SVGGElement,
@@ -105,11 +107,11 @@ export function scatterPlot(
   const x = scaleLinear()
     .domain([x0 ?? 0, x1 ?? 1])
     .nice()
-    .range(o.x.reverse ? xr.reverse() : xr)
+    .range(o.x.reverse ? xr.toReversed() : xr)
   const y = scaleLinear()
     .domain([y0 ?? 0, y1 ?? 1])
     .nice()
-    .range(o.y.reverse ? yr.reverse() : yr)
+    .range(o.y.reverse ? yr.toReversed() : yr)
   const plot = g.append("g").attr("transform", `translate(${left},${top})`)
 
   // grid
@@ -145,7 +147,6 @@ export function scatterPlot(
 
   // A faint line across the plot, named outside it where it leaves by the
   // right or the top, so no mark covers its name
-  const atEdge = (u: number, edge: number) => Math.abs(u - edge) < 0.5
   const line = (a: [number, number], b: [number, number], name: string) => {
     const [pa, pb] = [a, b].map(([u, v]) => [x(u), y(v)])
     guides

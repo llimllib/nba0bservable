@@ -69,11 +69,11 @@ export async function seasonRange() {
 const iso = (d: Date | string) =>
   typeof d === "string" ? d.slice(0, 10) : d.toISOString().slice(0, 10)
 
-const games = new Map<number, Promise<Map<string, string[]>>>()
+const seasons = new Map<number, Promise<Map<string, string[]>>>()
 
 // A season's game ids by date. A season the bucket doesn't have has none
 function gamesBySeason(season: number) {
-  let p = games.get(season)
+  let p = seasons.get(season)
   if (!p) {
     p = (async () => {
       const { first, last } = await seasonRange()
@@ -90,8 +90,8 @@ function gamesBySeason(season: number) {
       }
       return days
     })()
-    p.catch(() => games.delete(season))
-    games.set(season, p)
+    p.catch(() => seasons.delete(season))
+    seasons.set(season, p)
   }
   return p
 }

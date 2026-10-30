@@ -753,7 +753,7 @@ export const rotations: Tool<P, D> = {
       for (const s of r.stints) {
         const x0 = x(s.in)
         const w = Math.max(x(s.out) - x0, 1.5)
-        const fill = s.pm > 0 ? color.pos : s.pm < 0 ? color.neg : color.grid
+        const tone = s.pm > 0 ? color.pos : s.pm < 0 ? color.neg : color.grid
         const bar = row.append("g")
         bar
           .append("rect")
@@ -761,7 +761,7 @@ export const rotations: Tool<P, D> = {
           .attr("y", -barH / 2)
           .attr("width", w)
           .attr("height", barH)
-          .attr("fill", fill)
+          .attr("fill", tone)
           // a hairline gap between stints that end and start at once
           .attr("stroke", color.bg)
           .attr("stroke-width", 0.75)
@@ -862,7 +862,7 @@ export const rotations: Tool<P, D> = {
       project(pos) {
         const {
           x: t,
-          p: id,
+          p: player,
           f,
           m,
         } = pos as {
@@ -872,7 +872,7 @@ export const rotations: Tool<P, D> = {
           m?: number
         }
         if (m !== undefined) return [x(t), topHeight + y(m)]
-        const o = placed.find(o => o.r.player_id === id)
+        const o = placed.find(q => q.r.player_id === player)
         return o ? [x(t), topHeight + o.y + f! * rowH] : undefined
       },
     }

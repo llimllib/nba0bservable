@@ -79,7 +79,7 @@ function logo(t: TeamLine) {
     alt: "",
     loading: "lazy",
   })
-  img.onerror = () => img.remove()
+  img.addEventListener("error", () => img.remove())
   return img
 }
 

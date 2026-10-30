@@ -69,7 +69,7 @@ for (const width of [1100, 390]) {
       const [a, h] = [...g.querySelector(".score").textContent.matchAll(/\d+/g)]
       const margin = Math.abs(a - h)
       const parts = [...t.matchAll(/[A-Z]+ ([+-]?\d+)/gi)].map(m => +m[1])
-      return [margin, parts.reduce((a, b) => a + b, 0), t]
+      return [margin, parts.reduce((s, v) => s + v, 0), t]
     }),
   )
   check(sums.length === games, `every game has ESPN's net points line`)

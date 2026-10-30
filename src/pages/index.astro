@@ -82,8 +82,8 @@ const briefs = ["efficiency", "cumulative", "rotations"].map(
   ]
   // last night's scores, under the caption
   latestNight()
-    .then(({ yesterday, date, games }) => {
-      if (games.length === 0) return
+    .then(({ yesterday, date, games: scores }) => {
+      if (scores.length === 0) return
       const day =
         date === yesterday
           ? "Last night"
@@ -96,7 +96,7 @@ const briefs = ["efficiency", "cumulative", "rotations"].map(
       document.getElementById("board-day")!.textContent = `Scores · ${day}`
       const board = document.getElementById("board")!
       board.replaceChildren(
-        ...games.map(g => {
+        ...scores.map(g => {
           // away first, the winner bold; scores padded, so the columns of
           // the monospaced lines align
           const li = document.createElement("li")

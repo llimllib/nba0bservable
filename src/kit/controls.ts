@@ -113,6 +113,8 @@ function span(
       c.options.findIndex(o => o.value === v),
     )
   const last = c.options.length - 1
+  // an option's place along the track
+  const pct = (i: number) => `${last ? (i / last) * 100 : 0}%`
   const inputs = [p[c.key], p[c.keyTo]].map((v, i) => {
     const input = document.createElement("input")
     Object.assign(input, { type: "range", min: 0, max: last, step: 1 })
@@ -124,7 +126,6 @@ function span(
   const values = () => inputs.map(i => Number(i.value)).sort((a, b) => a - b)
   const show = () => {
     const [lo, hi] = values()
-    const pct = (i: number) => `${last ? (i / last) * 100 : 0}%`
     div.style.setProperty("--lo", pct(lo))
     div.style.setProperty("--hi", pct(hi))
     out.value =
