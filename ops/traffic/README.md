@@ -11,22 +11,19 @@ standard library only, for the server's Python 3.8.
 ## Install
 
 ```sh
-ssh root@billmill.org mkdir -p /root/nba-traffic
-scp ops/traffic/traffic.py root@billmill.org:/root/nba-traffic/
-ssh root@billmill.org python3 /root/nba-traffic/traffic.py
+mise run install-traffic
 ```
 
-Then add to root's crontab (`crontab -e`), after goaccess's job at :01:
+It runs `install.sh`, which copies `traffic.py` to
+`root@billmill.org:/root/nba-traffic/`, runs it once, and adds this to
+root's crontab if it isn't there, after goaccess's job at :01:
 
 ```
-# at 5 past every hour, write static/nba-traffic.html
-# https://billmill.org/static/nba-traffic.html
 5 * * * * python3 /root/nba-traffic/traffic.py >> /tmp/nba-traffic.log 2>&1
 ```
 
-To update, run the `scp` again. The history is
-`/var/lib/nba-traffic/traffic.db`; deleting it loses everything older
-than the logs.
+Rerun it to update. The history is `/var/lib/nba-traffic/traffic.db`;
+deleting it loses everything older than the logs.
 
 ## Run it locally
 

@@ -19,3 +19,7 @@ run = "oxfmt"
 [tasks.lint]
 description = "Check formatting, lints and types"
 run = ["oxfmt --check", "oxlint --deny-warnings", "npx astro check"]
+
+[tasks.install-traffic]
+description = "Install or update the /nba traffic report on billmill.org"
+run = "ops/traffic/install.sh"
