@@ -2,7 +2,8 @@
 import Base from "../layouts/Base.astro"
 import { catalog } from "../tools/catalog"
 const base = import.meta.env.BASE_URL.replace(/\/?$/, "/")
-const lead = catalog.find(t => t.href === "shooting")!
+// the lead is Player charts' shooting by usage
+const leadHref = `${base}scatter?pair=usg-ts`
 // playoff net points joins them, as the lead, once there are playoffs
 const briefs = ["efficiency", "cumulative", "rotations"].map(
   href => catalog.find(t => t.href === href)!,
@@ -12,17 +13,20 @@ const briefs = ["efficiency", "cumulative", "rotations"].map(
 <Base title="Now">
   <div class="front">
     <figure class="lead">
-      <a class="inset" href={`${base}${lead.href}`} aria-label={lead.name}><div id="lead-chart"></div></a>
+      <a class="inset" href={leadHref} aria-label="Shooting by usage"><div id="lead-chart"></div></a>
       <figcaption>
         <p>
           <b class="where"><span class="wide">Right</span><span class="narrow">Above</span>:</b>{" "}
-          <span id="lead-caption">{lead.blurb}</span>
+          <span id="lead-caption"
+            >True shooting against usage rate for the players who take the most
+            shots.</span
+          >
         </p>
         <p class="aside">
           Higher is more efficient; further right uses more of the offense.
           The dashed lines are league average.
         </p>
-        <a class="more" href={`${base}${lead.href}`}>Make your own →</a>
+        <a class="more" href={leadHref}>Make your own →</a>
         <aside class="about">
           <span class="kicker">About</span>
           <p>
@@ -52,7 +56,7 @@ const briefs = ["efficiency", "cumulative", "rotations"].map(
 
 <script>
   import { embed } from "../kit/mount"
-  import { leaders, shooting } from "../tools/shooting"
+  import { leaders, scatter } from "../tools/scatter"
   import {
     cumulativeBrief,
     efficiencyBrief,
@@ -62,16 +66,18 @@ const briefs = ["efficiency", "cumulative", "rotations"].map(
   import { latestNight } from "../scores/load"
 
   const pct = (v: number) => `${(v * 100).toFixed(1)}%`
-  const { data, p } = await embed(document.getElementById("lead-chart")!, shooting)
+  const { data, p } = await embed(document.getElementById("lead-chart")!, scatter, {
+    pair: "usg-ts",
+  })
   const { usage, efficient, games } = leaders(data, p)
   // the caption states what the chart shows today
   if (usage && efficient)
     document.getElementById("lead-caption")!.textContent =
-      `${games} games in, ${usage.name} is using ${pct(usage.usg)} of ` +
+      `${games} games in, ${usage.name} is using ${pct(usage.x)} of ` +
       `${usage.team}'s possessions while he's on the floor, the most in the ` +
       `league. Of the players carrying more than an average load, ` +
       `${efficient.name} (${efficient.team}) is scoring most efficiently, ` +
-      `at ${pct(efficient.ts)} true shooting.`
+      `at ${pct(efficient.y)} true shooting.`
 
   // then each brief's headline, after the lead so it doesn't slow the chart.
   // One that fails keeps its standing headline

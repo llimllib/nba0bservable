@@ -337,7 +337,11 @@ export function embed<P extends Params, D>(
         let p = { ...tool.defaults, ...params } as P
         const [data] = await Promise.all([tool.load(p), fontsReady()])
         p = { ...p, ...tool.normalize?.(data, p) }
-        const url = `${SITE}/${tool.id}`
+        // the preset is part of the chart's address
+        const q = new URLSearchParams(
+          Object.entries(params).map(([k, v]) => [k, String(v)]),
+        ).toString()
+        const url = `${SITE}/${tool.id}${q ? `?${q}` : ""}`
         buildFrame(root, "auto", tool.describe(data, p), url, (g, s) =>
           tool.render(g, data, p, s, () => {}),
         )

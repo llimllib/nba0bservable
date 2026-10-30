@@ -1,6 +1,6 @@
 // Run a command against a dev server that lives only as long as the command:
 //
-//   node scripts/with-dev.mjs npm run shot -- "shooting?team=BOS"
+//   node scripts/with-dev.mjs npm run shot -- "scatter?pair=usg-ts&team=BOS"
 //
 // Astro 7 backgrounds `astro dev` when an agent runs it, and finds the daemon
 // again through a lock file holding its pid. In a sandbox that can't see the

@@ -3,13 +3,6 @@
 // open the tool
 export const catalog = [
   {
-    href: "shooting",
-    name: "Shooting by usage",
-    blurb:
-      "True shooting against usage rate for the players who take the most shots.",
-    takes: ["Season", "Games", "Team", "Top %"],
-  },
-  {
     href: "scatter",
     name: "Player charts",
     blurb:

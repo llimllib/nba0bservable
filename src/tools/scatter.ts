@@ -436,6 +436,20 @@ function teamColors(abbrev: string): [string, string] {
 
 const pairOf = (id: string) => pairs[id] ?? pairs[defaults.pair]
 
+// The shooting chart's two headline facts, for the front page's caption:
+// who uses the most of their team's offense, and who's most efficient among
+// those who use more than average. For the usg-ts pair, where x is usage and
+// y is true shooting
+export function leaders(d: D, p: P) {
+  const ps = shown(d, p)
+  const busiest = max(ps, pl => pl.x)
+  const usage = ps.find(pl => pl.x === busiest)
+  const heavy = ps.filter(pl => pl.x > d.league.x)
+  const best = max(heavy, pl => pl.y)
+  const efficient = heavy.find(pl => pl.y === best)
+  return { usage, efficient, games: max(d.players, pl => pl.gp) ?? 0 }
+}
+
 // the players with the most volume: the top `top` percent of those with any
 function shown(d: D, p: P) {
   const some = d.players.filter(pl => pl.volume > 0)
