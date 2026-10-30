@@ -782,15 +782,18 @@ export const scatter: Tool<P, D> = {
         ? pl.name
         : `${pl.name} ’${String(pl.season).slice(2)}`) +
       (pl.teams.length > 1 ? ` (${pl.teams.join("→")})` : "")
+    // behind a team, the rest of the league is smaller, so the team's dots
+    // and names stand out by size as well as color
+    const rOf = (pl: Player) => (mine(pl) || !p.team ? r : 3.5)
     const order = [...ps].sort((a, b) => Number(mine(a)) - Number(mine(b)))
     for (const pl of order) {
       plot
         .append("circle")
         .attr("cx", x(pl.x))
         .attr("cy", y(pl.y))
-        .attr("r", r)
+        .attr("r", rOf(pl))
         .attr("fill", mine(pl) ? teamColors(pl.team)[0] : color.faint)
-        .attr("fill-opacity", mine(pl) ? 1 : 0.45)
+        .attr("fill-opacity", mine(pl) ? 1 : p.team ? 0.35 : 0.45)
         .attr("stroke", mine(pl) ? teamColors(pl.team)[1] : color.bg)
         .attr("stroke-width", mine(pl) ? 1.5 : 0.75)
         .append("title")
@@ -801,7 +804,8 @@ export const scatter: Tool<P, D> = {
 
     // names: the players with the most volume first, and all of a
     // highlighted team's. A click on a dot toggles its name
-    const labelSize = 12.5
+    // a team's few names can be bigger
+    const labelSize = p.team ? 14 : 12.5
     // a team's few players are all named, overlapping if they must; a team
     // over many seasons is named where there's room
     const few = Boolean(p.team) && ps.filter(mine).length <= 20
@@ -819,13 +823,20 @@ export const scatter: Tool<P, D> = {
         }))
         .filter((_, i) => !p.team || mine(ps[i])),
       { width: plotW, height: plotH },
-      { size: labelSize, minCell: 1800, avoid },
+      {
+        size: labelSize,
+        minCell: 1800,
+        avoid,
+        dots: ps
+          .filter(pl => !mine(pl))
+          .map(pl => ({ x: x(pl.x), y: y(pl.y), r: rOf(pl) })),
+      },
     )
     const marks: Mark[] = ps.map(pl => ({
       key: pl.key,
       x: x(pl.x) + left,
       y: y(pl.y) + top,
-      r,
+      r: rOf(pl),
       label: named(pl),
       labeled: labeled.has(pl.key),
       labelSize,

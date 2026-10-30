@@ -2,8 +2,10 @@
 // each point's label goes on the side of the point facing the open space of
 // its Voronoi cell. Points are labeled in priority order, and a label is
 // skipped when its cell is too small or it would cover another label, a dot,
-// or an obstacle (a reference line, a note)
+// or an obstacle (a reference line, a note). Labels have a halo, so the dots
+// they do cross don't break the letters
 import { Delaunay, polygonArea, polygonCentroid, select } from "d3"
+import { color } from "./theme"
 
 export interface LabelPoint {
   x: number
@@ -40,9 +42,17 @@ export function placeLabels(
   node: SVGGElement,
   points: LabelPoint[],
   bounds: { width: number; height: number },
-  opts: { size: number; pad?: number; minCell?: number; avoid?: Box[] },
+  opts: {
+    size: number
+    pad?: number
+    minCell?: number
+    avoid?: Box[]
+    // unlabeled dots a label keeps off when it can, such as the rest of the
+    // league behind a highlighted team
+    dots?: { x: number; y: number; r: number }[]
+  },
 ): Set<string> {
-  const { size, pad = 4, minCell = 1500, avoid = [] } = opts
+  const { size, pad = 4, minCell = 1500, avoid = [], dots = [] } = opts
   // the keys of the points that got a label
   const labeled = new Set<string>()
   if (!points.length) return labeled
@@ -68,36 +78,81 @@ export function placeLabels(
     return { x0: p.x - w / 2, y0: p.y + d, x1: p.x + w / 2, y1: p.y + d + h }
   }
 
-  const placed: Box[] = [...avoid]
-  const order = points
-    .map((_, i) => i)
-    .sort((a, b) => points[b].priority - points[a].priority)
-  for (const i of order) {
-    const p = points[i]
+  // the open space around each point counts the unlabeled dots too
+  const open = dots.length
+    ? Delaunay.from(
+        [...points, ...dots],
+        p => p.x,
+        p => p.y,
+      ).voronoi([0, 0, bounds.width, bounds.height])
+    : voronoi
+
+  const inBounds = (b: Box) =>
+    b.x0 >= 0 && b.x1 <= bounds.width && b.y0 >= 0 && b.y1 <= bounds.height
+  // the boxes each point's label could take, the side facing the open space
+  // first, for the points that get a label
+  const sides: Side[] = ["right", "bottom", "left", "top"]
+  const beside = new Map<number, Box[]>()
+  for (const [i, p] of points.entries()) {
     const cell = voronoi.cellPolygon(i)
     // coincident points have no cell
     if (!cell) continue
     if (!p.always && -polygonArea(cell) < minCell) continue
-    // the side facing the cell's centroid first, then the others
-    const [cx, cy] = polygonCentroid(cell)
-    const sides: Side[] = ["right", "bottom", "left", "top"]
+    const [cx, cy] = polygonCentroid(open.cellPolygon(i) ?? cell)
     const k =
       (Math.round((Math.atan2(cy - p.y, cx - p.x) / Math.PI) * 2) + 4) % 4
-    const tries = [sides[k], ...sides.filter((_, j) => j !== k)]
     const w = width(p.text)
-    const inBounds = (b: Box) =>
-      b.x0 >= 0 && b.x1 <= bounds.width && b.y0 >= 0 && b.y1 <= bounds.height
-    const clear = (b: Box) =>
-      inBounds(b) &&
-      !placed.some(o => overlaps(b, o)) &&
-      !points.some((q, j) => j !== i && hits(b, q.x, q.y, q.r))
-    // a label that must show takes the first side in bounds when none is
-    // clear: overlapping beats a highlighted player with no name
-    const b =
-      tries.map(side => box(p, side, w)).find(clear) ??
-      (p.always ? tries.map(side => box(p, side, w)).find(inBounds) : undefined)
-    if (!b) continue
-    placed.push(b)
+    beside.set(
+      i,
+      [sides[k], ...sides.filter((_, j) => j !== k)].map(side =>
+        box(p, side, w),
+      ),
+    )
+  }
+
+  const placed: Box[] = [...avoid]
+  const clearOfLabels = (b: Box, i: number) =>
+    inBounds(b) &&
+    !placed.some(o => overlaps(b, o)) &&
+    !points.some((q, j) => j !== i && hits(b, q.x, q.y, q.r))
+  const clear = (b: Box, i: number) =>
+    clearOfLabels(b, i) && !dots.some(q => hits(b, q.x, q.y, q.r))
+  // for a label that must show, the side in bounds over the fewest labels
+  // and dots: overlapping beats a highlighted player with no name
+  const least = (b: Box, i: number, bs: Box[]) => {
+    const cost = (c: Box) =>
+      inBounds(c)
+        ? placed.filter(o => overlaps(c, o)).length * 100 +
+          points.filter((q, j) => j !== i && hits(c, q.x, q.y, q.r)).length
+        : Infinity
+    return b === bs.reduce((m, c) => (cost(c) < cost(m) ? c : m))
+  }
+  // in passes, so a label over the unlabeled dots doesn't take a side
+  // another label needed to be clear: first the labels with a clear side,
+  // then those clear of other labels, over the dots, where the halo keeps
+  // them readable, then those that must show
+  const order = [...beside.keys()].sort(
+    (a, b) => points[b].priority - points[a].priority,
+  )
+  const passes = [
+    clear,
+    ...(dots.length ? [clearOfLabels] : []),
+    (b: Box, i: number, bs: Box[]) =>
+      Boolean(points[i].always) && least(b, i, bs),
+  ]
+  const at = new Map<number, Box>()
+  for (const ok of passes)
+    for (const i of order) {
+      if (at.has(i)) continue
+      const bs = beside.get(i)!
+      const b = bs.find(b => ok(b, i, bs))
+      if (!b) continue
+      placed.push(b)
+      at.set(i, b)
+    }
+
+  for (const [i, b] of at) {
+    const p = points[i]
     if (p.key !== undefined) labeled.add(p.key)
     g.append("text")
       .attr("data-mark", p.key ?? null)
@@ -105,6 +160,11 @@ export function placeLabels(
       .attr("y", b.y1 - size * 0.18)
       .attr("text-anchor", "middle")
       .attr("font-size", size)
+      .attr("fill", color.ink)
+      .attr("stroke", color.bg)
+      .attr("stroke-width", 3.5)
+      .attr("stroke-linejoin", "round")
+      .attr("paint-order", "stroke")
       .text(p.text)
   }
   measure.remove()
