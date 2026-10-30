@@ -39,6 +39,9 @@ interface Team {
   ortg: number
   drtg: number
   games: number
+  // the record over the same games
+  wins: number
+  losses: number
   // better than average, so positive is good in every column, and
   // off + def = net
   net: number
@@ -79,6 +82,9 @@ function signed(v: number) {
   return v > 0 ? `+${t}` : `−${t}`
 }
 
+// a team's record, after its abbreviation: " (4-1)"
+const record = (t: Team) => ` (${t.wins}-${t.losses})`
+
 // one team-season's games in the window, summed: the NBA's way, so a
 // blowout counts by its possessions, not as one game in an average
 async function loadNba(season: number, p: P) {
@@ -93,16 +99,16 @@ async function loadNba(season: number, p: P) {
     ]),
     read("stats", "games", season, ["game_id", "game_type"]),
   ])
-  const type = new Map(games.map(g => [g.game_id, g.game_type as string]))
+  const gameType = new Map(games.map(g => [g.game_id, g.game_type as string]))
   // the play-in goes with the playoffs, as it does at CTG. A season with
   // none played yet has no playoffs to show
   const post = ["playoffs", "play_in"]
-  const hasPlayoffs = logs.some(r => post.includes(type.get(r.game_id)!))
+  const hasPlayoffs = logs.some(r => post.includes(gameType.get(r.game_id)!))
   const playoffs = p.playoffs && hasPlayoffs
   const kinds = playoffs ? post : ["regular_season"]
   const byTeam = new Map<string, typeof logs>()
   for (const r of logs) {
-    if (!kinds.includes(type.get(r.game_id)!) || !(r.poss > 0)) continue
+    if (!kinds.includes(gameType.get(r.game_id)!) || !(r.poss > 0)) continue
     let list = byTeam.get(r.team_id)
     if (!list) byTeam.set(r.team_id, (list = []))
     list.push(r)
@@ -119,11 +125,12 @@ async function loadNba(season: number, p: P) {
   const rows = [...byTeam].map(([team_id, list]) => {
     list.sort((a, b) => +b.game_date - +a.game_date)
     const used = last ? list.slice(0, Number(last)) : list
-    let [pts, allowed, poss] = [0, 0, 0]
+    let [pts, allowed, poss, wins] = [0, 0, 0, 0]
     for (const r of used) {
       pts += r.pts
       allowed += r.pts - r.plus_minus
       poss += r.poss
+      if (r.plus_minus > 0) wins++
       if (!through || r.game_date > through) through = r.game_date
     }
     return {
@@ -131,6 +138,8 @@ async function loadNba(season: number, p: P) {
       ortg: (100 * pts) / poss,
       drtg: (100 * allowed) / poss,
       games: used.length,
+      wins,
+      losses: used.length - wins,
     }
   })
   return { rows, windows, last, through, playoffs, hasPlayoffs }
@@ -171,6 +180,8 @@ async function loadCtg(season: number, p: P) {
       ortg: r[`off_rtg${sfx}`] as number,
       drtg: r[`def_rtg${sfx}`] as number,
       games: r[`wins${sfx}`] + r[`losses${sfx}`],
+      wins: r[`wins${sfx}`] as number,
+      losses: r[`losses${sfx}`] as number,
     })),
     windows,
     last,
@@ -221,6 +232,8 @@ export const efficiency: Tool<P, D> = {
         ortg: r.ortg,
         drtg: r.drtg,
         games: r.games,
+        wins: r.wins,
+        losses: r.losses,
         net: r.ortg - r.drtg,
         off: r.ortg - avg,
         def: avg - r.drtg,
@@ -320,7 +333,6 @@ export const efficiency: Tool<P, D> = {
         : ""
     const ctg =
       d.source === "ctg" ? ". Cleaning the Glass leaves out garbage time" : ""
-    const most = max(d.teams, t => t.games) ?? 0
     return {
       title: "Team efficiency",
       context: `Points per 100 possessions better or worse than the average team ${span}${through}${ctg}`,
@@ -330,7 +342,7 @@ export const efficiency: Tool<P, D> = {
       ],
       // the average is zero in every column: with it, +6.4 on offense is a
       // rating you can work out
-      counts: `average team ${d.avg.toFixed(1)} · ${d.teams.length} teams · ${most} games`,
+      counts: `average ${d.avg.toFixed(1)}`,
       source: `Data: ${sources[d.source].label}`,
     }
   },
@@ -349,8 +361,25 @@ export const efficiency: Tool<P, D> = {
     // text shrinks with the rows on short frames
     const fs = Math.min(14, rowH * 0.68)
 
-    // columns: rank and team, three bar columns, the strip
-    const teamW = 96
+    // columns: rank and team, three bar columns, the strip. The team
+    // column fits the widest name and record
+    const logo = Math.min(rowH - 3, 20)
+    const recFs = fs * 0.85
+    const measureTeam = g.append("text").attr("font-size", fs)
+    const teamW =
+      30 +
+      logo +
+      (max(ts, t => {
+        measureTeam.text(null)
+        measureTeam
+          .append("tspan")
+          .attr("font-weight", type.label.weight)
+          .text(t.abbrev)
+        measureTeam.append("tspan").attr("font-size", recFs).text(record(t))
+        return measureTeam.node()!.getComputedTextLength()
+      }) ?? 40) +
+      12
+    measureTeam.remove()
     const stripW = Math.round(W * 0.22)
     const gap = 18
     const colW = (W - teamW - stripW - gap) / 3
@@ -424,7 +453,6 @@ export const efficiency: Tool<P, D> = {
         .attr("font-size", fs * 0.85)
         .attr("fill", color.muted)
         .text(i + 1)
-      const logo = Math.min(rowH - 3, 20)
       row
         .append("image")
         .attr("href", logoUrl(t.abbrev))
@@ -432,16 +460,21 @@ export const efficiency: Tool<P, D> = {
         .attr("y", cy - logo / 2)
         .attr("width", logo)
         .attr("height", logo)
-      row
+      const name = row
         .append("text")
         .attr("x", 30 + logo)
         .attr("y", cy + fs * 0.35)
         .attr("font-size", fs)
-        .attr("font-weight", type.label.weight)
-        .text(t.abbrev)
+      name.append("tspan").attr("font-weight", type.label.weight).text(t.abbrev)
+      name
+        .append("tspan")
+        .attr("font-size", recFs)
+        .attr("fill", color.muted)
+        .text(record(t))
+      name
         .append("title")
         .text(
-          `${t.name}\n${t.ortg.toFixed(1)} offensive rating · ${t.drtg.toFixed(1)} defensive rating · ${t.games} games`,
+          `${t.name}, ${t.wins}-${t.losses}\n${t.ortg.toFixed(1)} offensive rating · ${t.drtg.toFixed(1)} defensive rating · ${t.games} games`,
         )
       columns.forEach((c, j) => {
         const v = t[c.key]
