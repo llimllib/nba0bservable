@@ -342,7 +342,7 @@ export const cumulative: Tool<P, D> = {
           width(s.name, type.label.size, type.label.weight),
           width(fmt(ends[i].v), type.sub.size, type.sub.weight),
         ),
-      ) ?? 0) + 16
+      ) ?? 0) + 33
     measure.remove()
 
     const plotW = size.width - left - gutter
@@ -419,8 +419,11 @@ export const cumulative: Tool<P, D> = {
     // names in the gutter, spread apart so they don't overlap, each joined
     // to the end of its line
     const lineH = type.label.size + type.sub.size + 2
+    // from a name's baseline up to its middle, where its swatch is
+    const mid = type.label.size * 0.35
+    // each name starts with its swatch level with its line's end
     const labels = ss
-      .map((s, i) => ({ s, end: ends[i], ly: y(ends[i].v) }))
+      .map((s, i) => ({ s, end: ends[i], ly: y(ends[i].v) + mid }))
       .sort((a, b) => a.ly - b.ly)
     const minY = type.label.size * 0.8
     const maxY = plotH - type.sub.size - 4
@@ -431,25 +434,47 @@ export const cumulative: Tool<P, D> = {
         labels[i].ly,
         i < labels.length - 1 ? labels[i + 1].ly - lineH : maxY,
       )
-    const lx = plotW + 12
+    // each name starts with a swatch of its line, as in a legend, so the
+    // leader to it can be a thin gray rule that doesn't read as data
+    const sx = plotW + 12
+    const lx = sx + 17
+    const endR = 3.5
     for (const { s, end, ly } of labels) {
       const [ex, ey] = [x(end.n), y(end.v)]
-      // a line that ends before the others gets a dotted leader
-      if (ex < plotW - 1)
+      const my = ly - mid
+      const [dx, dy] = [sx - 3 - ex, my - ey]
+      const k = (endR + 2) / Math.hypot(dx, dy)
+      // a line ending at the edge, level with its name, is joined to it
+      // by the swatch beside it; a leader there would be a stub
+      const level = ex > plotW - 1 && Math.abs(dy) < type.label.size / 2
+      if (!level)
         plot
           .append("line")
-          .attr("x1", ex + 3)
-          .attr("x2", plotW)
-          .attr("y1", ey)
-          .attr("y2", ey)
-          .attr("stroke", s.color)
-          .attr("stroke-dasharray", "1 3")
+          .attr("x1", ex + dx * k)
+          .attr("y1", ey + dy * k)
+          .attr("x2", sx - 3)
+          .attr("y2", my)
+          .attr("stroke", color.muted)
+          .attr("stroke-width", 0.75)
+          .attr("stroke-dasharray", "3 3")
+      // the line's end, so it's plain where the data stops
       plot
-        .append("path")
-        .attr("d", `M${plotW},${ey}L${lx - 3},${ly - type.label.size * 0.35}`)
-        .attr("fill", "none")
+        .append("circle")
+        .attr("cx", ex)
+        .attr("cy", ey)
+        .attr("r", endR)
+        .attr("fill", s.color)
+        .attr("stroke", color.bg)
+        .attr("stroke-width", 1)
+      plot
+        .append("line")
+        .attr("x1", sx)
+        .attr("x2", sx + 12)
+        .attr("y1", my)
+        .attr("y2", my)
         .attr("stroke", s.color)
-        .attr("stroke-width", 1.5)
+        .attr("stroke-width", 2.25)
+        .attr("stroke-dasharray", s.dashed ? "4 2" : null)
       plot
         .append("text")
         .attr("x", lx)
