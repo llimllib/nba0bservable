@@ -166,9 +166,9 @@ const stats: Record<string, Stat> = {
   fga100: per100("fga", "Shot attempts", "FGA"),
   // a shot from the field or a trip to the line. By the formula, a
   // possession is FGA + 0.44 FTA + TOV − OREB, so this is about 100 plus
-  // offensive rebounds less turnovers per 100. The NBA counts possessions
-  // from the play-by-play, 1-3% fewer than the formula, so only about
-  // its axes name the stats; "for" and "against" fit the legend
+  // offensive rebounds less turnovers per 100, counting team offensive
+  // rebounds, which the NBA's play-by-play possessions do. Its axes name
+  // the stats; "for" and "against" fit the legend
   chances100: { ...per100("chances", "Shot chances", ""), short: "for" },
   opp_chances100: {
     ...per100("opp_chances", "Opponents' shot chances", ""),
@@ -201,7 +201,12 @@ const stats: Record<string, Stat> = {
     ...per100("tov", "Turnovers", "TOV"),
     lower: true,
   },
-  oreb100: per100("oreb", "Offensive rebounds", "OREB"),
+  // a team rebound after its own miss keeps the possession as a player's
+  // does, but the box score's oreb leaves it out
+  oreb100: {
+    ...per100("all_oreb", "Offensive rebounds", "OREB"),
+    label: "Offensive rebounds, with team rebounds, per 100 possessions",
+  },
   oreb_pct: {
     label: "Offensive rebound %",
     short: "OREB%",
@@ -253,6 +258,8 @@ interface Pair {
   // lines of constant x − y, named for that difference, for a side of the
   // ball against its opposite
   diff?: (c: number) => string
+  // the first season with the pair's data, if later than its dataset's
+  first?: number
 }
 
 const ends: [string, string, string, string] = [
@@ -320,8 +327,9 @@ const pairs: Record<string, Pair> = {
     corners: ["Limits theirs", "Both", "Neither", "Gets its own"],
     diff: c => `${sign(c)}${Math.abs(c)}`,
   },
-  // where a team's own shot chances come from: OREB − TOV is roughly its
-  // chances per 100 less 100
+  // where a team's own shot chances come from: OREB − TOV is its chances
+  // per 100 less 100, give or take a point. Team offensive rebounds start
+  // in 2023
   "oreb-tov": {
     name: "Offensive rebounds and turnovers",
     group: "Offense and defense",
@@ -329,6 +337,7 @@ const pairs: Record<string, Pair> = {
     x: "oreb100",
     y: "tov100_low",
     deck: "Turnovers by offensive rebounds per 100 possessions",
+    first: 2023,
     corners: [
       "Protects the ball",
       "Both",
@@ -537,6 +546,8 @@ const counts = [
   "tov",
   "blk",
   "poss",
+  // null for a game without play-by-play, which sums as 0
+  "team_oreb",
 ]
 
 // each team's totals over its games in the window, joined to its
@@ -607,6 +618,7 @@ async function loadLogs(season: number, p: P) {
       t[`${s}fg2m`] = t[`${s}fgm`] - t[`${s}fg3m`]
       t[`${s}fg2a`] = t[`${s}fga`] - t[`${s}fg3a`]
       t[`${s}chances`] = t[`${s}fga`] + 0.44 * t[`${s}fta`]
+      t[`${s}all_oreb`] = t[`${s}oreb`] + t[`${s}team_oreb`]
     }
     totals.set(team_id, t)
   }
@@ -672,7 +684,11 @@ export const teamCharts: Tool<P, D> = {
     const pair = pairs[id]
     const [sx, sy] = [stats[pair.x], stats[pair.y]]
     const meta = await metadata()
-    const { first_season, last_season } = meta[sources[pair.src].dataset]
+    const { last_season } = meta[sources[pair.src].dataset]
+    const first_season = Math.max(
+      meta[sources[pair.src].dataset].first_season,
+      pair.first ?? 0,
+    )
     const season = Math.min(
       last_season,
       Math.max(first_season, p.season || last_season),
