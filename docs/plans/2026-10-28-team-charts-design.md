@@ -20,7 +20,12 @@ Player charts. Sixteen, grouped in the Stats menu:
   volume by shotmaking (points per shot by shots per 100); shot profile
   (rim share by 3-point share)
 - **Playmaking**: assists by turnovers per 100
-- **Rebounding**: OREB% by DREB%
+- **Four factors** (added 2026-10-30): Dean Oliver's four, each the
+  team's against its opponents', with diagonals of the margin: eFG%,
+  turnovers per 100 (forced on x, so x − y stays the margin), OREB%
+  (replacing OREB% by DREB%, the same data, whose margin is a sum), and
+  free throws made per shot attempt, Oliver's definition and the scores
+  page's (it was attempts). eFG% and FT rate moved here from Shooting
 - **Defense**: defensive rating by forced turnover rate; opponents' FG% at
   the rim by blocks per 100
 

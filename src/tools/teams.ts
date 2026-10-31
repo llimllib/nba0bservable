@@ -103,10 +103,13 @@ const efg = (side: "" | "opp_"): Stat => ({
   lower: Boolean(side),
   tip: pct1,
 })
+// Oliver's free throw factor: made, not attempted, as on the scores page
 const ftRate = (side: "" | "opp_"): Stat => ({
-  label: side ? "Opponents' free throw rate" : "Free throw rate",
+  label: side
+    ? "Opponents' free throws made per shot attempt"
+    : "Free throws made per shot attempt",
   short: side ? "Opp FTr" : "FTr",
-  get: t => t[`${side}fta`] / t[`${side}fga`],
+  get: t => t[`${side}ftm`] / t[`${side}fga`],
   lower: Boolean(side),
   tip: num2,
 })
@@ -214,11 +217,12 @@ const stats: Record<string, Stat> = {
     pct: true,
     tip: pct1,
   },
-  dreb_pct: {
-    label: "Defensive rebound %",
-    short: "DREB%",
-    get: t => t.dreb / (t.dreb + t.opp_oreb),
+  opp_oreb_pct: {
+    label: "Opponents' offensive rebound %",
+    short: "Opp OREB%",
+    get: t => t.opp_oreb / (t.opp_oreb + t.dreb),
     pct: true,
+    lower: true,
     tip: pct1,
   },
   forced_tov: {
@@ -226,6 +230,18 @@ const stats: Record<string, Stat> = {
     short: "Opp TOV/100",
     get: t => (100 * t.opp_tov) / t.opp_poss,
     tip: num1,
+  },
+  // turnovers both ends, with shorts that fit the legend, as for chances
+  tov_forced: {
+    label: "Opponents' turnovers per 100 possessions",
+    short: "forced",
+    get: t => (100 * t.opp_tov) / t.opp_poss,
+    tip: num1,
+  },
+  tov_committed: {
+    ...per100("tov", "Turnovers", ""),
+    short: "committed",
+    lower: true,
   },
   blk100: {
     label: "Blocks per 100 opponent possessions",
@@ -341,6 +357,55 @@ const pairs: Record<string, Pair> = {
     corners: ["Protects the ball", "Both", "Neither", "Crashes the glass"],
     diff: c => `${sign(c)}${Math.abs(c)}`,
   },
+  // Dean Oliver's four factors, each a side of the ball against its
+  // opposite, so the diagonals are the team's margin in it
+  efg: {
+    name: "Effective FG%, both ends",
+    group: "Four factors",
+    src: "logs",
+    x: "efg",
+    y: "opp_efg",
+    deck: "Opponents' effective field goal percentage by the team's",
+    corners: ends,
+    diff: c => `${sign(c)}${+Math.abs(c * 100).toFixed(1)}`,
+  },
+  // turnovers are the one factor where lower is better on offense, so
+  // forced turnovers go on x to keep x − y the margin
+  "tov-both": {
+    name: "Turnovers, both ends",
+    group: "Four factors",
+    src: "logs",
+    x: "tov_forced",
+    y: "tov_committed",
+    deck: "Turnovers by opponents' turnovers per 100 possessions",
+    corners: ["Protects the ball", "Both", "Neither", "Forces them"],
+    diff: c => `${sign(c)}${Math.abs(c)}`,
+  },
+  rebounding: {
+    name: "Offensive rebounding, both ends",
+    group: "Four factors",
+    src: "logs",
+    x: "oreb_pct",
+    y: "opp_oreb_pct",
+    deck: "Opponents' offensive rebound percentage by the team's",
+    corners: [
+      "Defensive glass",
+      "Both glasses",
+      "Neither glass",
+      "Offensive glass",
+    ],
+    diff: c => `${sign(c)}${+Math.abs(c * 100).toFixed(1)}`,
+  },
+  "ft-rate": {
+    name: "Free throw rate, both ends",
+    group: "Four factors",
+    src: "logs",
+    x: "ft_rate",
+    y: "opp_ft_rate",
+    deck: "Opponents' free throws made per shot attempt by the team's",
+    corners: ["Doesn't foul", "Both", "Neither", "Gets to the line"],
+    diff: c => `${sign(c)}${+Math.abs(c).toFixed(2)}`,
+  },
   threes: {
     name: "Three-point shooting",
     group: "Shooting",
@@ -397,26 +462,6 @@ const pairs: Record<string, Pair> = {
       "Many allowed · made",
     ],
   },
-  efg: {
-    name: "Effective FG%, both ends",
-    group: "Shooting",
-    src: "logs",
-    x: "efg",
-    y: "opp_efg",
-    deck: "Opponents' effective field goal percentage by the team's",
-    corners: ends,
-    diff: c => `${sign(c)}${+Math.abs(c * 100).toFixed(1)}`,
-  },
-  "ft-rate": {
-    name: "Free throw rate, both ends",
-    group: "Shooting",
-    src: "logs",
-    x: "ft_rate",
-    y: "opp_ft_rate",
-    deck: "Opponents' free throw attempts per shot attempt by the team's",
-    corners: ["Doesn't foul", "Both", "Neither", "Gets to the line"],
-    diff: c => `${sign(c)}${+Math.abs(c).toFixed(2)}`,
-  },
   shots: {
     name: "Shot volume and shotmaking",
     group: "Shooting",
@@ -448,20 +493,6 @@ const pairs: Record<string, Pair> = {
     y: "ast100",
     deck: "Assists by turnovers per 100 possessions",
     ratios: [1.5, 2, 2.5],
-  },
-  rebounding: {
-    name: "Rebounding",
-    group: "Rebounding",
-    src: "logs",
-    x: "dreb_pct",
-    y: "oreb_pct",
-    deck: "Offensive by defensive rebound percentage",
-    corners: [
-      "Offensive glass",
-      "Both glasses",
-      "Neither glass",
-      "Defensive glass",
-    ],
   },
   turnovers: {
     name: "Forcing turnovers",
@@ -534,6 +565,7 @@ const counts = [
   "fga",
   "fg3m",
   "fg3a",
+  "ftm",
   "fta",
   "oreb",
   "dreb",
