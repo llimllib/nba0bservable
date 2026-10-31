@@ -845,11 +845,6 @@ export const teamCharts: Tool<P, D> = {
       title: pair.name,
       context: `${pair.deck} ${span}${through}`,
       legend: [
-        {
-          symbol: "dot",
-          color: color.ink,
-          text: "a moved logo's value",
-        },
         ...reference,
         ...(pair.diff
           ? [
@@ -861,7 +856,7 @@ export const teamCharts: Tool<P, D> = {
             ]
           : []),
       ],
-      counts: `${d.teams.length} teams · ${most} games`,
+      counts: `${most} games`,
       source: `Data: ${sources[pair.src].credit}`,
     }
   },
