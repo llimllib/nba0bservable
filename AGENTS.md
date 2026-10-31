@@ -46,7 +46,6 @@ A push to `main` deploys: `.github/workflows/publish.yml` builds and syncs
 `dist/` to the `nba-data` DigitalOcean Space with `--delete`, then purges
 DO's CDN. billmill.org/nba is Cloudflare → Caddy → that Space; Caddy
 (`~/code/Newsite/ops/Caddyfile`) strips `/nba` and maps `/x` to `x.html`.
-Cloudflare caches pages for an hour and isn't purged by the workflow.
 There's no scheduled rebuild: data is read at run time, so a build is only
 needed when the code changes.
 
