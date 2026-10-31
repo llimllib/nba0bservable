@@ -16,6 +16,8 @@ export type Size = keyof typeof sizes
 
 const pad = 28
 const stripHeight = 34
+// a wrapped legend's rows, and the counts when they drop below it
+const legendRow = stripHeight - 12
 const footerHeight = 40
 
 export interface Frame {
@@ -102,85 +104,140 @@ export function agate(s: Selection<any, any, any, any>) {
     .style("text-transform", "uppercase")
 }
 
-function drawLegend(g: G, items: LegendItem[], y: number) {
+// The legend's items in a row, wrapped onto more rows at maxWidth. Returns
+// the widest row's width, the last row's, and the number of rows
+function drawLegend(g: G, items: LegendItem[], y: number, maxWidth: number) {
   let x = 0
+  let row = 0
+  let widest = 0
   const cy = y - type.agate.size * 0.35
   for (const item of items) {
-    // the symbol's width, so the text after it lines up
-    let w = 10
-    if (item.symbol === "dot")
-      g.append("circle")
-        .attr("cx", x + 5)
-        .attr("cy", cy)
-        .attr("r", 4.5)
-        .attr("fill", item.color)
-    else if (item.symbol === "dash") {
-      // a reference line, drawn as the chart draws it
-      w = 22
-      g.append("line")
-        .attr("x1", x)
-        .attr("x2", x + w)
-        .attr("y1", cy)
-        .attr("y2", cy)
-        .attr("stroke", item.color)
-        .attr("stroke-width", 1.25)
-        .attr("stroke-dasharray", "5 4")
-    } else if (item.symbol === "line" || item.symbol === "dotline") {
-      w = 22
-      const pts: [number, number][] = [
-        [x, cy + 3],
-        [x + 8, cy - 4],
-        [x + 15, cy + 1],
-        [x + w, cy - 3],
-      ]
-      g.append("polyline")
-        .attr("points", pts.join(" "))
-        .attr("fill", "none")
-        .attr("stroke", item.color)
-        .attr("stroke-width", 1.25)
-      if (item.symbol === "dotline")
-        for (const [px, py] of pts)
-          g.append("circle")
-            .attr("cx", px)
-            .attr("cy", py)
-            .attr("r", 1.75)
-            .attr("fill", item.color)
-    } else if (item.symbol === "tick")
-      g.append("line")
-        .attr("x1", x + 5)
-        .attr("x2", x + 5)
-        .attr("y1", cy - 7)
-        .attr("y2", cy + 7)
-        .attr("stroke", item.color)
-        .attr("stroke-width", 2.5)
-    else {
-      // a small bar, with its label inside as on the chart's own bars
-      const rect = g
-        .append("rect")
-        .attr("y", cy - 8)
-        .attr("height", 16)
-        .attr("fill", item.color)
-      const label = g
-        .append("text")
-        .attr("y", cy + 4)
-        .attr("text-anchor", "middle")
-        .attr("font-family", font.head)
-        .attr("font-size", 12)
-        .attr("font-weight", 600)
-        .attr("fill", color.bg)
-        .text(item.label ?? "")
-      w = Math.max(label.node()!.getComputedTextLength() + 10, 16)
-      rect.attr("x", x).attr("width", w)
-      label.attr("x", x + w / 2)
-    }
-    const t = g
+    const ig = g.append("g")
+    const w = drawSymbol(ig, item, cy)
+    const t = ig
       .append("text")
-      .attr("x", x + w + 6)
+      .attr("x", w + 6)
       .attr("y", y)
       .text(item.text)
-    x += w + 6 + t.node()!.getComputedTextLength() + 18
+    const iw = w + 6 + t.node()!.getComputedTextLength()
+    if (x > 0 && (item.break || x + iw > maxWidth)) {
+      x = 0
+      row++
+    }
+    ig.attr("transform", `translate(${x},${row * legendRow})`)
+    widest = Math.max(widest, x + iw)
+    x += iw + 18
   }
-  return x - 18
+  return { width: widest, last: x - 18, rows: row + 1 }
+}
+
+// a legend item's symbol at x = 0, returning its width, so the text after
+// it lines up
+function drawSymbol(g: G, item: LegendItem, cy: number) {
+  const ring = (s: Selection<any, any, any, any>) =>
+    item.hollow
+      ? s
+          .attr("fill", color.bg)
+          .attr("stroke", item.color)
+          .attr("stroke-width", 1.5)
+      : s.attr("fill", item.color)
+  if (item.symbol === "dot" && item.label) {
+    // a numbered disc, as the chart numbers its own
+    g.append("circle").attr("cx", 6).attr("cy", cy).attr("r", 6).call(ring)
+    g.append("text")
+      .attr("x", 6)
+      .attr("y", cy + 3.5)
+      .attr("text-anchor", "middle")
+      .attr("font-family", font.head)
+      .attr("font-size", 10)
+      .attr("font-weight", 700)
+      .attr("letter-spacing", 0)
+      .attr("fill", color.bg)
+      .text(item.label)
+    return 12
+  }
+  if (item.symbol === "dot") {
+    g.append("circle").attr("cx", 5).attr("cy", cy).attr("r", 4.5).call(ring)
+    return 10
+  }
+  if (item.symbol === "diamond") {
+    g.append("rect")
+      .attr("x", 1.5)
+      .attr("y", cy - 3.5)
+      .attr("width", 7)
+      .attr("height", 7)
+      .attr("transform", `rotate(45 5 ${cy})`)
+      .call(ring)
+    return 10
+  }
+  if (item.symbol === "cross") {
+    g.append("path")
+      .attr("d", `M1,${cy - 4}L9,${cy + 4}M1,${cy + 4}L9,${cy - 4}`)
+      .attr("stroke", item.color)
+      .attr("stroke-width", 1.75)
+    return 10
+  }
+  if (item.symbol === "dash") {
+    // a reference line, drawn as the chart draws it
+    g.append("line")
+      .attr("x2", 22)
+      .attr("y1", cy)
+      .attr("y2", cy)
+      .attr("stroke", item.color)
+      .attr("stroke-width", 1.25)
+      .attr("stroke-dasharray", "5 4")
+    return 22
+  }
+  if (item.symbol === "line" || item.symbol === "dotline") {
+    const pts: [number, number][] = [
+      [0, cy + 3],
+      [8, cy - 4],
+      [15, cy + 1],
+      [22, cy - 3],
+    ]
+    g.append("polyline")
+      .attr("points", pts.join(" "))
+      .attr("fill", "none")
+      .attr("stroke", item.color)
+      .attr("stroke-width", 1.25)
+    if (item.symbol === "dotline")
+      for (const [px, py] of pts)
+        g.append("circle")
+          .attr("cx", px)
+          .attr("cy", py)
+          .attr("r", 1.75)
+          .attr("fill", item.color)
+    return 22
+  }
+  if (item.symbol === "tick") {
+    g.append("line")
+      .attr("x1", 5)
+      .attr("x2", 5)
+      .attr("y1", cy - 7)
+      .attr("y2", cy + 7)
+      .attr("stroke", item.color)
+      .attr("stroke-width", 2.5)
+    return 10
+  }
+  // a small bar, with its label inside as on the chart's own bars
+  const rect = g
+    .append("rect")
+    .attr("y", cy - 8)
+    .attr("height", 16)
+    .attr("fill", item.color)
+  const label = g
+    .append("text")
+    .attr("y", cy + 4)
+    .attr("text-anchor", "middle")
+    .attr("font-family", font.head)
+    .attr("font-size", 12)
+    .attr("font-weight", 600)
+    .attr("fill", color.bg)
+    .text(item.label ?? "")
+  const w = Math.max(label.node()!.getComputedTextLength() + 10, 16)
+  rect.attr("width", w)
+  label.attr("x", w / 2)
+  return w
 }
 
 // a phrase as a sentence: capitalized, with a period unless it ends in one
@@ -307,8 +364,13 @@ export function buildFrame(
   const strip = svg.append("g").call(agate)
   const stripY = bandHeight + stripHeight / 2 + type.agate.size * 0.35
   const legend = strip.append("g").attr("transform", `translate(${pad},0)`)
-  const legendWidth = drawLegend(legend, desc.legend ?? [], stripY)
-  let stripBottom = bandHeight + stripHeight
+  const legendSize = drawLegend(
+    legend,
+    desc.legend ?? [],
+    stripY,
+    width - pad * 2,
+  )
+  let stripBottom = bandHeight + stripHeight + (legendSize.rows - 1) * legendRow
   if (desc.counts) {
     const counts = strip
       .append("text")
@@ -316,13 +378,16 @@ export function buildFrame(
       .attr("y", stripY)
       .attr("text-anchor", "end")
       .text(desc.counts)
-    // when both don't fit on one line, the counts get their own
+    // the counts go at the end of the legend's last row when they fit
+    // there, and otherwise get their own row under it
+    const lastY = stripY + (legendSize.rows - 1) * legendRow
+    counts.attr("y", lastY)
     if (
-      legendWidth + counts.node()!.getComputedTextLength() + 24 >
+      legendSize.last + counts.node()!.getComputedTextLength() + 24 >
       width - pad * 2
     ) {
-      counts.attr("y", stripY + stripHeight - 12)
-      stripBottom += stripHeight - 12
+      counts.attr("y", lastY + legendRow)
+      stripBottom += legendRow
     }
   }
   svg

@@ -75,3 +75,13 @@ was on the floor.
   fit a square.
 - **No 16:9.** The band and legend left about 150px of plot for twenty-odd
   rows, and 16:9 had never been used, so it was dropped from the site.
+- **All events (an experiment, 2026-10-31).** A toggle, `all=1`, draws
+  every field goal and turnover on the bars, to see how much density the
+  chart can take. Shots sit on the bar's top edge: filled made, hollow
+  missed, a circle for two and a diamond for three, the circle at 1.25×
+  the diamond's half-width so they look the same size. Turnovers are an
+  ink × hanging below with the fouls. The legend gives the shots their own
+  row (`break` on a legend item; the kit's legend now wraps), and numbers
+  the foul's dot so it isn't the made 2. In the square export the fouls
+  lose their numbers and look like made 2s; only position tells them
+  apart. It may not stay.

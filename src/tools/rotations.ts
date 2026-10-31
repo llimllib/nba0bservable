@@ -22,7 +22,8 @@ import type { Body, Mark, Tool } from "../kit/tool"
 const seasons = [2027, 2026, 2025]
 
 // game is a game id; empty means the team's latest game
-const defaults = { season: seasons[0], team: "BOS", game: "" }
+// all: every field goal and turnover on the bars, not just fouls
+const defaults = { season: seasons[0], team: "BOS", game: "", all: false }
 type P = typeof defaults
 
 interface Stint {
@@ -39,6 +40,16 @@ interface Foul {
   n: number
   // "Shooting", "Offensive Charge", ...
   kind: string
+}
+
+// a field goal or a turnover
+interface Play {
+  t: number
+  kind: "made" | "missed" | "to"
+  // 2 or 3 for a shot
+  value: number
+  // the shot or turnover type
+  sub: string
 }
 
 interface Game {
@@ -66,7 +77,13 @@ interface D {
   names: Map<string, string>
   // the shown game's scoring plays, in order, and its personal fouls by
   // player, when its season has them
-  events?: { game_id: string; plays: DataRow[]; fouls: Map<string, Foul[]> }
+  events?: {
+    game_id: string
+    plays: DataRow[]
+    fouls: Map<string, Foul[]>
+    // field goals and turnovers by player
+    actions: Map<string, Play[]>
+  }
 }
 
 interface Row {
@@ -316,6 +333,9 @@ export const rotations: Tool<P, D> = {
         "home_team_id",
         "home_score",
         "away_score",
+        "shot_result",
+        "shot_value",
+        "is_field_goal",
       ],
       { game_id: { $eq: game } },
     ).catch(() => [])
@@ -337,12 +357,30 @@ export const rotations: Tool<P, D> = {
       const fs = byPlayer.get(e.person_id)!
       fs.push({ t: e.time, n: fs.length + 1, kind: e.sub_type })
     }
+    const actions = new Map<string, Play[]>()
+    for (const e of events) {
+      if (!e.person_id) continue
+      const play: Play | undefined = e.is_field_goal
+        ? {
+            t: e.time,
+            kind: e.shot_result === "Made" ? "made" : "missed",
+            value: e.shot_value,
+            sub: e.sub_type,
+          }
+        : e.action_type === "Turnover"
+          ? { t: e.time, kind: "to", value: 0, sub: e.sub_type }
+          : undefined
+      if (!play) continue
+      if (!actions.has(e.person_id)) actions.set(e.person_id, [])
+      actions.get(e.person_id)!.push(play)
+    }
     return {
       ...d,
       events: {
         game_id: game,
         plays: events.filter(e => e.pts > 0),
         fouls: byPlayer,
+        actions,
       },
     }
   },
@@ -380,6 +418,9 @@ export const rotations: Tool<P, D> = {
             .join(" · "),
         })),
       },
+      ...(byPlay(d, p.game)
+        ? [{ key: "all", label: "All events", kind: "toggle" as const }]
+        : []),
     ]
   },
 
@@ -414,8 +455,35 @@ export const rotations: Tool<P, D> = {
               {
                 symbol: "dot" as const,
                 color: color.ink,
+                // with all events on, numbered, so it isn't the made 2
+                ...(p.all ? { label: "1" } : {}),
                 text: "personal foul",
               },
+            ]
+          : []),
+        ...(p.all && byPlay(d, p.game)
+          ? [
+              // the shots and turnovers on a row of their own
+              {
+                symbol: "dot" as const,
+                color: color.ink,
+                text: "made 2",
+                break: true,
+              },
+              {
+                symbol: "dot" as const,
+                color: color.ink,
+                hollow: true,
+                text: "missed 2",
+              },
+              { symbol: "diamond" as const, color: color.ink, text: "made 3" },
+              {
+                symbol: "diamond" as const,
+                color: color.ink,
+                hollow: true,
+                text: "missed 3",
+              },
+              { symbol: "cross" as const, color: color.ink, text: "turnover" },
             ]
           : []),
       ],
@@ -466,6 +534,14 @@ export const rotations: Tool<P, D> = {
     const foulR = numbered ? 6 : Math.max(2, barH * 0.25)
     const foulY = barH / 2 + foulR / 3
     const foulsBy = fouls(d, p.game)
+    const actionsBy =
+      p.all && d.events?.game_id === p.game
+        ? d.events.actions
+        : new Map<string, Play[]>()
+    // shots sit on the bar's top edge, turnovers hang below it with the
+    // fouls
+    const shotR = Math.max(2, Math.min(3.5, barH * 0.2))
+    const shotY = -barH / 2
 
     // from the top of the plot: a head, the team's rows, the margin, then
     // the opponent's head and rows
@@ -836,6 +912,71 @@ export const rotations: Tool<P, D> = {
             `${r.name}: ${ordinal(f.n)} foul (${f.kind.toLowerCase()}), ` +
               `${at.period} ${mmss(at.left)}` +
               (out ? ", fouled out" : ""),
+          )
+      }
+
+      // field goals: filled made, hollow missed, a circle for two and a
+      // diamond for three. Turnovers are an ink ×
+      let prevShot = -Infinity
+      let prevTo = -Infinity
+      for (const a of actionsBy.get(r.player_id) ?? []) {
+        const at = clock(a.t)
+        const mark = row.append("g")
+        const when = `${at.period} ${mmss(at.left)}`
+        if (a.kind === "to") {
+          const tx = Math.max(x(a.t), prevTo + 2 * shotR + 1)
+          prevTo = tx
+          const s = shotR
+          mark
+            .append("path")
+            .attr(
+              "d",
+              `M${tx - s},${foulY - s}L${tx + s},${foulY + s}` +
+                `M${tx - s},${foulY + s}L${tx + s},${foulY - s}`,
+            )
+            .attr("stroke", color.bg)
+            .attr("stroke-width", 4)
+          mark
+            .append("path")
+            .attr(
+              "d",
+              `M${tx - s},${foulY - s}L${tx + s},${foulY + s}` +
+                `M${tx - s},${foulY + s}L${tx + s},${foulY - s}`,
+            )
+            .attr("stroke", color.ink)
+            .attr("stroke-width", 1.75)
+          mark
+            .append("title")
+            .text(`${r.name}: turnover (${a.sub.toLowerCase()}), ${when}`)
+          continue
+        }
+        const sx = Math.max(x(a.t), prevShot + 2 * shotR + 1)
+        prevShot = sx
+        const made = a.kind === "made"
+        const shape = mark.append(a.value === 3 ? "rect" : "circle")
+        if (a.value === 3)
+          shape
+            .attr("x", sx - shotR)
+            .attr("y", shotY - shotR)
+            .attr("width", 2 * shotR)
+            .attr("height", 2 * shotR)
+            .attr("transform", `rotate(45 ${sx} ${shotY})`)
+        // a circle as big to the eye as the diamond, whose points reach
+        // shotR * 1.41 and whose area is a circle's of shotR * 1.13
+        else
+          shape
+            .attr("cx", sx)
+            .attr("cy", shotY)
+            .attr("r", shotR * 1.25)
+        shape
+          .attr("fill", made ? color.ink : color.bg)
+          .attr("stroke", made ? color.bg : color.ink)
+          .attr("stroke-width", made ? 1 : 1.5)
+        mark
+          .append("title")
+          .text(
+            `${r.name}: ${made ? "made" : "missed"} ${a.value}` +
+              ` (${a.sub.toLowerCase()}), ${when}`,
           )
       }
     }

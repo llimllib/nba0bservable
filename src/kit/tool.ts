@@ -75,8 +75,20 @@ export interface Body {
 
 export interface LegendItem {
   // line: a series over time. dotline: one known only at its dots
-  symbol: "dot" | "tick" | "bar" | "dash" | "line" | "dotline"
+  symbol:
+    | "dot"
+    | "diamond"
+    | "cross"
+    | "tick"
+    | "bar"
+    | "dash"
+    | "line"
+    | "dotline"
   color: string
+  // a dot or diamond's outline only
+  hollow?: boolean
+  // start a new row of the legend with this item
+  break?: boolean
   // drawn inside a bar, so the legend doesn't rely on color alone
   label?: string
   text: string
